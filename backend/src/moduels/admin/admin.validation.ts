@@ -35,3 +35,10 @@ export const ChecklistItemSchema = z.object({
 		sortOrder: z.number().int().min(0).default(0),
 	}),
 });
+
+export const UpdateChecklistItemSchema = z.object({
+	body: z.object({
+		label: z.string().trim().min(1).max(200),
+		sortOrder: z.number().int().min(0).optional(),
+	}),
+});

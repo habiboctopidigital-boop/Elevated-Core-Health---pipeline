@@ -68,6 +68,25 @@ export const emailService = {
 		});
 	},
 
+	async sendPasswordReset(email: string, resetToken: string) {
+		const appUrl = env.CORS_ORIGIN || "http://localhost:5173";
+		const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+
+		const html = `
+<h2>Reset Your Password</h2>
+<p>You requested a password reset for your Elevated Core Health Pipeline Portal account.</p>
+<p>Click the link below to set a new password. This link expires in 1 hour.</p>
+<a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#E8792E;color:#fff;text-decoration:none;border-radius:6px;font-size:16px;">
+  Reset Password
+</a>
+<p style="margin-top:16px;font-size:12px;color:#666;">
+  If you did not request this, you can safely ignore this email.
+</p>
+`;
+
+		await sendResend({ to: email, subject: "Password Reset — Elevated Core Health", html });
+	},
+
 	async notifyFlagged(patientName: string, flaggedBy: string, reason: string, adminEmail: string) {
 		const html = `
 <h2>Patient Flagged for Review</h2>

@@ -4,10 +4,11 @@ import { useState } from "react"
 import {
   useAdminChecklist,
   useCreateChecklistItem,
+  useUpdateChecklistItem,
   useDeleteChecklistItem,
 } from "@/hooks/query/useAdmin"
 import { STAGE_ORDER, STAGE_LABELS } from "@/types"
-import { Loader2, Plus, Trash2 } from "lucide-react"
+import { Loader2, Plus, Trash2, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useForm } from "react-hook-form"
@@ -15,6 +16,7 @@ import { useForm } from "react-hook-form"
 export default function AdminChecklistPage() {
   const { data: items, isLoading } = useAdminChecklist()
   const createItem = useCreateChecklistItem()
+  const updateItem = useUpdateChecklistItem()
   const deleteItem = useDeleteChecklistItem()
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -83,26 +85,13 @@ export default function AdminChecklistPage() {
                 {stageItems
                   .sort((a, b) => a.sortOrder - b.sortOrder)
                   .map((item) => (
-                    <div
+                    <ChecklistItemRow
                       key={item.id}
-                      className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-[#FFF0E5]/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-3.5 h-3.5 rounded border border-[#E5E7EB]" />
-                        <span className="text-sm text-[#374151]">{item.label}</span>
-                        {item.isDefault && (
-                          <span className="text-[10px] bg-[#FFF0E5] text-[#E8792E] px-1.5 py-0.5 rounded font-medium">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => deleteItem.mutate(item.id)}
-                        className="p-1 rounded hover:bg-red-50 text-[#6B7280] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                      item={item}
+                      onUpdate={(id, label) => updateItem.mutate({ id, label })}
+                      onDelete={(id) => deleteItem.mutate(id)}
+                      isUpdating={updateItem.isPending}
+                    />
                   ))}
               </div>
             ) : (
@@ -166,6 +155,89 @@ export default function AdminChecklistPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function ChecklistItemRow({
+  item,
+  onUpdate,
+  onDelete,
+  isUpdating,
+}: {
+  item: { id: string; label: string; isDefault: boolean }
+  onUpdate: (id: string, label: string) => void
+  onDelete: (id: string) => void
+  isUpdating: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState(item.label)
+
+  const handleSave = () => {
+    const trimmed = editValue.trim()
+    if (trimmed && trimmed !== item.label) {
+      onUpdate(item.id, trimmed)
+    }
+    setEditing(false)
+  }
+
+  const handleCancel = () => {
+    setEditValue(item.label)
+    setEditing(false)
+  }
+
+  return (
+    <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-[#FFF0E5]/50 transition-colors group">
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        <div className="w-3.5 h-3.5 rounded border border-[#E5E7EB] shrink-0" />
+        {editing ? (
+          <div className="flex items-center gap-1 flex-1">
+            <input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSave()
+                if (e.key === "Escape") handleCancel()
+              }}
+              autoFocus
+              className="flex-1 h-7 px-2 rounded border border-[#E8792E] text-sm text-[#1A1B1E] focus:outline-none focus:ring-1 focus:ring-[#E8792E]/30"
+            />
+            <button
+              onClick={handleSave}
+              disabled={isUpdating || !editValue.trim()}
+              className="p-1 rounded hover:bg-green-50 text-green-600 disabled:opacity-30"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleCancel}
+              className="p-1 rounded hover:bg-red-50 text-red-500"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <span
+            onClick={() => !item.isDefault && setEditing(true)}
+            className={`text-sm text-[#374151] truncate ${item.isDefault ? "" : "cursor-pointer hover:text-[#E8792E]"}`}
+          >
+            {item.label}
+          </span>
+        )}
+        {item.isDefault && (
+          <span className="text-[10px] bg-[#FFF0E5] text-[#E8792E] px-1.5 py-0.5 rounded font-medium shrink-0">
+            Default
+          </span>
+        )}
+      </div>
+      {!item.isDefault && (
+        <button
+          onClick={() => onDelete(item.id)}
+          className="p-1 rounded hover:bg-red-50 text-[#6B7280] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   )
 }

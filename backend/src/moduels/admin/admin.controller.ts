@@ -46,6 +46,11 @@ export const adminController = {
 		handleServiceResponse(serviceResponse, res);
 	},
 
+	async updateChecklistItem(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.updateChecklistItem(paramId(req), req.body);
+		handleServiceResponse(serviceResponse, res);
+	},
+
 	// Analytics
 	async getAnalytics(_req: Request, res: Response): Promise<void> {
 		const serviceResponse = await adminService.getAnalytics();

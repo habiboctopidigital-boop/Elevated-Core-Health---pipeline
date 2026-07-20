@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { comparePassword, hashPassword, signAccessToken, signRefreshToken, verifyRefreshToken } from "@/lib/auth";
 import type { AuthenticatedUser } from "@/lib/types";
 import { logger } from "@/utils/logger";
+import { emailService } from "@/services/email.service";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import type {
@@ -158,7 +159,7 @@ export const authService = {
 			data: { passwordResetToken: resetToken, passwordResetExpires: resetExpires },
 		});
 
-		logger.info({ resetToken, email: user.email }, "Password reset token generated");
+		emailService.sendPasswordReset(user.email, resetToken).catch(() => {});
 		return ServiceResponse.success("If this email exists, a reset link has been sent.", null);
 	},
 

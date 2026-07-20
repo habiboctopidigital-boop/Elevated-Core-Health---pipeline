@@ -3,11 +3,12 @@ import type { z } from "zod";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
-import type { ChecklistItemSchema, CreateUserSchema, UpdateUserSchema } from "./admin.validation";
+import type { ChecklistItemSchema, CreateUserSchema, UpdateChecklistItemSchema, UpdateUserSchema } from "./admin.validation";
 
 type CreateUserInput = z.infer<typeof CreateUserSchema>["body"];
 type UpdateUserInput = z.infer<typeof UpdateUserSchema>["body"];
 type ChecklistItemInput = z.infer<typeof ChecklistItemSchema>["body"];
+type UpdateChecklistItemInput = z.infer<typeof UpdateChecklistItemSchema>["body"];
 
 const STAGE_ORDER = [
 	"onboarding",
@@ -114,6 +115,20 @@ export const adminService = {
 		}
 		await prisma.checklistItem.delete({ where: { id } });
 		return ServiceResponse.success("Checklist item deleted.", null);
+	},
+
+	async updateChecklistItem(id: string, input: UpdateChecklistItemInput) {
+		const item = await prisma.checklistItem.findUnique({ where: { id } });
+		if (!item) {
+			return ServiceResponse.failure("Checklist item not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const updated = await prisma.checklistItem.update({
+			where: { id },
+			data: { label: input.label, ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}) },
+		});
+
+		return ServiceResponse.success("Checklist item updated.", updated);
 	},
 
 	// Analytics

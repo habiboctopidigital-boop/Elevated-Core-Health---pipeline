@@ -96,6 +96,21 @@ export function useCreateChecklistItem() {
   })
 }
 
+export function useUpdateChecklistItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, label }: { id: string; label: string }) =>
+      AdminService.updateChecklistItem(id, { label }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
+      toast.success("Checklist item updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update item")
+    },
+  })
+}
+
 export function useDeleteChecklistItem() {
   const qc = useQueryClient()
   return useMutation({

@@ -61,6 +61,14 @@ export const AdminService = {
     return data.data
   },
 
+  async updateChecklistItem(id: string, input: { label: string; sortOrder?: number }): Promise<ChecklistItemDef> {
+    const { data } = await axiosInstance.patch<ApiResponse<ChecklistItemDef>>(
+      `${API_ENDPOINTS.ADMIN.CHECKLIST_ITEMS}/${id}`,
+      input,
+    )
+    return data.data
+  },
+
   async deleteChecklistItem(id: string): Promise<void> {
     await axiosInstance.delete(`${API_ENDPOINTS.ADMIN.CHECKLIST_ITEMS}/${id}`)
   },
