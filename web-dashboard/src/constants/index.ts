@@ -12,12 +12,14 @@ export const ROUTES = {
     BOARD: "/dashboard/board",
     LOG: "/dashboard/log",
     SOP: "/dashboard/sop",
+    IMPORT: "/dashboard/import",
     PROFILE: "/dashboard/profile",
   },
   ADMIN: {
     HOME: "/admin/dashboard",
     BOARD: "/admin/dashboard/board",
     LOG: "/admin/dashboard/log",
+    IMPORT: "/admin/dashboard/import",
     USERS: "/admin/dashboard/users",
     CHECKLIST: "/admin/dashboard/checklist",
     PROFILE: "/admin/dashboard/profile",
@@ -38,6 +40,7 @@ export const API_ENDPOINTS = {
   PATIENTS: "/patients",
   PATIENTS_INTAKE: "/patients/intake",
   PATIENTS_INTAKE_TEST: "/patients/intake-test",
+  PATIENTS_IMPORT: "/patients/import",
   ACTIVITY_LOG: "/activity-log",
   DASHBOARD_SUMMARY: "/dashboard/summary",
   ADMIN: {

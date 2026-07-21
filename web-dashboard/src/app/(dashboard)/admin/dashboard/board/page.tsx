@@ -5,6 +5,7 @@ import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { StatusBar } from "@/components/features/status-bar"
+import { ImportDialog } from "@/components/features/import-dialog"
 import { STAGE_ORDER, STAGE_LABELS, STAGE_HINTS } from "@/types"
 import type { Patient, PatientStage } from "@/types"
 import { Loader2, LayoutGrid, ShieldCheck } from "lucide-react"
@@ -57,7 +58,10 @@ export default function AdminBoardPage() {
             <p className="text-xs text-[#6B7280]">Full oversight — manage all patient stages</p>
           </div>
         </div>
-        <StatusBar />
+        <div className="flex items-center gap-2">
+          <ImportDialog />
+          <StatusBar />
+        </div>
       </div>
 
       {/* — Kanban Board — */}

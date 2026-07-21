@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation"
 import { KanbanBoard } from "@/components/features/kanban-board"
 import { StatusBar } from "@/components/features/status-bar"
+import { ImportDialog } from "@/components/features/import-dialog"
 import { LayoutGrid } from "lucide-react"
 
 export default function VABoardPage() {
@@ -22,7 +23,10 @@ export default function VABoardPage() {
             <p className="text-xs text-[#6B7280]">Track patients through 7 workflow stages</p>
           </div>
         </div>
-        <StatusBar />
+        <div className="flex items-center gap-2">
+          <ImportDialog />
+          <StatusBar />
+        </div>
       </div>
 
       {/* — Kanban Board — */}

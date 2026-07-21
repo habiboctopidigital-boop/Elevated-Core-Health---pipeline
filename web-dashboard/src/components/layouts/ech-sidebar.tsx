@@ -12,6 +12,7 @@ import {
   Users,
   CheckSquare,
   ScrollText,
+  Upload,
   LogOut,
   User,
   Loader2,
@@ -25,6 +26,7 @@ import { useAuth } from "@/hooks/auth/useAuth"
 const VA_NAV = [
   { href: ROUTES.DASHBOARD.HOME, icon: LayoutDashboard, label: "Dashboard" },
   { href: ROUTES.DASHBOARD.BOARD, icon: Columns3, label: "Board" },
+  { href: ROUTES.DASHBOARD.IMPORT, icon: Upload, label: "Import" },
   { href: ROUTES.DASHBOARD.LOG, icon: ClipboardList, label: "Handoff Log" },
   { href: ROUTES.DASHBOARD.SOP, icon: ScrollText, label: "SOP Reference" },
   { href: ROUTES.DASHBOARD.PROFILE, icon: User, label: "Profile" },
@@ -33,6 +35,7 @@ const VA_NAV = [
 const ADMIN_NAV = [
   { href: ROUTES.ADMIN.HOME, icon: LayoutDashboard, label: "Dashboard" },
   { href: ROUTES.ADMIN.BOARD, icon: Columns3, label: "Board" },
+  { href: ROUTES.ADMIN.IMPORT, icon: Upload, label: "Import" },
   { href: ROUTES.ADMIN.LOG, icon: ClipboardList, label: "Handoff Log" },
   { href: ROUTES.ADMIN.USERS, icon: Users, label: "Users" },
   { href: ROUTES.ADMIN.CHECKLIST, icon: CheckSquare, label: "Checklist" },
