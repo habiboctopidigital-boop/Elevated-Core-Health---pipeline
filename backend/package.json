@@ -16,7 +16,8 @@
 		"check": "biome check --write",
 		"test": "vitest run",
 		"test:cov": "vitest run --coverage",
-		"postinstall": "prisma generate"
+		"postinstall": "prisma generate",
+		"vercel-build": "npx prisma generate && npx tsup"
 	},
 	"dependencies": {
 		"@prisma/adapter-pg": "^7.8.0",
@@ -56,17 +57,16 @@
 	},
 	"tsup": {
 		"entry": [
-			"src/index.ts"
+			"src/index.ts",
+			"src/vercel-handler.ts"
 		],
 		"outDir": "dist",
 		"format": [
-			"esm",
 			"cjs"
 		],
 		"target": "es2020",
 		"sourcemap": true,
 		"clean": true,
-		"dts": true,
 		"splitting": false,
 		"skipNodeModulesBundle": true
 	},

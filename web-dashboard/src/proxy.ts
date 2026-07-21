@@ -5,7 +5,7 @@ const publicRoutes = ["/login", "/forgot-password", "/reset-password"]
 const dashboardRoutes = ["/dashboard"]
 const adminRoutes = ["/admin/dashboard"]
 
-export function middleware(request: NextRequest) {
+export  function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("ech_access_token")?.value
   const { pathname } = request.nextUrl
 
