@@ -2,9 +2,10 @@ import axios from "axios"
 import Cookies from "js-cookie"
 import { config } from "@/config"
 import type { ApiResponse } from "@/types"
+import { env } from "./env"
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: env.NEXT_PUBLIC_API_URL,
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
