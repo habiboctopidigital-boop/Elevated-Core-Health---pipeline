@@ -9,10 +9,12 @@ import type { Patient, PatientStage } from "@/types"
 import { Loader2, GripVertical } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/auth/useAuth"
 
 export function KanbanBoard() {
   const { data: patients, isLoading, error } = usePatients()
   const moveStage = useMoveStage()
+  const { user: currentUser } = useAuth()
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -28,11 +30,30 @@ export function KanbanBoard() {
       {} as Record<string, Patient[]>,
     ) || {}
 
-  const handleDragStart = useCallback((e: React.DragEvent, patientId: string) => {
-    setDraggingId(patientId)
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/plain", patientId)
-  }, [])
+  // — Assignment gating check —
+  const canUserMovePatient = useCallback(
+    (patient: Patient): boolean => {
+      if (!currentUser) return false
+      if (currentUser.role === "admin") return true
+      return !!patient.assignedTo && patient.assignedTo === currentUser.id
+    },
+    [currentUser],
+  )
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, patientId: string) => {
+      const patient = patients?.find((p) => p.id === patientId)
+      if (!patient || !canUserMovePatient(patient)) {
+        e.preventDefault()
+        toast.error("You can only move patients assigned to you")
+        return
+      }
+      setDraggingId(patientId)
+      e.dataTransfer.effectAllowed = "move"
+      e.dataTransfer.setData("text/plain", patientId)
+    },
+    [patients, canUserMovePatient],
+  )
 
   const handleDragEnd = useCallback(() => {
     setDraggingId(null)
@@ -65,6 +86,12 @@ export function KanbanBoard() {
       const patient = patients?.find((p) => p.id === patientId)
       if (!patient) return
 
+      // — Assignment gate on drop too —
+      if (!canUserMovePatient(patient)) {
+        toast.error("You can only move patients assigned to you")
+        return
+      }
+
       const curIdx = STAGE_ORDER.indexOf(patient.stage)
       const tgtIdx = STAGE_ORDER.indexOf(targetStage as PatientStage)
       if (curIdx === tgtIdx) return
@@ -93,7 +120,7 @@ export function KanbanBoard() {
         pendingMoves.current.delete(patientId)
       }
     },
-    [patients, moveStage],
+    [patients, moveStage, canUserMovePatient],
   )
 
   const handleMoveStage = useCallback(
@@ -126,7 +153,7 @@ export function KanbanBoard() {
 
   return (
     <>
-      <div className="h-[calc(100vh-9rem)] -mx-6 -mb-6 overflow-x-auto">
+      <div className="h-[calc(100vh-12rem)] -mx-6 -mb-6 overflow-x-auto">
         <div className="inline-flex h-full gap-3 p-6 min-w-max">
           {STAGE_ORDER.map((stage) => {
             const stagePatients = groupedPatients[stage] || []

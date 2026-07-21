@@ -18,7 +18,11 @@ adminRouter.delete("/users/:id", adminController.deleteUser);
 // Checklist management
 adminRouter.get("/checklist-items", adminController.listChecklistItems);
 adminRouter.post("/checklist-items", validateRequest(ChecklistItemSchema), adminController.createChecklistItem);
-adminRouter.patch("/checklist-items/:id", validateRequest(UpdateChecklistItemSchema), adminController.updateChecklistItem);
+adminRouter.patch(
+	"/checklist-items/:id",
+	validateRequest(UpdateChecklistItemSchema),
+	adminController.updateChecklistItem,
+);
 adminRouter.delete("/checklist-items/:id", adminController.deleteChecklistItem);
 
 // Analytics

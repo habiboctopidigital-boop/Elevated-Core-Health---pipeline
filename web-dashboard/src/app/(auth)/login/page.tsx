@@ -35,7 +35,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-md rounded-md bg-white p-10">
           <div className="mb-8 text-center">
             <div className="w-14 h-14 rounded-full bg-[#E8792E] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#E8792E]/20">
               <span className="text-white text-2xl font-bold tracking-tight">ECH</span>
@@ -126,25 +126,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="hidden lg:flex w-[480px] bg-gradient-to-br from-[#E8792E] via-[#E8792E] to-[#024d2b] items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, white 1px, transparent 1px)`,
-            backgroundSize: "24px 24px",
-          }}
-        />
-        <div className="relative text-center">
-          <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
-            <span className="text-white text-3xl font-bold tracking-tight">ECH</span>
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-3">
-            Patient Pipeline Portal
-          </h2>
-          <p className="text-[#F2994A] text-sm leading-relaxed max-w-xs mx-auto">
-            Track patients through every stage of the administrative workflow — from onboarding to reconciliation.
-          </p>
-        </div>
-      </div>
+
     </div>
   )
 }

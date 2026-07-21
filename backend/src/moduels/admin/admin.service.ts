@@ -3,7 +3,12 @@ import type { z } from "zod";
 import { hashPassword } from "@/lib/auth";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
-import type { ChecklistItemSchema, CreateUserSchema, UpdateChecklistItemSchema, UpdateUserSchema } from "./admin.validation";
+import type {
+	ChecklistItemSchema,
+	CreateUserSchema,
+	UpdateChecklistItemSchema,
+	UpdateUserSchema,
+} from "./admin.validation";
 
 type CreateUserInput = z.infer<typeof CreateUserSchema>["body"];
 type UpdateUserInput = z.infer<typeof UpdateUserSchema>["body"];
