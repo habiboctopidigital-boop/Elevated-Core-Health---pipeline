@@ -12,7 +12,7 @@ export default function VABoardPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* — Board Header — */}
+      {/* - Board Header - */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-[#E8792E]/10 flex items-center justify-center">
@@ -29,7 +29,7 @@ export default function VABoardPage() {
         </div>
       </div>
 
-      {/* — Kanban Board — */}
+      {/* - Kanban Board - */}
       <KanbanBoard initialPatientId={claimPatientId ?? undefined} />
     </div>
   )

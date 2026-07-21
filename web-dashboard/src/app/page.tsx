@@ -152,7 +152,7 @@ function HeroSection() {
               </h1>
               <p className="text-base sm:text-lg text-white/50 max-w-md leading-relaxed opacity-0 animate-slide-up animate-delay-300">
                 A purpose-built patient pipeline portal for Elevated Core Health.
-                Track every administrative stage — from booking to reconciliation —
+                Track every administrative stage - from booking to reconciliation -
                 across two VA shifts without missing a beat.
               </p>
             </div>
@@ -332,7 +332,7 @@ function HowItWorksSection() {
             Three Moves, End to End
           </h2>
           <p className="text-sm sm:text-base text-[#6B7280] leading-relaxed">
-            From booking email to reconciled closeout — the portal maps your exact workflow
+            From booking email to reconciled closeout - the portal maps your exact workflow
             so nothing falls through the cracks between shifts.
           </p>
         </ScrollReveal>
@@ -383,7 +383,7 @@ function HowItWorksSection() {
 const FEATURES = [
   {
     title: "Visual Pipeline Board",
-    desc: "A real-time kanban board shows every patient and their current stage. Drag-and-drop with server-side checklist validation — forward moves are gated, backward moves are always free. No more spreadsheets or sticky notes.",
+    desc: "A real-time kanban board shows every patient and their current stage. Drag-and-drop with server-side checklist validation - forward moves are gated, backward moves are always free. No more spreadsheets or sticky notes.",
     tag: "Pipeline",
     icon: Layers,
     stats: [
@@ -492,7 +492,7 @@ const PERSONAS = [
     name: "Donna Rhodes",
     role: "Provider & Admin",
     initials: "DR",
-    quote: "I need to see the full picture at a glance — what's been done, what's waiting, and what needs my attention — without logging into three different systems.",
+    quote: "I need to see the full picture at a glance - what's been done, what's waiting, and what needs my attention - without logging into three different systems.",
     focus: ["Oversight", "Flag resolution", "Analytics"],
     color: "from-[#E8792E] to-[#F2994A]",
   },
@@ -500,7 +500,7 @@ const PERSONAS = [
     name: "Jude",
     role: "Morning VA",
     initials: "J",
-    quote: "When I start my shift, I want to see exactly where Amanda left off. No digging through emails — just open the board and pick up the next task.",
+    quote: "When I start my shift, I want to see exactly where Amanda left off. No digging through emails - just open the board and pick up the next task.",
     focus: ["AM patients", "Checklist completion", "Handoff notes"],
     color: "from-[#F2994A] to-[#E8792E]",
   },
@@ -525,7 +525,7 @@ function TeamSection() {
           </h2>
           <p className="text-sm sm:text-base text-[#6B7280] leading-relaxed">
             Not a generic tool. Every feature is shaped by how Donna, Jude, and Amanda
-            actually work — their shifts, their responsibilities, their handoff.
+            actually work - their shifts, their responsibilities, their handoff.
           </p>
         </ScrollReveal>
 
@@ -546,7 +546,7 @@ function TeamSection() {
                   </div>
 
                   <blockquote className="text-sm text-[#6B7280] leading-relaxed mb-5 italic">
-                    &ldquo;{persona.quote}&rdquo;
+                    "{persona.quote}"
                   </blockquote>
 
                   <div className="flex flex-wrap gap-2">
@@ -621,7 +621,7 @@ function TrustSection() {
             Security & Simplicity
           </h2>
           <p className="text-sm sm:text-base text-white/40 leading-relaxed">
-            Healthcare operations require trust. Every decision — from hosting to data modeling —
+            Healthcare operations require trust. Every decision - from hosting to data modeling -
             is made with HIPAA and your team&apos;s workflow in mind.
           </p>
         </ScrollReveal>

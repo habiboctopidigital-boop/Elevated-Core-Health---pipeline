@@ -43,7 +43,7 @@ export default function VADashboardPage() {
     { label: "Profile", icon: User, href: ROUTES.DASHBOARD.PROFILE, desc: "Update your profile" },
   ]
 
-  // Quick nav grid — 4 columns for 4 items
+  // Quick nav grid - 4 columns for 4 items
   const navCols = "grid-cols-2 sm:grid-cols-4"
 
   return (

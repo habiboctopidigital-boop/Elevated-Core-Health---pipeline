@@ -80,7 +80,7 @@ export function HandoffLog() {
                       <span className="font-semibold text-[#E8792E]">
                         {log.author}
                       </span>
-                      <span className="text-[#6B7280] text-xs">&middot;</span>
+                      <span className="text-[#6B7280] text-xs">-</span>
                       <span className="text-xs text-[#6B7280]">
                         {new Date(log.createdAt).toLocaleString("en-US", {
                           month: "short",

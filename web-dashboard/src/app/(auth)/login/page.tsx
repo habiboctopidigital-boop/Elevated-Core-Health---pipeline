@@ -121,7 +121,7 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-[10px] text-[#6B7280] mt-6">
-            Elevated Core Health &middot; Patient Pipeline Portal
+            Elevated Core Health - Patient Pipeline Portal
           </p>
         </div>
       </div>

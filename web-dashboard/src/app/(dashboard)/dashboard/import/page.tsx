@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react"
 import { useBulkUpload, formatFileSize } from "@/hooks/useBulkUpload"
-import { useImportHistory } from "@/hooks/useImportHistory"
+import { useImportHistory, type ImportHistoryEntry } from "@/hooks/useImportHistory"
 import { Button } from "@/components/ui/button"
 import {
   Upload,
@@ -19,9 +19,66 @@ import {
   Trash2,
   Database,
   RefreshCw,
+  Download,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+const PREVIEW_LIMIT = 20
+
+function DataPreviewTable({
+  data,
+  maxCols = 6,
+  maxRows,
+}: {
+  data: Record<string, string | undefined>[]
+  maxCols?: number
+  maxRows?: number
+}) {
+  const rows = maxRows ? data.slice(0, maxRows) : data
+  const columns = data.length > 0 ? Object.keys(data[0]) : []
+  const displayCols = columns.slice(0, maxCols)
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className="overflow-x-auto rounded-xl border border-[#E5E7EB] bg-white">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+            <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-3 py-2.5 w-8">#</th>
+            {displayCols.map((col) => (
+              <th key={col} className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-3 py-2.5 whitespace-nowrap">
+                {col}
+              </th>
+            ))}
+            {columns.length > maxCols && (
+              <th className="text-left text-[10px] font-semibold text-[#6B7280] px-3 py-2.5">
+                +{columns.length - maxCols}
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#FFF0E5]/20">
+              <td className="text-[#6B7280] px-3 py-2.5 text-[10px]">{i + 1}</td>
+              {displayCols.map((col) => (
+                <td key={col} className="text-[#374151] px-3 py-2.5 max-w-[200px] truncate whitespace-nowrap">
+                  {row[col] || <span className="text-[#B0B0B0] italic">-</span>}
+                </td>
+              ))}
+              {columns.length > maxCols && <td className="text-[#6B7280] px-3 py-2.5 text-[10px]">-</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Upload Zone ───
 function UploadZone({
   state,
   inputRef,
@@ -90,7 +147,6 @@ function UploadZone({
         )}
       </div>
 
-      {/* Selected file + actions */}
       {(state.status === "selected" || state.status === "error") && (
         <div className="mt-4 max-w-xl mx-auto">
           <div
@@ -136,20 +192,16 @@ function UploadZone({
         </div>
       )}
 
-      {/* Success result inline */}
       {state.status === "success" && (
-        <div className="mt-6 max-w-2xl mx-auto">
-          <SuccessResult
-            result={state.result}
-            file={state.file}
-            onUploadAnother={reset}
-          />
+        <div className="mt-6 max-w-3xl mx-auto">
+          <SuccessResult result={state.result} file={state.file} onUploadAnother={reset} />
         </div>
       )}
     </div>
   )
 }
 
+// ─── Success Result ───
 function SuccessResult({
   result,
   file,
@@ -159,8 +211,20 @@ function SuccessResult({
   file: File
   onUploadAnother: () => void
 }) {
-  const previewRows = result.data.slice(0, 5)
+  const [showAll, setShowAll] = useState(false)
+  const allCount = result.data.length
+  const displayData = showAll ? result.data : result.data.slice(0, PREVIEW_LIMIT)
   const columns = result.data.length > 0 ? Object.keys(result.data[0]) : []
+
+  function downloadJson() {
+    const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = file.name.replace(/\.[^.]+$/, "") + "_parsed.json"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="rounded-2xl border border-green-100 bg-green-50/50 overflow-hidden">
@@ -174,15 +238,26 @@ function SuccessResult({
             {result.totalRows} row{result.totalRows !== 1 ? "s" : ""} from {file.name}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onUploadAnother}
-          className="text-xs gap-1.5 border-green-200 text-green-700 hover:bg-green-100"
-        >
-          <RefreshCw className="w-3 h-3" />
-          Upload Another
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={downloadJson}
+            className="text-xs gap-1.5 border-green-200 text-green-700 hover:bg-green-100"
+          >
+            <Download className="w-3 h-3" />
+            JSON
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onUploadAnother}
+            className="text-xs gap-1.5 border-green-200 text-green-700 hover:bg-green-100"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Upload Another
+          </Button>
+        </div>
       </div>
 
       {columns.length > 0 && (
@@ -206,73 +281,56 @@ function SuccessResult({
         </div>
       )}
 
-      {previewRows.length > 0 && (
+      {result.data.length > 0 && (
         <div className="px-5 pb-5">
-          <div className="flex items-center gap-1.5 mb-2.5">
-            <Database className="w-3.5 h-3.5 text-[#6B7280]" />
-            <span className="text-[10px] font-semibold text-[#374151] uppercase tracking-wider">
-              Preview (first {previewRows.length} of {result.totalRows})
-            </span>
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-1.5">
+              <Database className="w-3.5 h-3.5 text-[#6B7280]" />
+              <span className="text-[10px] font-semibold text-[#374151] uppercase tracking-wider">
+                Data Preview ({showAll ? allCount : Math.min(PREVIEW_LIMIT, allCount)} of {allCount} rows)
+              </span>
+            </div>
+            {allCount > PREVIEW_LIMIT && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="flex items-center gap-1 text-[10px] font-medium text-[#E8792E] hover:text-[#D4691F] transition-colors"
+              >
+                {showAll ? (
+                  <><EyeOff className="w-3 h-3" /> Show less</>
+                ) : (
+                  <><Eye className="w-3 h-3" /> Show all {allCount} rows</>
+                )}
+              </button>
+            )}
           </div>
-          <div className="overflow-x-auto rounded-xl border border-green-100 bg-white">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-[#F9FAFB] border-b border-green-100">
-                  <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-3 py-2.5 w-8">#</th>
-                  {columns.slice(0, 6).map((col) => (
-                    <th key={col} className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-3 py-2.5 whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
-                  {columns.length > 6 && (
-                    <th className="text-left text-[10px] font-semibold text-[#6B7280] px-3 py-2.5">
-                      +{columns.length - 6}
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {previewRows.map((row, i) => (
-                  <tr key={i} className="border-b border-green-50 last:border-0 hover:bg-[#FFF0E5]/20">
-                    <td className="text-[#6B7280] px-3 py-2.5 text-[10px]">{i + 1}</td>
-                    {columns.slice(0, 6).map((col) => (
-                      <td key={col} className="text-[#374151] px-3 py-2.5 max-w-[180px] truncate whitespace-nowrap">
-                        {row[col] || <span className="text-[#B0B0B0] italic">—</span>}
-                      </td>
-                    ))}
-                    {columns.length > 6 && <td className="text-[#6B7280] px-3 py-2.5 text-[10px]">—</td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataPreviewTable data={displayData} />
+          {!showAll && allCount > PREVIEW_LIMIT && (
+            <p className="text-[10px] text-[#6B7280] mt-2 text-center">
+              Showing first {PREVIEW_LIMIT} rows. Click "Show all" to view all {allCount} rows.
+            </p>
+          )}
         </div>
       )}
     </div>
   )
 }
 
+// ─── History Row ───
 function HistoryRow({
   entry,
   isExpanded,
   onToggle,
   onDelete,
 }: {
-  entry: ReturnType<typeof useImportHistory>["entries"][number]
+  entry: ImportHistoryEntry
   isExpanded: boolean
   onToggle: () => void
   onDelete: () => void
 }) {
   const date = new Date(entry.timestamp)
-  const formattedDate = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
-  const formattedTime = date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  })
+  const formattedDate = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  const formattedTime = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+  const preview = entry.previewRows ?? []
 
   return (
     <div className="group">
@@ -287,7 +345,7 @@ function HistoryRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-[#374151] truncate">{entry.fileName}</p>
           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#6B7280]">
-            <span>{entry.fileType.toUpperCase()}</span>
+            <span>{entry.fileType}</span>
             <span className="w-1 h-1 rounded-full bg-[#D4D4D8]" />
             <span>{entry.totalRows} rows</span>
             <span className="w-1 h-1 rounded-full bg-[#D4D4D8]" />
@@ -313,32 +371,48 @@ function HistoryRow({
       </div>
 
       {isExpanded && (
-        <div className="px-4 pb-3 pl-11">
-          <div className="p-3 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] space-y-2">
-            <div className="flex items-center gap-1.5">
+        <div className="px-4 pb-4 pl-11 space-y-3">
+          {/* Metadata */}
+          <div className="p-3 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB]">
+            <div className="flex items-center gap-1.5 mb-2">
               <Table className="w-3 h-3 text-[#6B7280]" />
-              <span className="text-[10px] font-semibold text-[#374151] uppercase tracking-wider">Columns</span>
+              <span className="text-[10px] font-semibold text-[#374151] uppercase tracking-wider">Details</span>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 mb-2">
               {entry.columns.map((col) => (
                 <span key={col} className="text-[10px] font-mono bg-white text-[#6B7280] px-2 py-0.5 rounded border border-[#E5E7EB]">
                   {col}
                 </span>
               ))}
             </div>
-            <div className="flex items-center gap-4 text-[10px] text-[#6B7280] pt-1 border-t border-[#E5E7EB]">
+            <div className="flex items-center gap-4 text-[10px] text-[#6B7280] pt-2 border-t border-[#E5E7EB]">
               <span>File: {entry.fileName}</span>
-              <span>Type: {entry.fileType.toUpperCase()}</span>
+              <span>Type: {entry.fileType}</span>
               <span>Rows: {entry.totalRows}</span>
               <span>Size: {entry.fileSize}</span>
+              <span>Date: {formattedDate} {formattedTime}</span>
             </div>
           </div>
+
+          {/* Preview data */}
+          {preview.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Database className="w-3 h-3 text-[#6B7280]" />
+                <span className="text-[10px] font-semibold text-[#374151] uppercase tracking-wider">
+                  Data Preview (first {preview.length})
+                </span>
+              </div>
+              <DataPreviewTable data={preview} maxCols={8} />
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
 
+// ─── Page ───
 export default function ImportPage() {
   const bulk = useBulkUpload()
   const { entries, clearHistory, removeEntry } = useImportHistory()

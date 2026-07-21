@@ -11,7 +11,7 @@ export type UploadState =
   | { status: "idle" }
   | { status: "dragging" }
   | { status: "selected"; file: File }
-  | { status: "uploading"; file: File; progress: number }
+  | { status: "uploading"; file: File }
   | { status: "success"; file: File; result: { totalRows: number; data: ParsedRow[] } }
   | { status: "error"; file: File; message: string }
 
@@ -26,9 +26,16 @@ function genId() {
   return `import-${Date.now()}-${++idCounter}`
 }
 
+function getExt(name: string) {
+  const parts = name.split(".")
+  return parts.length > 1 ? (parts.pop() ?? "").toLowerCase() : ""
+}
+
 export function useBulkUpload() {
   const [state, setState] = useState<UploadState>({ status: "idle" })
   const inputRef = useRef<HTMLInputElement>(null)
+  const stateRef = useRef(state)
+  stateRef.current = state
   const { addEntry } = useImportHistory()
 
   const reset = useCallback(() => {
@@ -37,7 +44,7 @@ export function useBulkUpload() {
   }, [])
 
   const handleFile = useCallback((file: File) => {
-    const ext = "." + file.name.split(".").pop()?.toLowerCase()
+    const ext = "." + getExt(file.name)
     if (!ALLOWED_TYPES.includes(ext)) {
       setState({ status: "error", file, message: "Unsupported file type. Accepted: .csv, .xlsx, .xls" })
       return
@@ -54,22 +61,26 @@ export function useBulkUpload() {
   }, [])
 
   const upload = useCallback(async () => {
-    if (state.status !== "selected") return
-    const { file } = state
-    setState({ status: "uploading", file, progress: 0 })
+    const current = stateRef.current
+    if (current.status !== "selected") return
+    const { file } = current
+    setState({ status: "uploading", file })
 
     try {
       const result = await ImportService.uploadFile(file)
+      console.log("=== PARSED IMPORT DATA ===", { fileName: file.name, totalRows: result.totalRows, data: result.data })
       setState({ status: "success", file, result })
 
+      const previewRows = result.data.slice(0, 20)
       const columns = result.data.length > 0 ? Object.keys(result.data[0]) : []
       const entry: ImportHistoryEntry = {
         id: genId(),
         fileName: file.name,
-        fileType: (ext() || "unknown").replace(".", ""),
+        fileType: getExt(file.name).toUpperCase(),
         fileSize: formatFileSize(file.size),
         totalRows: result.totalRows,
         columns,
+        previewRows,
         status: "success",
         timestamp: new Date().toISOString(),
       }
@@ -78,17 +89,11 @@ export function useBulkUpload() {
       const message = err instanceof Error ? err.message : "Upload failed. Please try again."
       setState({ status: "error", file, message })
     }
-  }, [state, addEntry])
-
-  function ext() {
-    if (state.status === "idle") return ""
-    return "." + state.file.name.split(".").pop()?.toLowerCase()
-  }
+  }, [addEntry])
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
-      setState({ status: "idle" })
       const file = e.dataTransfer.files[0]
       if (file) handleFile(file)
     },
@@ -97,11 +102,11 @@ export function useBulkUpload() {
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setState((s) => (s.status === "idle" || s.status === "dragging" ? { status: "dragging" } : s))
+    setState({ status: "dragging" })
   }, [])
 
   const onDragLeave = useCallback(() => {
-    setState((s) => (s.status === "dragging" ? { status: "idle" } : s))
+    setState({ status: "idle" })
   }, [])
 
   return {

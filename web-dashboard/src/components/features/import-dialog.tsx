@@ -346,10 +346,10 @@ function SuccessView({
                     <td className="text-[#6B7280] px-3 py-2">{i + 1}</td>
                     {columns.slice(0, 5).map((col) => (
                       <td key={col} className="text-[#374151] px-3 py-2 max-w-[160px] truncate whitespace-nowrap">
-                        {row[col] || <span className="text-[#B0B0B0] italic">—</span>}
+                        {row[col] || <span className="text-[#B0B0B0] italic">-</span>}
                       </td>
                     ))}
-                    {columns.length > 5 && <td className="text-[#6B7280] px-3 py-2">—</td>}
+                    {columns.length > 5 && <td className="text-[#6B7280] px-3 py-2">-</td>}
                   </tr>
                 ))}
               </tbody>

@@ -30,7 +30,7 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
       {} as Record<string, Patient[]>,
     ) || {}
 
-  // — Assignment gating check —
+  // - Assignment gating check —
   const canUserMovePatient = useCallback(
     (patient: Patient): boolean => {
       if (!currentUser) return false
@@ -86,7 +86,7 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
       const patient = patients?.find((p) => p.id === patientId)
       if (!patient) return
 
-      // — Assignment gate on drop too —
+      // - Assignment gate on drop too —
       if (!canUserMovePatient(patient)) {
         toast.error("You can only move patients assigned to you")
         return

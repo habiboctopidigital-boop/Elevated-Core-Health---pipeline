@@ -175,7 +175,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   )}
                 </div>
                 <p className="text-xs text-[#6B7280]">
-                  {STAGE_LABELS[patient.stage]} &middot; Created{" "}
+                  {STAGE_LABELS[patient.stage]} - Created{" "}
                   {new Date(patient.createdAt).toLocaleDateString()}
                 </p>
               </div>
@@ -234,7 +234,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               {/* Checklist */}
               <div>
                 <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2">
-                  Checklist — {STAGE_LABELS[patient.stage]}
+                  Checklist - {STAGE_LABELS[patient.stage]}
                 </p>
 
                 {totalItems > 0 ? (
@@ -373,12 +373,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
               </div>
 
-              {/* Flag for Donna Section — VA's flag message */}
+              {/* Flag for Donna Section - VA's flag message */}
               {patient.isFlagged && (
                 <div className="bg-[#FEF2F2] border border-red-100 rounded-lg p-3">
                   <p className="text-xs font-semibold text-[#E8792E] flex items-center gap-1.5">
                     <Flag className="w-3.5 h-3.5" fill="#E8792E" />
-                    Flag for Donna — Reason
+                    Flag for Donna - Reason
                   </p>
                   {patient.flagReason && (
                     <p className="text-sm text-[#1A1B1E] mt-1">
@@ -389,13 +389,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     <p className="text-[11px] text-[#6B7280] mt-1">
                       by {patient.flaggedByUser.name}
                       {patient.flaggedAt &&
-                        ` · ${new Date(patient.flaggedAt).toLocaleString()}`}
+                        ` - ${new Date(patient.flaggedAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Donna's Response Section — when flag has been cleared */}
+              {/* Donna's Response Section - when flag has been cleared */}
               {patient.flagClearedReason && (
                 <div className="bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-lg p-3">
                   <p className="text-xs font-semibold text-[#036638] flex items-center gap-1.5">
@@ -409,7 +409,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     <p className="text-[11px] text-[#6B7280] mt-1">
                       by {patient.flagClearedByUser.name}
                       {patient.flagClearedAt &&
-                        ` · ${new Date(patient.flagClearedAt).toLocaleString()}`}
+                        ` - ${new Date(patient.flagClearedAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
@@ -501,7 +501,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
               )}
 
-              {/* Claim / Assign — show dropdown for VAs, simple claim for unassigned */}
+              {/* Claim / Assign - show dropdown for VAs, simple claim for unassigned */}
               {(isAdmin || (!patient.assignedUser && user?.role === "va")) && vaList && (
                 <div>
                   <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2">

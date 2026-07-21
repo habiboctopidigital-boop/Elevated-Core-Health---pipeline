@@ -314,7 +314,7 @@ function FlaggedPatientRow({
         <p className="text-sm font-semibold text-[#1A1B1E] truncate">{patient.name}</p>
         <p className="text-xs text-[#6B7280] truncate">
           {patient.flagReason || "No reason given"}
-          {patient.flaggedByUser && ` — flagged by ${patient.flaggedByUser.name}`}
+          {patient.flaggedByUser && ` - flagged by ${patient.flaggedByUser.name}`}
         </p>
       </div>
       <span className="text-[10px] bg-[#FFF0E5] text-[#E8792E] px-2 py-0.5 rounded font-medium capitalize shrink-0">

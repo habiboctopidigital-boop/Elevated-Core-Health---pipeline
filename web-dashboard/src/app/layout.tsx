@@ -14,7 +14,7 @@ import ThemeProvider from "@/providers/ThemeProvider"
 import { Toaster } from "sonner"
 
 export const metadata = {
-  title: "Elevated Core Health — Patient Pipeline Portal",
+  title: "Elevated Core Health - Patient Pipeline Portal",
   description: "Internal operations portal for patient pipeline management",
 }
 

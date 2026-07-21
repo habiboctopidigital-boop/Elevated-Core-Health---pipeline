@@ -43,7 +43,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const { data: vaList } = useListVas()
   const assignPatient = useAssignPatient()
 
-  // — Checklist progress for this stage —
+  // - Checklist progress for this stage —
   const stageDefs = checklistDefs?.filter((d) => d.stage === patient.stage) || []
   const stageState = patient.checklistState?.[patient.stage] || {}
   const completedCount = stageDefs.filter((d) => stageState[d.id] === true).length
@@ -51,7 +51,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const allComplete = totalCount > 0 ? completedCount === totalCount : true
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100
 
-  // — Assignment-gated stage changes —
+  // - Assignment-gated stage changes —
   const isAdmin = currentUser?.role === "admin"
   const isAssignedUser = !!patient.assignedTo && patient.assignedTo === currentUser?.id
   const canMoveStage = !isAdmin && isAssignedUser
@@ -74,7 +74,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         isDragging && "opacity-50 scale-95 shadow-lg rotate-2",
       )}
     >
-      {/* — Header: Name + badges — */}
+      {/* - Header: Name + badges - */}
       <div className="flex items-start justify-between mb-2 gap-2">
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -110,7 +110,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         </div>
       </div>
 
-      {/* — Info row: appointment + phone — */}
+      {/* - Info row: appointment + phone - */}
       <div className="flex items-center gap-3 mb-1.5 flex-wrap">
         {patient.appointmentDatetime && (
           <p className="text-[11px] text-[#6B7280] flex items-center gap-1">
@@ -131,7 +131,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         )}
       </div>
 
-      {/* — Assigned user — */}
+      {/* - Assigned user - */}
       {patient.assignedUser ? (
         <div className="flex items-center gap-1.5 mb-2">
           <div className="w-4 h-4 rounded-full bg-[#E8792E]/10 flex items-center justify-center">
@@ -152,7 +152,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         </div>
       )}
 
-      {/* — Checklist progress — */}
+      {/* - Checklist progress - */}
       {totalCount > 0 ? (
         <div className="mb-2 px-0.5">
           <div className="flex items-center justify-between mb-1">
@@ -211,7 +211,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         </div>
       )}
 
-      {/* — Footer: timestamp + move buttons — */}
+      {/* - Footer: timestamp + move buttons - */}
       <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]/50">
         <span className="text-[10px] text-[#6B7280]">{timeAgo(patient.updatedAt)}</span>
 

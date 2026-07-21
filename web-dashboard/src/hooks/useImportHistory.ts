@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 const STORAGE_KEY = "ech_import_history"
 
@@ -11,11 +11,12 @@ export interface ImportHistoryEntry {
   fileSize: string
   totalRows: number
   columns: string[]
+  previewRows: Record<string, string | undefined>[]
   status: "success"
   timestamp: string
 }
 
-function getSnapshot(): ImportHistoryEntry[] {
+function readStorage(): ImportHistoryEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? JSON.parse(raw) : []
@@ -24,42 +25,42 @@ function getSnapshot(): ImportHistoryEntry[] {
   }
 }
 
-function subscribe(callback: () => void): () => void {
-  const handler = () => callback()
-  window.addEventListener("storage", handler)
-  return () => window.removeEventListener("storage", handler)
-}
-
-const listeners = new Set<() => void>()
-
-function emit() {
-  for (const listener of listeners) listener()
-}
-
 export function useImportHistory() {
-  const entries = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  const [entries, setEntries] = useState<ImportHistoryEntry[]>(readStorage)
 
-  const addEntry = useCallback((entry: ImportHistoryEntry) => {
-    try {
-      const current = getSnapshot()
-      const updated = [entry, ...current]
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-      emit()
-    } catch {
-      // localStorage full or unavailable
-    }
+  const sync = useCallback(() => {
+    setEntries(readStorage())
   }, [])
+
+  useEffect(() => {
+    window.addEventListener("storage", sync)
+    return () => window.removeEventListener("storage", sync)
+  }, [sync])
+
+  const addEntry = useCallback(
+    (entry: ImportHistoryEntry) => {
+      try {
+        const current = readStorage()
+        const updated = [entry, ...current]
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+        setEntries(updated)
+      } catch {
+        // localStorage full or unavailable
+      }
+    },
+    [],
+  )
 
   const clearHistory = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
-    emit()
+    setEntries([])
   }, [])
 
   const removeEntry = useCallback((id: string) => {
-    const current = getSnapshot()
+    const current = readStorage()
     const updated = current.filter((e) => e.id !== id)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    emit()
+    setEntries(updated)
   }, [])
 
   return { entries, addEntry, clearHistory, removeEntry }

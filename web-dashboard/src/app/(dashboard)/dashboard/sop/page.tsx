@@ -24,9 +24,9 @@ const CHECKLISTS: Record<string, string[]> = {
   ],
   chart_signed: [
     "Verify Optimantra note is signed",
-    "CPT level check — appropriate for services rendered",
-    "ICD-10 alignment — codes match documentation",
-    "Documentation support check — all billed services documented",
+    "CPT level check - appropriate for services rendered",
+    "ICD-10 alignment - codes match documentation",
+    "Documentation support check - all billed services documented",
   ],
   sent_to_billing: [
     "Claim submitted to correct payer (Headway / Grow Therapy / self-pay)",
@@ -91,7 +91,7 @@ export default function SOPPage() {
             <CheckCircle className="w-4 h-4 text-[#F2994A] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
               <strong>No clinical data.</strong> Notes fields are for operational status
-              only — never diagnoses or clinical details.
+              only - never diagnoses or clinical details.
             </p>
           </div>
         </div>

@@ -47,7 +47,7 @@ export default function AdminBoardPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* — Board Header — */}
+      {/* - Board Header - */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-[#E8792E]/10 flex items-center justify-center">
@@ -55,7 +55,7 @@ export default function AdminBoardPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-[#1A1B1E]">Admin Pipeline Board</h1>
-            <p className="text-xs text-[#6B7280]">Full oversight — manage all patient stages</p>
+            <p className="text-xs text-[#6B7280]">Full oversight - manage all patient stages</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -64,7 +64,7 @@ export default function AdminBoardPage() {
         </div>
       </div>
 
-      {/* — Kanban Board — */}
+      {/* - Kanban Board - */}
       <div className="h-[calc(100vh-12rem)] -mx-6 -mb-6 overflow-x-auto">
         <div className="inline-flex h-full gap-3 p-6 min-w-max">
           {STAGE_ORDER.map((stage) => {
