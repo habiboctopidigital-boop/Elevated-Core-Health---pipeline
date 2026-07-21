@@ -76,9 +76,16 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
     >
       {/* — Header: Name + badges — */}
       <div className="flex items-start justify-between mb-2 gap-2">
-        <p className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate flex-1">
+        <div className="flex flex-col gap-y-2">
+          <h1 className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate flex-1">
           {patient.name}
-        </p>
+         
+        </h1>
+        <h1 className="text-sm font-semibold text-[#1A1B1E]   flex-1">
+          {patient.email}
+         
+        </h1>
+        </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {patient.isFlagged && (
             <Flag className="w-3.5 h-3.5 text-[#E8792E]" fill="#E8792E" />
