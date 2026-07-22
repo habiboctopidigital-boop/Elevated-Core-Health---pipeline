@@ -26,8 +26,8 @@ import { useAuth } from "@/hooks/auth/useAuth"
 const VA_NAV = [
   { href: ROUTES.DASHBOARD.HOME, icon: LayoutDashboard, label: "Dashboard" },
   { href: ROUTES.DASHBOARD.BOARD, icon: Columns3, label: "Board" },
-  { href: ROUTES.DASHBOARD.IMPORT, icon: Upload, label: "Import" },
-  { href: ROUTES.DASHBOARD.LOG, icon: ClipboardList, label: "Handoff Log" },
+  { href: ROUTES.DASHBOARD.IMPORT, icon: Upload, label: "Patients Import" },
+  { href: ROUTES.DASHBOARD.LOG, icon: ClipboardList, label: "Activity Log" },
   { href: ROUTES.DASHBOARD.SOP, icon: ScrollText, label: "SOP Reference" },
   { href: ROUTES.DASHBOARD.PROFILE, icon: User, label: "Profile" },
 ]
@@ -35,11 +35,11 @@ const VA_NAV = [
 const ADMIN_NAV = [
   { href: ROUTES.ADMIN.HOME, icon: LayoutDashboard, label: "Dashboard" },
   { href: ROUTES.ADMIN.BOARD, icon: Columns3, label: "Board" },
-  { href: ROUTES.ADMIN.IMPORT, icon: Upload, label: "Import" },
-  { href: ROUTES.ADMIN.LOG, icon: ClipboardList, label: "Handoff Log" },
+  { href: ROUTES.ADMIN.IMPORT, icon: Upload, label: "Patients Import" },
+  { href: ROUTES.ADMIN.LOG, icon: ClipboardList, label: "Activity Log" },
   { href: ROUTES.ADMIN.USERS, icon: Users, label: "Users" },
-  { href: ROUTES.ADMIN.CHECKLIST, icon: CheckSquare, label: "Checklist" },
-  { href: ROUTES.ADMIN.PROFILE, icon: User, label: "Profile" },
+  { href: ROUTES.ADMIN.CHECKLIST, icon: CheckSquare, label: "Satge Checklist" },
+  { href: ROUTES.ADMIN.PROFILE, icon: User, label: "Profile"},
 ]
 
 interface EchSidebarProps {
@@ -141,7 +141,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
           onClick={handleLogout}
           disabled={loggingOut}
           className={cn(
-            "w-full bg-[#1F2937] hover:bg-[#374151] text-gray-300 hover:text-white border border-white/5 disabled:opacity-50 transition-colors h-9",
+            "w-full bg-[#1F2937] hover:bg-[#374151] text-gray-300 hover:text-white border border-white/5 disabled:opacity-50 transition-colors h-9 cursor-pointer",
             isCollapsed ? "px-0 justify-center" : "justify-start px-3 gap-2"
           )}
           title={isCollapsed ? "Sign out" : undefined}

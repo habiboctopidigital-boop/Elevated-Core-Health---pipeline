@@ -60,7 +60,6 @@ export default function AdminBoardPage() {
         </div>
         <div className="flex items-center gap-2">
           <ImportDialog />
-          <StatusBar />
         </div>
       </div>
 
