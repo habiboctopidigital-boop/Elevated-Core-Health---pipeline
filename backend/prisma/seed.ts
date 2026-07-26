@@ -48,6 +48,7 @@ async function main() {
 			create: {
 				name: "Donna Rhodes",
 				email: "donna@elevatedcore.com",
+				
 				passwordHash: donnaPassword,
 				role: "admin",
 				shift: null,

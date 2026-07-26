@@ -462,7 +462,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowClearInput(true)}
-                  className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+                  className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-300 hover:text-black"
                 >
                   Clear Flag with Feedback
                 </Button>

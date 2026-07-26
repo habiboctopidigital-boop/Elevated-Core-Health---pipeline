@@ -131,7 +131,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
           {!isCollapsed && (
             <div className="min-w-0">
               <p className="text-gray-200 text-sm font-semibold truncate leading-tight">{user?.name}</p>
-              <p className="text-[#9CA3AF] text-[11px] truncate capitalize font-medium tracking-wide mt-0.5">{user?.role}</p>
+              <p className="text-[#9CA3AF] text-[11px] truncate capitalize font-medium tracking-wide mt-0.5">{user?.role === "va" ? "virtual assistant" : "Admin"}</p>
             </div>
           )}
         </div>
