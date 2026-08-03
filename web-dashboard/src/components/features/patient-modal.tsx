@@ -167,6 +167,17 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setClearReason("")
   }, [patient?.id, patient?.notes])
 
+  // ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && open) {
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", handleEscape)
+    return () => window.removeEventListener("keydown", handleEscape)
+  }, [open, onClose])
+
   const handleSaveNotes = async () => {
     if (!patient) return
     setSavingNotes(true)
@@ -225,23 +236,23 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto mx-4 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto mx-4 animate-in fade-in zoom-in-95 duration-200 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
         {isLoading || !patient ? (
           <div className="p-8 text-center text-[#6B7280] text-sm">
             {isLoading ? "Loading..." : "Patient not found"}
           </div>
         ) : (
           <>
-            <div className="sticky top-0 bg-white border-b border-[#E5E7EB]/50 px-6 py-4 flex items-start justify-between z-10 rounded-t-xl">
+            <div className="sticky top-0 bg-gradient-to-r from-[#036638] to-[#025030] border-b-0 px-8 py-6 flex items-start justify-between z-10 rounded-t-2xl shadow-sm">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-lg font-bold text-[#1A1B1E] truncate">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-bold text-white truncate">
                     {patient.name}
                   </h2>
                   {patient.isFlagged && (
                     <Badge
                       variant="outline"
-                      className="bg-[#F0F9F5] text-[#036638] border-[#036638]/30 text-[10px] font-semibold gap-1"
+                      className="bg-white text-[#036638] border-white text-[10px] font-bold gap-1 shadow-sm"
                     >
                       <Flag className="w-3 h-3" fill="#036638" />
                       Flagged
@@ -250,30 +261,36 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   {stale && (
                     <Badge
                       variant="outline"
-                      className="bg-[#FEFCE8] text-amber-600 border-amber-200 text-[10px] font-semibold gap-1"
+                      className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] font-bold gap-1 shadow-sm"
                     >
                       <AlertTriangle className="w-3 h-3" />
                       Stale
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-[#6B7280]">
-                  {STAGE_LABELS[patient.stage]} - Created{" "}
-                  {new Date(patient.createdAt).toLocaleDateString()}
-                </p>
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
+                    {STAGE_LABELS[patient.stage]}
+                  </span>
+                  <p className="text-sm text-white/80">
+                    Created {new Date(patient.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-[#EBF7EC] text-[#6B7280] hover:text-[#036638] transition-colors"
+                title="Press ESC to close"
+                className="p-2 rounded-lg hover:bg-white/15 text-white hover:text-white transition-all ml-4 flex-shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-8 space-y-7">
               {/* Stage Navigation */}
-              <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg p-4">
-                <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-3">
+              <div className="bg-gradient-to-br from-[#F9FAFB] to-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
+                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                   Pipeline Stage
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -321,9 +338,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Checklist */}
-              <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                     Checklist - {STAGE_LABELS[patient.stage]}
                   </p>
                   {!allComplete && totalItems > 0 && !isAdmin && (
@@ -369,7 +387,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         return (
                           <label
                             key={item.id}
-                            className="flex items-start gap-2.5 py-2.5 px-3 rounded-md hover:bg-[#F9FAFB] cursor-pointer transition-colors border border-transparent hover:border-[#E5E7EB]"
+                            className="flex items-start gap-2.5 py-3 px-3 rounded-lg hover:bg-[#F9FAFB] cursor-pointer transition-all border border-transparent hover:border-[#E5E7EB] group"
                           >
                             <input
                               type="checkbox"
@@ -381,13 +399,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                   checked: !checked,
                                 })
                               }
-                              className="mt-0.5 w-4 h-4 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638]"
+                              className="mt-1 w-5 h-5 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638] cursor-pointer"
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span
                                   className={cn(
-                                    "text-sm font-semibold",
+                                    "text-sm font-semibold transition-all",
                                     checked
                                       ? "text-[#6B7280] line-through"
                                       : "text-[#1A1B1E]",
@@ -395,10 +413,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                 >
                                   {item.label}
                                 </span>
-                                <span className="text-[9px] font-bold text-red-500">*</span>
+                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold rounded-full uppercase tracking-wider">
+                                  Required
+                                </span>
                               </div>
                               {item.description && (
-                                <p className="text-[11px] text-[#6B7280] mt-0.5">
+                                <p className="text-[11px] text-[#6B7280] mt-1">
                                   {item.description}
                                 </p>
                               )}
@@ -416,10 +436,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Stage-Specific SOPs */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-4 h-4 text-amber-600" />
-                  <p className="text-[11px] font-semibold text-amber-900 uppercase tracking-wider">
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Zap className="w-5 h-5 text-amber-600" />
+                  <p className="text-[11px] font-bold text-amber-900 uppercase tracking-widest">
                     Standard Operating Procedure
                   </p>
                 </div>
@@ -434,11 +454,11 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Eligibility Check (VOB) */}
-              <div className="bg-[#F0F9F5] border border-[#65BD6C]/30 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-[#036638]" />
-                    <p className="text-[11px] font-semibold text-[#036638] uppercase tracking-wider">
+              <div className="bg-gradient-to-br from-[#F0F9F5] to-[#E8F5F2] border border-[#65BD6C]/30 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="w-5 h-5 text-[#036638]" />
+                    <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest">
                       Verification of Benefits (VOB)
                     </p>
                   </div>
@@ -504,8 +524,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               {/* Details */}
               <div className="grid grid-cols-2 gap-4">
                 {patient.appointmentDatetime && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Appointment
                     </p>
                     <p className="text-sm text-[#1A1B1E] flex items-center gap-1.5">
@@ -521,38 +541,38 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
                 )}
                 {patient.assignedUser && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Assigned To
                     </p>
-                    <p className="text-sm text-[#1A1B1E]">
+                    <p className="text-sm font-medium text-[#1A1B1E]">
                       {patient.assignedUser.name}
                     </p>
                   </div>
                 )}
-                <div>
-                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
+                <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                     Source
                   </p>
-                  <p className="text-sm text-[#1A1B1E] capitalize">
+                  <p className="text-sm font-medium text-[#1A1B1E] capitalize">
                     {patient.source || "Manual"}
                   </p>
                 </div>
                 {patient.bookingPlatform && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Booking Platform
                     </p>
-                    <p className="text-sm text-[#1A1B1E]">
+                    <p className="text-sm font-medium text-[#1A1B1E]">
                       {patient.bookingPlatform}
                     </p>
                   </div>
                 )}
-                <div>
-                  <p className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider mb-1">
+                <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                     Last Updated
                   </p>
-                  <p className="text-sm text-[#1A1B1E]">
+                  <p className="text-sm font-medium text-[#036638]">
                     {timeAgo(patient.updatedAt)}
                   </p>
                 </div>
@@ -560,21 +580,21 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Flag for Donna Section - VA's flag message */}
               {patient.isFlagged && (
-                <div className="bg-[#F0F9F5] border border-red-100 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-[#036638] flex items-center gap-1.5">
-                    <Flag className="w-3.5 h-3.5" fill="#036638" />
-                    Flag for Donna - Reason
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
+                  <p className="text-sm font-bold text-red-700 flex items-center gap-2">
+                    <Flag className="w-4 h-4" fill="#dc2626" />
+                    Flagged for Donna
                   </p>
                   {patient.flagReason && (
-                    <p className="text-sm text-[#1A1B1E] mt-1">
+                    <p className="text-sm text-[#1A1B1E] mt-2 bg-white rounded-lg p-3 border border-red-100">
                       {patient.flagReason}
                     </p>
                   )}
                   {patient.flaggedByUser && (
-                    <p className="text-[11px] text-[#6B7280] mt-1">
-                      by {patient.flaggedByUser.name}
+                    <p className="text-[11px] text-[#6B7280] mt-2 font-medium">
+                      by <span className="text-[#036638] font-semibold">{patient.flaggedByUser.name}</span>
                       {patient.flaggedAt &&
-                        ` - ${new Date(patient.flaggedAt).toLocaleString()}`}
+                        ` • ${new Date(patient.flaggedAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
@@ -582,19 +602,19 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Donna's Response Section - when flag has been cleared */}
               {patient.flagClearedReason && (
-                <div className="bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-[#036638] flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
+                <div className="bg-[#EBF7EC] border border-[#65BD6C]/40 rounded-xl p-4 shadow-sm">
+                  <p className="text-sm font-bold text-[#036638] flex items-center gap-2">
+                    <Check className="w-4 h-4" />
                     Donna's Response
                   </p>
-                  <p className="text-sm text-[#1A1B1E] mt-1">
+                  <p className="text-sm text-[#1A1B1E] mt-2 bg-white rounded-lg p-3 border border-[#65BD6C]/20">
                     {patient.flagClearedReason}
                   </p>
                   {patient.flagClearedByUser && (
-                    <p className="text-[11px] text-[#6B7280] mt-1">
-                      by {patient.flagClearedByUser.name}
+                    <p className="text-[11px] text-[#6B7280] mt-2 font-medium">
+                      by <span className="text-[#036638] font-semibold">Donna Rhodes</span>
                       {patient.flagClearedAt &&
-                        ` - ${new Date(patient.flagClearedAt).toLocaleString()}`}
+                        ` • ${new Date(patient.flagClearedAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
@@ -730,23 +750,24 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               )}
 
               {/* Operational Notes */}
-              <div>
-                <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2">
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                   Operational Notes
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Textarea
                     placeholder="Add operational notes (no clinical data)..."
                     value={notesText}
                     onChange={(e) => setNotesText(e.target.value)}
-                    className="text-sm min-h-[80px]"
+                    className="text-sm min-h-24 rounded-lg border-[#E5E7EB] focus:border-[#036638] focus:ring-[#036638]"
                   />
                   <div className="flex justify-end">
                     <Button
                       size="sm"
                       onClick={handleSaveNotes}
                       disabled={savingNotes}
-                      className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
+                      className="bg-[#036638] hover:bg-[#025030] text-white text-xs font-semibold px-4 rounded-lg transition-all shadow-sm"
                     >
                       {savingNotes ? "Saving..." : "Save Notes"}
                     </Button>
@@ -756,11 +777,11 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Activity Log */}
               <div>
-                <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <MessageSquare className="w-3 h-3" />
+                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
                   Activity Log
                 </p>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-2 bg-gray-50 rounded-xl p-4 border border-[#E5E7EB]">
                   {logData?.logs && logData.logs.length > 0 ? (
                     logData.logs.map((log) => {
                       const isAdminMessage = log.author === "Donna Rhodes" || log.author.toLowerCase() === "admin"
