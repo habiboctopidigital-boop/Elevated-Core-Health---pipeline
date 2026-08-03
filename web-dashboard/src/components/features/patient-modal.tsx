@@ -301,35 +301,42 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     const isCurrent = stage === patient.stage
                     const isNext = idx === currentIdx + 1
                     const isFuture = idx > currentIdx + 1
-                    const isClickable = !isFuture && (!isNext || allComplete || isAdmin)
+
+                    // For VAs: next stage is only clickable if current stage checklist is 100% complete
+                    // For Admin: next stage is always clickable (they can bypass)
+                    const canAdvanceToNext = isAdmin ? true : allComplete
+                    const isClickable =
+                      isCurrent ? false : // Can't click current stage
+                      isComplete ? true :  // Can click completed stages (go back)
+                      isNext ? canAdvanceToNext : // Next stage only if checklist complete
+                      false // Can't skip stages
 
                     const isBlockedForVA = !isAdmin && isNext && !allComplete
+                    const isDisabledReason = isBlockedForVA
+                      ? "Complete all checklist items first"
+                      : isFuture
+                        ? "Complete the current stage first"
+                        : null
 
                     return (
                       <button
                         key={stage}
                         onClick={() => isClickable && handleMoveStage(stage)}
                         disabled={moveStage.isPending || !isClickable}
-                        title={
-                          isBlockedForVA
-                            ? "Complete all checklist items first"
-                            : isFuture
-                              ? "Complete the current stage first"
-                              : STAGE_LABELS[stage]
-                        }
+                        title={isDisabledReason || STAGE_LABELS[stage]}
                         className={cn(
-                          "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all border",
+                          "flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all border",
                           isCurrent &&
-                            "bg-[#036638] text-white border-[#036638] shadow-sm",
+                            "bg-[#036638] text-white border-[#036638] shadow-md",
                           isComplete &&
-                            "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/30",
-                          !isCurrent && !isComplete && !isFuture && !isBlockedForVA &&
-                            "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#65BD6C]/40 cursor-pointer",
-                          (isFuture || isBlockedForVA) &&
-                            "bg-gray-50 text-[#B0B2B8] border-[#E5E7EB]/50 cursor-not-allowed opacity-60",
+                            "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/50 hover:bg-[#dff4eb] cursor-pointer",
+                          !isCurrent && !isComplete && !isFuture && isClickable &&
+                            "bg-white text-[#036638] border-[#E5E7EB] hover:border-[#65BD6C] hover:shadow-sm cursor-pointer font-bold",
+                          !isClickable && !isCurrent &&
+                            "bg-gray-100 text-[#A0A0A0] border-gray-300 cursor-not-allowed opacity-50",
                         )}
                       >
-                        {isComplete && <Check className="w-3 h-3" />}
+                        {isComplete && <Check className="w-3.5 h-3.5" />}
                         {STAGE_LABELS[stage]}
                       </button>
                     )
