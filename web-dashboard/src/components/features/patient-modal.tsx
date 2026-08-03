@@ -302,18 +302,18 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     const isNext = idx === currentIdx + 1
                     const isFuture = idx > currentIdx + 1
 
-                    // For VAs: next stage is only clickable if current stage checklist is 100% complete
-                    // For Admin: next stage is always clickable (they can bypass)
-                    const canAdvanceToNext = isAdmin ? true : allComplete
+                    // EVERYONE: next stage is only clickable if current stage checklist is 100% complete
+                    // Both VAs and Admins must complete all checklist items before advancing
+                    const canAdvanceToNext = allComplete
                     const isClickable =
                       isCurrent ? false : // Can't click current stage
                       isComplete ? true :  // Can click completed stages (go back)
                       isNext ? canAdvanceToNext : // Next stage only if checklist complete
                       false // Can't skip stages
 
-                    const isBlockedForVA = !isAdmin && isNext && !allComplete
-                    const isDisabledReason = isBlockedForVA
-                      ? "Complete all checklist items first"
+                    const isBlocked = isNext && !allComplete
+                    const isDisabledReason = isBlocked
+                      ? "Complete all checklist items before advancing"
                       : isFuture
                         ? "Complete the current stage first"
                         : null
@@ -326,14 +326,21 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         title={isDisabledReason || STAGE_LABELS[stage]}
                         className={cn(
                           "flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all border",
+                          // Current stage (dark green)
                           isCurrent &&
-                            "bg-[#036638] text-white border-[#036638] shadow-md",
-                          isComplete &&
+                            "bg-[#036638] text-white border-[#036638] shadow-md cursor-default",
+                          // Completed stages (light green, clickable to go back)
+                          !isCurrent && isComplete &&
                             "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/50 hover:bg-[#dff4eb] cursor-pointer",
+                          // Next stage when checklist COMPLETE (white, clickable)
                           !isCurrent && !isComplete && !isFuture && isClickable &&
-                            "bg-white text-[#036638] border-[#E5E7EB] hover:border-[#65BD6C] hover:shadow-sm cursor-pointer font-bold",
-                          !isClickable && !isCurrent &&
-                            "bg-gray-100 text-[#A0A0A0] border-gray-300 cursor-not-allowed opacity-50",
+                            "bg-white text-[#036638] border-[#036638] hover:border-[#036638] hover:shadow-md cursor-pointer font-bold",
+                          // Next stage when checklist INCOMPLETE or future stages (gray, DISABLED)
+                          !isCurrent && !isComplete && !isClickable &&
+                            "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed opacity-60 line-through",
+                          // Future unreachable stages (light gray)
+                          isFuture && !isClickable &&
+                            "bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed opacity-40",
                         )}
                       >
                         {isComplete && <Check className="w-3.5 h-3.5" />}
