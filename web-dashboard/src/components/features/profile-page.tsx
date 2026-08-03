@@ -71,12 +71,12 @@ export function ProfilePage() {
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E7EB]/50">
           <div className={cn(
             "w-12 h-12 rounded-full flex items-center justify-center",
-            user?.role === "admin" ? "bg-[#E8792E]" : "bg-[#FFF0E5]",
+            user?.role === "admin" ? "bg-[#036638]" : "bg-[#EBF7EC]",
           )}>
             {user?.role === "admin" ? (
               <Shield className="w-6 h-6 text-white" />
             ) : (
-              <User className="w-6 h-6 text-[#E8792E]" />
+              <User className="w-6 h-6 text-[#036638]" />
             )}
           </div>
           <div>
@@ -91,7 +91,7 @@ export function ProfilePage() {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 transition-all"
+              className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
             />
           </div>
           <div className="space-y-1.5">
@@ -100,7 +100,7 @@ export function ProfilePage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 transition-all"
+              className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
             />
           </div>
           <div className="flex justify-end">
@@ -108,7 +108,7 @@ export function ProfilePage() {
               size="sm"
               onClick={handleSaveProfile}
               disabled={saving}
-              className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs gap-1.5"
+              className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
             >
               {saving ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -125,7 +125,7 @@ export function ProfilePage() {
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Key className="w-4 h-4 text-[#E8792E]" />
+            <Key className="w-4 h-4 text-[#036638]" />
             <h2 className="text-sm font-bold text-[#1A1B1E]">Password</h2>
           </div>
           {!showPasswordForm && (
@@ -133,7 +133,7 @@ export function ProfilePage() {
               variant="outline"
               size="sm"
               onClick={() => setShowPasswordForm(true)}
-              className="text-xs border-[#E8792E]/30 text-[#E8792E]"
+              className="text-xs border-[#036638]/30 text-[#036638]"
             >
               Change
             </Button>
@@ -148,7 +148,7 @@ export function ProfilePage() {
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
             </div>
             <div className="space-y-1.5">
@@ -157,7 +157,7 @@ export function ProfilePage() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
             </div>
             <div className="space-y-1.5">
@@ -166,7 +166,7 @@ export function ProfilePage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
             </div>
             <div className="flex gap-2 justify-end">
@@ -187,7 +187,7 @@ export function ProfilePage() {
                 size="sm"
                 onClick={handleChangePassword}
                 disabled={changingPassword || !currentPassword || !newPassword}
-                className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+                className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
               >
                 {changingPassword ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />

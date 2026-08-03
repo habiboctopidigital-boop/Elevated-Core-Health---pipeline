@@ -39,8 +39,8 @@ function ResetPasswordForm({ token }: { token: string }) {
   if (done) {
     return (
       <div className="text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-[#FFF0E5] flex items-center justify-center mx-auto">
-          <CheckCircle2 className="w-6 h-6 text-[#E8792E]" />
+        <div className="w-12 h-12 rounded-full bg-[#EBF7EC] flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-6 h-6 text-[#036638]" />
         </div>
         <div>
           <h1 className="text-lg font-bold text-[#1A1B1E]">Password reset</h1>
@@ -50,7 +50,7 @@ function ResetPasswordForm({ token }: { token: string }) {
         </div>
         <Link
           href={ROUTES.LOGIN}
-          className="inline-flex items-center gap-1.5 text-sm text-[#E8792E] font-medium hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm text-[#036638] font-medium hover:underline"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to login
@@ -79,7 +79,7 @@ function ResetPasswordForm({ token }: { token: string }) {
             placeholder="Min. 6 characters"
             required
             minLength={6}
-            className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 transition-all"
+            className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
           />
         </div>
       </div>
@@ -95,7 +95,7 @@ function ResetPasswordForm({ token }: { token: string }) {
             placeholder="Re-enter password"
             required
             minLength={6}
-            className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 transition-all"
+            className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
           />
         </div>
       </div>
@@ -103,7 +103,7 @@ function ResetPasswordForm({ token }: { token: string }) {
       <Button
         type="submit"
         disabled={resetting || !newPassword || !confirmPassword}
-        className="w-full bg-[#E8792E] hover:bg-[#D4691F] text-white text-sm h-10"
+        className="w-full bg-[#036638] hover:bg-[#025030] text-white text-sm h-10"
       >
         {resetting ? (
           <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -113,7 +113,7 @@ function ResetPasswordForm({ token }: { token: string }) {
 
       <Link
         href={ROUTES.LOGIN}
-        className="flex items-center justify-center gap-1.5 text-sm text-[#6B7280] hover:text-[#E8792E] transition-colors"
+        className="flex items-center justify-center gap-1.5 text-sm text-[#6B7280] hover:text-[#036638] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to login
@@ -133,7 +133,7 @@ function ResetPasswordPageInner() {
     return (
       <div className="text-center space-y-4">
         <div className="w-12 h-12 rounded-full bg-[#FEF2F2] flex items-center justify-center mx-auto">
-          <Lock className="w-6 h-6 text-[#E8792E]" />
+          <Lock className="w-6 h-6 text-[#036638]" />
         </div>
         <div>
           <h1 className="text-lg font-bold text-[#1A1B1E]">Invalid link</h1>
@@ -143,7 +143,7 @@ function ResetPasswordPageInner() {
         </div>
         <Link
           href={ROUTES.FORGOT_PASSWORD}
-          className="text-sm text-[#E8792E] font-medium hover:underline"
+          className="text-sm text-[#036638] font-medium hover:underline"
         >
           Request a new reset link
         </Link>
@@ -158,7 +158,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-[#F4F5F7] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-xl border border-[#E5E7EB] p-8 shadow-sm">
-        <Suspense fallback={<Loader2 className="w-6 h-6 text-[#E8792E] animate-spin mx-auto" />}>
+        <Suspense fallback={<Loader2 className="w-6 h-6 text-[#036638] animate-spin mx-auto" />}>
           <ResetPasswordPageInner />
         </Suspense>
       </div>

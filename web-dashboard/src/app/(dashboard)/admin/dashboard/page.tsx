@@ -76,8 +76,8 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-[#E5E7EB] border-t-[3px] border-t-[#F2A93B] p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#FFF0E5] flex items-center justify-center">
-              <Activity className="w-5 h-5 text-[#E8792E]" />
+            <div className="w-10 h-10 rounded-lg bg-[#EBF7EC] flex items-center justify-center">
+              <Activity className="w-5 h-5 text-[#036638]" />
             </div>
             <div>
               <p className="text-2xl font-bold text-[#1A1B1E]">{totalPatients}</p>
@@ -90,11 +90,11 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-3">
             <div className={cn(
               "w-10 h-10 rounded-lg flex items-center justify-center",
-              summary?.staleCount && summary.staleCount > 0 ? "bg-[#FEFCE8]" : "bg-[#FFF0E5]",
+              summary?.staleCount && summary.staleCount > 0 ? "bg-[#FEFCE8]" : "bg-[#EBF7EC]",
             )}>
               <AlertTriangle className={cn(
                 "w-5 h-5",
-                summary?.staleCount && summary.staleCount > 0 ? "text-amber-500" : "text-[#E8792E]",
+                summary?.staleCount && summary.staleCount > 0 ? "text-amber-500" : "text-[#036638]",
               )} />
             </div>
             <div>
@@ -108,11 +108,11 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-3">
             <div className={cn(
               "w-10 h-10 rounded-lg flex items-center justify-center",
-              summary?.flaggedCount && summary.flaggedCount > 0 ? "bg-[#FEF2F2]" : "bg-[#FFF0E5]",
+              summary?.flaggedCount && summary.flaggedCount > 0 ? "bg-[#FEF2F2]" : "bg-[#EBF7EC]",
             )}>
               <Flag className={cn(
                 "w-5 h-5",
-                summary?.flaggedCount && summary.flaggedCount > 0 ? "text-[#E8792E]" : "text-[#E8792E]",
+                summary?.flaggedCount && summary.flaggedCount > 0 ? "text-[#036638]" : "text-[#036638]",
               )} />
             </div>
             <div>
@@ -124,8 +124,8 @@ export default function AdminDashboardPage() {
 
         <div className="bg-white rounded-xl border border-[#E5E7EB] border-t-[3px] border-t-[#3FA66E] p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#FFF0E5] flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-[#E8792E]" />
+            <div className="w-10 h-10 rounded-lg bg-[#EBF7EC] flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-[#036638]" />
             </div>
             <div>
               <p className="text-2xl font-bold text-[#1A1B1E]">{analytics?.reconciledThisWeek || 0}</p>
@@ -145,9 +145,9 @@ export default function AdminDashboardPage() {
               <button
                 key={action.href}
                 onClick={() => router.push(action.href)}
-                className="bg-white rounded-xl border border-[#E5E7EB] p-4 text-left hover:border-[#F2994A]/40 hover:shadow-sm transition-all text-center"
+                className="bg-white rounded-xl border border-[#E5E7EB] p-4 text-left hover:border-[#65BD6C]/40 hover:shadow-sm transition-all text-center"
               >
-                <Icon className="w-6 h-6 text-[#E8792E] mx-auto mb-2" />
+                <Icon className="w-6 h-6 text-[#036638] mx-auto mb-2" />
                 <p className="text-sm font-semibold text-[#1A1B1E]">{action.label}</p>
                 <p className="text-xs text-[#6B7280] mt-0.5">{action.desc}</p>
               </button>
@@ -225,7 +225,7 @@ export default function AdminDashboardPage() {
       {/* Pipeline Overview + VA Load */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-[#E5E7EB] p-5">
-          <h2 className="text-sm font-bold text-[#E8792E] mb-4">Pipeline Overview</h2>
+          <h2 className="text-sm font-bold text-[#036638] mb-4">Pipeline Overview</h2>
           <div className="space-y-3">
             {STAGE_ORDER.map((stage) => {
               const count = patientsByStage[stage] || 0
@@ -236,10 +236,10 @@ export default function AdminDashboardPage() {
                   <span className="text-xs text-[#6B7280] w-28 truncate shrink-0">
                     {STAGE_LABELS[stage]}
                   </span>
-                  <div className="flex-1 h-5 bg-[#FFF0E5] rounded-full overflow-hidden">
+                  <div className="flex-1 h-5 bg-[#EBF7EC] rounded-full overflow-hidden">
                     {count > 0 && (
                       <div
-                        className="h-full bg-[#E8792E] rounded-full transition-all"
+                        className="h-full bg-[#036638] rounded-full transition-all"
                         style={{ width: `${Math.max(barWidth, 8)}%` }}
                       />
                     )}
@@ -254,22 +254,22 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-[#E5E7EB] p-5">
-          <h2 className="text-sm font-bold text-[#E8792E] mb-4">VA Workload</h2>
+          <h2 className="text-sm font-bold text-[#036638] mb-4">VA Workload</h2>
           {analytics?.vaLoad && analytics.vaLoad.length > 0 ? (
             <div className="space-y-3">
               {analytics.vaLoad.map((va) => (
                 <div key={va.id} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#FFF0E5] flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-[#E8792E]">
+                  <div className="w-8 h-8 rounded-full bg-[#EBF7EC] flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-[#036638]">
                       {va.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[#1A1B1E] truncate">{va.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <div className="flex-1 h-2 bg-[#FFF0E5] rounded-full overflow-hidden">
+                      <div className="flex-1 h-2 bg-[#EBF7EC] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-[#F2994A] rounded-full"
+                          className="h-full bg-[#65BD6C] rounded-full"
                           style={{
                             width: `${Math.min(
                               (va.patientCount / Math.max(...analytics.vaLoad.map((v) => v.patientCount), 1)) *
@@ -308,7 +308,7 @@ function FlaggedPatientRow({
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="w-8 h-8 rounded-lg bg-[#FEF2F2] flex items-center justify-center shrink-0">
-        <Flag className="w-4 h-4 text-[#E8792E]" fill="#E8792E" />
+        <Flag className="w-4 h-4 text-[#036638]" fill="#036638" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-[#1A1B1E] truncate">{patient.name}</p>
@@ -317,7 +317,7 @@ function FlaggedPatientRow({
           {patient.flaggedByUser && ` - flagged by ${patient.flaggedByUser.name}`}
         </p>
       </div>
-      <span className="text-[10px] bg-[#FFF0E5] text-[#E8792E] px-2 py-0.5 rounded font-medium capitalize shrink-0">
+      <span className="text-[10px] bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded font-medium capitalize shrink-0">
         {STAGE_LABELS[patient.stage] || patient.stage}
       </span>
       <Button
@@ -325,7 +325,7 @@ function FlaggedPatientRow({
         size="sm"
         onClick={() => onClearFlag(patient.id)}
         disabled={isClearing}
-        className="shrink-0 text-xs h-8 px-3 border-[#E8792E] text-[#E8792E] hover:bg-[#E8792E] hover:text-white"
+        className="shrink-0 text-xs h-8 px-3 border-[#036638] text-[#036638] hover:bg-[#036638] hover:text-white"
       >
         {isClearing ? <Loader2 className="w-3 h-3 animate-spin" /> : "Clear Flag"}
       </Button>

@@ -32,7 +32,7 @@ export default function AdminBoardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 text-[#E8792E] animate-spin" />
+        <Loader2 className="w-6 h-6 text-[#036638] animate-spin" />
       </div>
     )
   }
@@ -50,8 +50,8 @@ export default function AdminBoardPage() {
       {/* - Board Header - */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#E8792E]/10 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-[#E8792E]" />
+          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5 text-[#036638]" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-[#1A1B1E]">Admin Pipeline Board</h1>
@@ -71,12 +71,12 @@ export default function AdminBoardPage() {
             return (
               <div
                 key={stage}
-                className="w-72 flex flex-col bg-[#FFF0E5]/40 rounded-xl border border-[#E5E7EB]/50 shrink-0"
+                className="w-72 flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 shrink-0"
               >
                 <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-[#E8792E] truncate">
+                      <h3 className="text-sm font-bold text-[#036638] truncate">
                         {STAGE_LABELS[stage]}
                       </h3>
                       <p className="text-[10px] text-[#6B7280] mt-0.5">

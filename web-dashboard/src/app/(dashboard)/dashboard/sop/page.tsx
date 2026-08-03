@@ -51,7 +51,7 @@ export default function SOPPage() {
     <div className="space-y-6  max-w-[1600px] mx-auto pb-12">
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <ScrollText className="w-5 h-5 text-[#E8792E]" />
+          <ScrollText className="w-5 h-5 text-[#036638]" />
           <h1 className="text-xl font-bold text-[#1A1B1E]">
             SOP Reference
           </h1>
@@ -63,10 +63,10 @@ export default function SOPPage() {
 
       {/* Key Rules */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 space-y-3">
-        <h2 className="text-sm font-bold text-[#E8792E]">Key Rules</h2>
+        <h2 className="text-sm font-bold text-[#036638]">Key Rules</h2>
         <div className="space-y-2">
           <div className="flex items-start gap-2.5">
-            <CheckCircle className="w-4 h-4 text-[#F2994A] mt-0.5 shrink-0" />
+            <CheckCircle className="w-4 h-4 text-[#65BD6C] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
               <strong>Forward moves are checklist-gated.</strong> A patient cannot advance
               until every checklist item for the current stage is checked. Backward moves
@@ -81,14 +81,14 @@ export default function SOPPage() {
             </p>
           </div>
           <div className="flex items-start gap-2.5">
-            <Flag className="w-4 h-4 text-[#E8792E] mt-0.5 shrink-0" />
+            <Flag className="w-4 h-4 text-[#036638] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
               <strong>Flag for Donna.</strong> Any VA can flag a card with a text reason.
               Only Donna can clear flags. Use this for issues needing her attention.
             </p>
           </div>
           <div className="flex items-start gap-2.5">
-            <CheckCircle className="w-4 h-4 text-[#F2994A] mt-0.5 shrink-0" />
+            <CheckCircle className="w-4 h-4 text-[#65BD6C] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
               <strong>No clinical data.</strong> Notes fields are for operational status
               only - never diagnoses or clinical details.
@@ -101,7 +101,7 @@ export default function SOPPage() {
       {STAGE_ORDER.map((stage) => (
         <div key={stage} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
           <div className="mb-3">
-            <h3 className="text-sm font-bold text-[#E8792E]">
+            <h3 className="text-sm font-bold text-[#036638]">
               {STAGE_LABELS[stage]}
             </h3>
             <p className="text-xs text-[#6B7280]">{STAGE_HINTS[stage]}</p>
@@ -109,7 +109,7 @@ export default function SOPPage() {
           <ul className="space-y-1.5">
             {CHECKLISTS[stage]?.map((item, i) => (
               <li key={i} className="flex items-start gap-2.5 text-sm text-[#374151]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#F2994A] mt-1.5 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#65BD6C] mt-1.5 shrink-0" />
                 {item}
               </li>
             ))}

@@ -113,7 +113,7 @@ export function ImportDialog() {
         <Button
           variant="outline"
           size="sm"
-          className=" cursor-pointer gap-1.5 border-[#E5E7EB] text-[#374151] hover:bg-[#FFF0E5] hover:border-[#E8792E]/20 hover:text-[#E8792E]"
+          className=" cursor-pointer gap-1.5 border-[#E5E7EB] text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/20 hover:text-[#036638]"
         >
           <Upload className="w-3.5 h-3.5" />
           Patients Import
@@ -122,8 +122,8 @@ export function ImportDialog() {
       <DialogContent className="sm:max-w-lg gap-0 p-0 overflow-hidden">
         <DialogHeader className="p-5 pb-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFF0E5] to-[#FBE7B2] flex items-center justify-center">
-              <Upload className="w-5 h-5 text-[#E8792E]" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] flex items-center justify-center">
+              <Upload className="w-5 h-5 text-[#036638]" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-[#1A1B1E]">Import Patients</DialogTitle>
@@ -146,10 +146,10 @@ export function ImportDialog() {
                 className={cn(
                   "relative rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200",
                   state.status === "dragging"
-                    ? "border-[#E8792E] bg-[#FFF0E5] scale-[1.02]"
+                    ? "border-[#036638] bg-[#EBF7EC] scale-[1.02]"
                     : state.status === "selected" || state.status === "uploading"
-                      ? "border-[#E8792E]/40 bg-[#FFF0E5]/20"
-                      : "border-[#E5E7EB] bg-white hover:border-[#E8792E]/30 hover:bg-[#FFF0E5]/10",
+                      ? "border-[#036638]/40 bg-[#EBF7EC]/20"
+                      : "border-[#E5E7EB] bg-white hover:border-[#036638]/30 hover:bg-[#EBF7EC]/10",
                 )}
               >
                 <input
@@ -165,14 +165,14 @@ export function ImportDialog() {
 
                 {state.status === "uploading" ? (
                   <div className="py-4">
-                    <Loader2 className="w-10 h-10 text-[#E8792E] mx-auto mb-3 animate-spin" />
+                    <Loader2 className="w-10 h-10 text-[#036638] mx-auto mb-3 animate-spin" />
                     <p className="text-sm font-medium text-[#374151]">Uploading & parsing...</p>
                     <p className="text-xs text-[#6B7280] mt-1">{state.file.name}</p>
                   </div>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FFF0E5] to-[#FBE7B2] flex items-center justify-center mx-auto mb-4">
-                      <Upload className="w-6 h-6 text-[#E8792E]" />
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] flex items-center justify-center mx-auto mb-4">
+                      <Upload className="w-6 h-6 text-[#036638]" />
                     </div>
                     <p className="text-sm font-semibold text-[#374151]">
                       {state.status === "dragging" ? "Drop file here" : "Drag & drop or click to browse"}
@@ -190,13 +190,13 @@ export function ImportDialog() {
                       "flex items-center gap-3 p-3 rounded-xl border",
                       state.status === "error"
                         ? "bg-red-50 border-red-100"
-                        : "bg-[#FFF0E5]/40 border-[#FBE7B2]/50",
+                        : "bg-[#EBF7EC]/40 border-[#FBE7B2]/50",
                     )}
                   >
                     <FileSpreadsheet
                       className={cn(
                         "w-8 h-8 shrink-0",
-                        state.status === "error" ? "text-red-400" : "text-[#E8792E]",
+                        state.status === "error" ? "text-red-400" : "text-[#036638]",
                       )}
                     />
                     <div className="flex-1 min-w-0">
@@ -232,7 +232,7 @@ export function ImportDialog() {
                   <Button
                     size="sm"
                     onClick={upload}
-                    className="gap-1.5 bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs shadow-sm"
+                    className="gap-1.5 bg-[#036638] hover:bg-[#025030] text-white text-xs shadow-sm"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     Upload & Parse
@@ -302,7 +302,7 @@ function SuccessView({
             {columns.map((col) => (
               <span
                 key={col}
-                className="text-[10px] font-mono bg-[#FFF0E5]/60 text-[#E8792E] px-2 py-0.5 rounded-md border border-[#FBE7B2]/50"
+                className="text-[10px] font-mono bg-[#EBF7EC]/60 text-[#036638] px-2 py-0.5 rounded-md border border-[#FBE7B2]/50"
               >
                 {col}
               </span>
@@ -342,7 +342,7 @@ function SuccessView({
               </thead>
               <tbody>
                 {previewRows.map((row, i) => (
-                  <tr key={i} className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#FFF0E5]/20">
+                  <tr key={i} className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#EBF7EC]/20">
                     <td className="text-[#6B7280] px-3 py-2">{i + 1}</td>
                     {columns.slice(0, 5).map((col) => (
                       <td key={col} className="text-[#374151] px-3 py-2 max-w-[160px] truncate whitespace-nowrap">
@@ -362,7 +362,7 @@ function SuccessView({
         <Button
           size="sm"
           onClick={onReset}
-          className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+          className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
         >
           Import Another
         </Button>

@@ -34,13 +34,13 @@ export function HandoffLog() {
             placeholder="Search by patient name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 focus:border-[#E8792E] transition-all"
+            className="w-full h-9 pl-9 pr-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all"
           />
         </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 appearance-none cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
         >
           <option value="">All types</option>
           <option value="manual">Manual</option>
@@ -51,7 +51,7 @@ export function HandoffLog() {
       <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-5 h-5 text-[#E8792E] animate-spin" />
+            <Loader2 className="w-5 h-5 text-[#036638] animate-spin" />
           </div>
         ) : logs.length > 0 ? (
           <div className="divide-y divide-[#E5E7EB]/50">
@@ -66,18 +66,18 @@ export function HandoffLog() {
               .map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-start gap-3 px-4 py-3 hover:bg-[#FFF0E5]/30 transition-colors"
+                  className="flex items-start gap-3 px-4 py-3 hover:bg-[#EBF7EC]/30 transition-colors"
                 >
                   <div
                     className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
                       log.type === "auto"
-                        ? "bg-[#F2994A]"
-                        : "bg-[#E8792E]"
+                        ? "bg-[#65BD6C]"
+                        : "bg-[#036638]"
                     }`}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold text-[#E8792E]">
+                      <span className="font-semibold text-[#036638]">
                         {log.author}
                       </span>
                       <span className="text-[#6B7280] text-xs">-</span>
@@ -90,7 +90,7 @@ export function HandoffLog() {
                         })}
                       </span>
                       {log.type === "auto" && (
-                        <span className="text-[10px] bg-[#FFF0E5] text-[#E8792E] px-1.5 py-0.5 rounded font-medium">
+                        <span className="text-[10px] bg-[#EBF7EC] text-[#036638] px-1.5 py-0.5 rounded font-medium">
                           Auto
                         </span>
                       )}
@@ -119,7 +119,7 @@ export function HandoffLog() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#1A1B1E] disabled:opacity-40 hover:border-[#F2994A]/40 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#1A1B1E] disabled:opacity-40 hover:border-[#65BD6C]/40 transition-colors"
           >
             Previous
           </button>
@@ -129,7 +129,7 @@ export function HandoffLog() {
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#1A1B1E] disabled:opacity-40 hover:border-[#F2994A]/40 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[#E5E7EB] bg-white text-[#1A1B1E] disabled:opacity-40 hover:border-[#65BD6C]/40 transition-colors"
           >
             Next
           </button>

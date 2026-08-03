@@ -73,7 +73,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
         "flex items-center h-16 border-b border-white/5 px-5 relative",
         isCollapsed ? "justify-center" : "gap-3"
       )}>
-        <div className="w-8 h-8 rounded-full bg-[#E8792E] flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-[#036638] flex items-center justify-center flex-shrink-0">
           <span className="text-white text-xs font-bold">ECH</span>
         </div>
         {!isCollapsed && (
@@ -81,7 +81,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
             <p className="text-white text-sm font-semibold truncate leading-tight">
               Elevated Core
             </p>
-            <p className="text-[#F2994A] text-[10px] font-medium uppercase tracking-wider">
+            <p className="text-[#65BD6C] text-[10px] font-medium uppercase tracking-wider">
               Pipeline Portal
             </p>
           </div>
@@ -106,7 +106,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
                 "flex items-center rounded-lg text-sm font-medium transition-all duration-150",
                 isCollapsed ? "justify-center px-0 py-3" : "px-3 py-2.5 gap-3",
                 isActive
-                  ? "bg-[#E8792E] text-white shadow-md"
+                  ? "bg-[#036638] text-white shadow-md"
                   : "text-[#9CA3AF] hover:text-white hover:bg-white/5",
               )}
               title={isCollapsed ? item.label : undefined}

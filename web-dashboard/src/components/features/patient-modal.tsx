@@ -13,6 +13,8 @@ import {
   MessageSquare,
   UserCheck,
   ChevronDown,
+  Zap,
+  Shield,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,6 +40,69 @@ interface PatientModalProps {
   open: boolean
   onClose: () => void
 }
+
+// Stage-specific SOPs
+const STAGE_SOPs: Record<PatientStage, string[]> = {
+  onboarding: [
+    "Confirm appointment date and time in calendar",
+    "Verify patient contact information (phone, email)",
+    "Send welcome email with pre-visit instructions",
+    "Ensure intake form is completed",
+  ],
+  visit_complete: [
+    "Document visit completion in Optimantra",
+    "Verify all vital signs recorded",
+    "Confirm provider's clinical notes entered",
+    "Flag any abnormalities for review",
+  ],
+  post_visit_docs: [
+    "Generate and send patient instruction letter",
+    "Order and submit required lab work",
+    "Attach lab request forms to patient record",
+    "Confirm patient received all documents",
+  ],
+  chart_signed: [
+    "Ensure Optimantra note is signed by provider",
+    "Run pre-billing clawback check",
+    "Verify CPT codes match services rendered",
+    "Confirm ICD-10 codes are documented",
+    "Check documentation supports diagnosis",
+  ],
+  sent_to_billing: [
+    "Verify claim submission to billing system",
+    "Record claim number and submission date",
+    "Set follow-up reminder for claim status",
+    "Attach claim submission confirmation",
+  ],
+  payment_posted: [
+    "Record payment amount and date received",
+    "Match payment to submitted claim",
+    "Update insurance payer information",
+    "Flag any payment discrepancies",
+  ],
+  reconciled: [
+    "Verify all payments received match billing",
+    "Close patient record in system",
+    "Archive supporting documentation",
+    "Record final reconciliation details",
+  ],
+}
+
+// Mock VOB (Verification of Benefits) data
+const generateMockVOBData = () => ({
+  coverage: "Active",
+  payer: "Blue Cross Blue Shield",
+  memberId: "BCB123456789",
+  groupNumber: "G789012",
+  copay: "$30",
+  coinsurance: "20%",
+  deductible: "$1,500",
+  deductibleMet: "$750",
+  outOfPocketMax: "$5,000",
+  authorizationRequired: false,
+  visitsCoveredPerYear: "Unlimited",
+  checkDate: new Date().toLocaleDateString(),
+})
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -90,6 +155,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [clearReason, setClearReason] = useState("")
   const [showClearInput, setShowClearInput] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
+  const [eligibilityStatus, setEligibilityStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [eligibilityData, setEligibilityData] = useState<ReturnType<typeof generateMockVOBData> | null>(null)
 
   useEffect(() => {
     if (patient?.notes) setNotesText(patient.notes)
@@ -123,12 +190,28 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const handleMoveStage = async (target: PatientStage) => {
     if (!patient) return
+    const currentIdx = STAGE_ORDER.indexOf(patient.stage)
+    const targetIdx = STAGE_ORDER.indexOf(target)
+
+    // For VAs: check if moving forward requires complete checklist
+    if (!isAdmin && targetIdx > currentIdx && !allComplete) {
+      return // Prevent progression if checklist incomplete
+    }
+
     await moveStage.mutateAsync({ id: patient.id, targetStage: target })
   }
 
   const handleClaim = async () => {
     if (!patient || !user) return
     await claimPatient.mutateAsync({ id: patient.id, userId: user.id })
+  }
+
+  const handleCheckEligibility = async () => {
+    setEligibilityStatus("loading")
+    // Simulate API call with 1.5s delay
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    setEligibilityData(generateMockVOBData())
+    setEligibilityStatus("success")
   }
 
   const stale =
@@ -158,9 +241,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   {patient.isFlagged && (
                     <Badge
                       variant="outline"
-                      className="bg-[#FEF2F2] text-[#E8792E] border-[#E8792E]/30 text-[10px] font-semibold gap-1"
+                      className="bg-[#F0F9F5] text-[#036638] border-[#036638]/30 text-[10px] font-semibold gap-1"
                     >
-                      <Flag className="w-3 h-3" fill="#E8792E" />
+                      <Flag className="w-3 h-3" fill="#036638" />
                       Flagged
                     </Badge>
                   )}
@@ -181,7 +264,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg hover:bg-[#FFF0E5] text-[#6B7280] hover:text-[#E8792E] transition-colors"
+                className="p-1.5 rounded-lg hover:bg-[#EBF7EC] text-[#6B7280] hover:text-[#036638] transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -189,8 +272,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
             <div className="p-6 space-y-6">
               {/* Stage Navigation */}
-              <div>
-                <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2">
+              <div className="bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg p-4">
+                <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-3">
                   Pipeline Stage
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -199,28 +282,34 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     const currentIdx = STAGE_ORDER.indexOf(patient.stage)
                     const isComplete = idx < currentIdx
                     const isCurrent = stage === patient.stage
+                    const isNext = idx === currentIdx + 1
                     const isFuture = idx > currentIdx + 1
-                    const isClickable = !isFuture
+                    const isClickable = !isFuture && (!isNext || allComplete || isAdmin)
+
+                    const isBlockedForVA = !isAdmin && isNext && !allComplete
+
                     return (
                       <button
                         key={stage}
                         onClick={() => isClickable && handleMoveStage(stage)}
                         disabled={moveStage.isPending || !isClickable}
                         title={
-                          isFuture
-                            ? "Complete the current stage first"
-                            : STAGE_LABELS[stage]
+                          isBlockedForVA
+                            ? "Complete all checklist items first"
+                            : isFuture
+                              ? "Complete the current stage first"
+                              : STAGE_LABELS[stage]
                         }
                         className={cn(
-                          "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all border",
+                          "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all border",
                           isCurrent &&
-                            "bg-[#E8792E] text-white border-[#E8792E] shadow-sm",
+                            "bg-[#036638] text-white border-[#036638] shadow-sm",
                           isComplete &&
-                            "bg-[#FFF0E5] text-[#E8792E] border-[#F2994A]/30",
-                          !isCurrent && !isComplete && !isFuture &&
-                            "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#F2994A]/40",
-                          isFuture &&
-                            "bg-gray-50 text-[#B0B2B8] border-[#E5E7EB]/50 cursor-not-allowed",
+                            "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/30",
+                          !isCurrent && !isComplete && !isFuture && !isBlockedForVA &&
+                            "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#65BD6C]/40 cursor-pointer",
+                          (isFuture || isBlockedForVA) &&
+                            "bg-gray-50 text-[#B0B2B8] border-[#E5E7EB]/50 cursor-not-allowed opacity-60",
                         )}
                       >
                         {isComplete && <Check className="w-3 h-3" />}
@@ -232,48 +321,55 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Checklist */}
-              <div>
-                <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2">
-                  Checklist - {STAGE_LABELS[patient.stage]}
-                </p>
+              <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                    Checklist - {STAGE_LABELS[patient.stage]}
+                  </p>
+                  {!allComplete && totalItems > 0 && !isAdmin && (
+                    <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                      {totalItems - completedItems} remaining
+                    </span>
+                  )}
+                </div>
 
                 {totalItems > 0 ? (
                   <>
                     {/* Progress Indicator */}
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between text-xs text-[#6B7280] mb-1.5">
-                        <span>
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between text-xs text-[#6B7280] mb-2">
+                        <span className="font-medium">
                           {completedItems} / {totalItems} Completed
                         </span>
-                        <span>{progress}%</span>
+                        <span className="font-semibold text-[#036638]">{progress}%</span>
                       </div>
-                      <div className="w-full h-2 bg-[#E5E7EB]/30 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-[#E5E7EB] rounded-full overflow-hidden">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-300",
                               allComplete
                                 ? "bg-[#3FA66E]"
-                                : "bg-[#E8792E]",
+                                : "bg-[#036638]",
                           )}
                           style={{ width: `${progress}%` }}
                         />
                       </div>
                       {allComplete && (
-                        <p className="text-xs text-[#3FA66E] font-medium mt-1.5 flex items-center gap-1">
+                        <p className="text-xs text-[#3FA66E] font-medium mt-2 flex items-center gap-1">
                           <Check className="w-3.5 h-3.5" />
-                          All {STAGE_LABELS[patient.stage]} tasks completed. You may now move to the next stage.
+                          Ready to advance to next stage
                         </p>
                       )}
                     </div>
 
                     {/* Checklist Items */}
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {currentStageItems.map((item) => {
                         const checked = !!currentState[item.id]
                         return (
                           <label
                             key={item.id}
-                            className="flex items-start gap-2.5 py-2 px-2 rounded-md hover:bg-[#FFF0E5]/50 cursor-pointer transition-colors"
+                            className="flex items-start gap-2.5 py-2.5 px-3 rounded-md hover:bg-[#F9FAFB] cursor-pointer transition-colors border border-transparent hover:border-[#E5E7EB]"
                           >
                             <input
                               type="checkbox"
@@ -285,19 +381,22 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                   checked: !checked,
                                 })
                               }
-                              className="mt-0.5 w-4 h-4 rounded border-[#E5E7EB] text-[#E8792E] focus:ring-[#E8792E] accent-[#E8792E]"
+                              className="mt-0.5 w-4 h-4 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638]"
                             />
                             <div className="flex-1 min-w-0">
-                              <span
-                                className={cn(
-                                  "text-sm font-semibold",
-                                  checked
-                                    ? "text-[#6B7280] line-through"
-                                    : "text-[#1A1B1E]",
-                                )}
-                              >
-                                {item.label}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={cn(
+                                    "text-sm font-semibold",
+                                    checked
+                                      ? "text-[#6B7280] line-through"
+                                      : "text-[#1A1B1E]",
+                                  )}
+                                >
+                                  {item.label}
+                                </span>
+                                <span className="text-[9px] font-bold text-red-500">*</span>
+                              </div>
                               {item.description && (
                                 <p className="text-[11px] text-[#6B7280] mt-0.5">
                                   {item.description}
@@ -310,8 +409,94 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </div>
                   </>
                 ) : (
-                  <p className="text-xs text-[#6B7280] italic">
+                  <p className="text-xs text-[#6B7280] italic py-2">
                     No checklist items for this stage
+                  </p>
+                )}
+              </div>
+
+              {/* Stage-Specific SOPs */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-4 h-4 text-amber-600" />
+                  <p className="text-[11px] font-semibold text-amber-900 uppercase tracking-wider">
+                    Standard Operating Procedure
+                  </p>
+                </div>
+                <ul className="space-y-1.5">
+                  {STAGE_SOPs[patient.stage]?.map((sop, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
+                      <span className="text-amber-600 font-bold mt-0.5">•</span>
+                      <span>{sop}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Eligibility Check (VOB) */}
+              <div className="bg-[#F0F9F5] border border-[#65BD6C]/30 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-[#036638]" />
+                    <p className="text-[11px] font-semibold text-[#036638] uppercase tracking-wider">
+                      Verification of Benefits (VOB)
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCheckEligibility}
+                    disabled={eligibilityStatus === "loading"}
+                    className={cn(
+                      "text-[10px] font-medium px-2.5 py-1 rounded transition-all",
+                      eligibilityStatus === "loading"
+                        ? "bg-[#036638]/20 text-[#036638] cursor-wait"
+                        : "bg-[#036638] text-white hover:bg-[#025030]"
+                    )}
+                  >
+                    {eligibilityStatus === "loading" ? "Checking..." : "Check Eligibility"}
+                  </button>
+                </div>
+
+                {eligibilityStatus === "success" && eligibilityData && (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium">Coverage</p>
+                      <p className="text-sm font-semibold text-[#036638]">{eligibilityData.coverage}</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium">Payer</p>
+                      <p className="text-sm font-semibold text-[#1A1B1E]">{eligibilityData.payer}</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium">Member ID</p>
+                      <p className="text-sm font-semibold font-mono text-[#1A1B1E]">{eligibilityData.memberId}</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium">Copay</p>
+                      <p className="text-sm font-semibold text-[#1A1B1E]">{eligibilityData.copay}</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium">Deductible</p>
+                      <p className="text-sm font-semibold text-[#1A1B1E]">{eligibilityData.deductible}</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium">Met</p>
+                      <p className="text-sm font-semibold text-[#036638]">{eligibilityData.deductibleMet}</p>
+                    </div>
+                    <div className="col-span-2 bg-white rounded p-2">
+                      <p className="text-[10px] text-[#6B7280] font-medium mb-1">Authorization</p>
+                      <p className="text-sm font-semibold text-[#036638]">
+                        {eligibilityData.authorizationRequired ? "Required" : "Not Required"}
+                      </p>
+                    </div>
+                    <p className="col-span-2 text-[10px] text-[#6B7280] text-right">
+                      Checked: {eligibilityData.checkDate}
+                    </p>
+                  </div>
+                )}
+
+                {eligibilityStatus === "idle" && (
+                  <p className="text-sm text-[#6B7280] italic">
+                    Click "Check Eligibility" to verify patient benefits and coverage details.
                   </p>
                 )}
               </div>
@@ -324,7 +509,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       Appointment
                     </p>
                     <p className="text-sm text-[#1A1B1E] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#F2994A]" />
+                      <Clock className="w-3.5 h-3.5 text-[#65BD6C]" />
                       {new Date(patient.appointmentDatetime).toLocaleString("en-US", {
                         month: "short",
                         day: "numeric",
@@ -375,9 +560,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Flag for Donna Section - VA's flag message */}
               {patient.isFlagged && (
-                <div className="bg-[#FEF2F2] border border-red-100 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-[#E8792E] flex items-center gap-1.5">
-                    <Flag className="w-3.5 h-3.5" fill="#E8792E" />
+                <div className="bg-[#F0F9F5] border border-red-100 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-[#036638] flex items-center gap-1.5">
+                    <Flag className="w-3.5 h-3.5" fill="#036638" />
                     Flag for Donna - Reason
                   </p>
                   {patient.flagReason && (
@@ -431,7 +616,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           size="sm"
                           onClick={handleFlag}
                           disabled={!flagReason.trim() || flagPatient.isPending}
-                          className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+                          className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
                         >
                           {flagPatient.isPending ? "Flagging..." : "Flag for Donna"}
                         </Button>
@@ -450,7 +635,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFlagInput(true)}
-                      className="text-xs gap-1.5 border-[#E8792E]/30 text-[#E8792E] hover:bg-[#FFF0E5] hover:border-[#E8792E]/60 transition-colors"
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-colors"
                     >
                       <Flag className="w-3.5 h-3.5" />
                       Flag for Donna
@@ -513,7 +698,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         size="sm"
                         onClick={handleClaim}
                         disabled={claimPatient.isPending}
-                        className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+                        className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
                       >
                         <UserCheck className="w-3.5 h-3.5 mr-1" />
                         {claimPatient.isPending ? "Claiming..." : "Assign to Me"}
@@ -529,7 +714,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           e.target.value = ""
                         }}
                         value=""
-                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#F2994A]/40 focus:outline-none focus:ring-1 focus:ring-[#E8792E]"
+                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
                       >
                         <option value="">Assign to VA...</option>
                         {vaList.filter((v) => v.id !== user?.id).map((va) => (
@@ -561,7 +746,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       size="sm"
                       onClick={handleSaveNotes}
                       disabled={savingNotes}
-                      className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+                      className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
                     >
                       {savingNotes ? "Saving..." : "Save Notes"}
                     </Button>
@@ -585,13 +770,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           className={cn(
                             "flex items-start gap-2.5 text-xs py-2 px-2.5 rounded-md mb-1 transition-colors border-b",
                             isAdminMessage 
-                              ? "bg-[#FFF0E5]/80 border-[#F2994A]/20 shadow-sm" 
+                              ? "bg-[#EBF7EC]/80 border-[#65BD6C]/20 shadow-sm" 
                               : "border-[#E5E7EB]/30 hover:bg-gray-50/50"
                           )}
                         >
                           <span className={cn(
                             "text-[10px] whitespace-nowrap pt-0.5 min-w-[70px]",
-                            isAdminMessage ? "text-[#E8792E] font-medium" : "text-[#9CA3AF]"
+                            isAdminMessage ? "text-[#036638] font-medium" : "text-[#9CA3AF]"
                           )}>
                             {new Date(log.createdAt).toLocaleString("en-US", {
                               month: "short",
@@ -603,7 +788,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           <div className="flex flex-col gap-0.5 w-full">
                             <span className={cn(
                               "font-bold",
-                              isAdminMessage ? "text-[#D4691F]" : "text-[#E8792E]"
+                              isAdminMessage ? "text-[#025030]" : "text-[#036638]"
                             )}>
                               {log.author}
                             </span>

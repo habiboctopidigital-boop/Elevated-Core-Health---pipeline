@@ -62,8 +62,8 @@ export default function VADashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-[#E5E7EB] border-t-[3px] border-t-[#F2A93B] p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#FFF0E5] flex items-center justify-center">
-              <Activity className="w-5 h-5 text-[#E8792E]" />
+            <div className="w-10 h-10 rounded-lg bg-[#EBF7EC] flex items-center justify-center">
+              <Activity className="w-5 h-5 text-[#036638]" />
             </div>
             <div>
               <p className="text-2xl font-bold text-[#1A1B1E]">{totalPatients}</p>
@@ -78,12 +78,12 @@ export default function VADashboardPage() {
               "w-10 h-10 rounded-lg flex items-center justify-center",
               summary?.staleCount && summary.staleCount > 0
                 ? "bg-[#FEFCE8]"
-                : "bg-[#FFF0E5]",
+                : "bg-[#EBF7EC]",
             )}>
               {summary?.staleCount && summary.staleCount > 0 ? (
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
               ) : (
-                <CheckCircle2 className="w-5 h-5 text-[#E8792E]" />
+                <CheckCircle2 className="w-5 h-5 text-[#036638]" />
               )}
             </div>
             <div>
@@ -99,12 +99,12 @@ export default function VADashboardPage() {
               "w-10 h-10 rounded-lg flex items-center justify-center",
               summary?.flaggedCount && summary.flaggedCount > 0
                 ? "bg-[#FEF2F2]"
-                : "bg-[#FFF0E5]",
+                : "bg-[#EBF7EC]",
             )}>
               {summary?.flaggedCount && summary.flaggedCount > 0 ? (
-                <Flag className="w-5 h-5 text-[#E8792E]" fill="#E8792E" />
+                <Flag className="w-5 h-5 text-[#036638]" fill="#036638" />
               ) : (
-                <CheckCircle2 className="w-5 h-5 text-[#E8792E]" />
+                <CheckCircle2 className="w-5 h-5 text-[#036638]" />
               )}
             </div>
             <div>
@@ -125,9 +125,9 @@ export default function VADashboardPage() {
               <button
                 key={action.href}
                 onClick={() => router.push(action.href)}
-                className="bg-white rounded-xl border border-[#E5E7EB] p-4 text-left hover:border-[#F2994A]/40 hover:shadow-sm transition-all text-center"
+                className="bg-white rounded-xl border border-[#E5E7EB] p-4 text-left hover:border-[#65BD6C]/40 hover:shadow-sm transition-all text-center"
               >
-                <Icon className="w-6 h-6 text-[#E8792E] mx-auto mb-2" />
+                <Icon className="w-6 h-6 text-[#036638] mx-auto mb-2" />
                 <p className="text-sm font-semibold text-[#1A1B1E]">{action.label}</p>
                 <p className="text-xs text-[#6B7280] mt-0.5">{action.desc}</p>
               </button>
@@ -150,10 +150,10 @@ export default function VADashboardPage() {
                   <span className="text-xs text-[#6B7280] w-24 truncate shrink-0">
                     {STAGE_LABELS[stage]}
                   </span>
-                  <div className="flex-1 h-6 bg-[#FFF0E5] rounded-full overflow-hidden">
+                  <div className="flex-1 h-6 bg-[#EBF7EC] rounded-full overflow-hidden">
                     {count > 0 && (
                       <div
-                        className="h-full bg-[#E8792E] rounded-full transition-all"
+                        className="h-full bg-[#036638] rounded-full transition-all"
                         style={{ width: `${Math.max(barWidth, 8)}%` }}
                       />
                     )}

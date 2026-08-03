@@ -42,7 +42,7 @@ export default function AdminChecklistPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 text-[#E8792E] animate-spin" />
+        <Loader2 className="w-6 h-6 text-[#036638] animate-spin" />
       </div>
     )
   }
@@ -68,7 +68,7 @@ export default function AdminChecklistPage() {
         </div>
         <Button
           onClick={openCreate}
-          className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs gap-1.5"
+          className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
         >
           <Plus className="w-4 h-4" />
           Add Item
@@ -79,7 +79,7 @@ export default function AdminChecklistPage() {
         const stageItems = itemsByStage[stage] || []
         return (
           <div key={stage} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
-            <h3 className="text-sm font-bold text-[#E8792E] mb-3">{STAGE_LABELS[stage]}</h3>
+            <h3 className="text-sm font-bold text-[#036638] mb-3">{STAGE_LABELS[stage]}</h3>
             {stageItems.length > 0 ? (
               <div className="space-y-1.5">
                 {stageItems
@@ -113,7 +113,7 @@ export default function AdminChecklistPage() {
               <label className="text-xs font-semibold text-[#374151]">Stage</label>
               <select
                 {...register("stage")}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 bg-white"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
               >
                 {STAGE_ORDER.map((s) => (
                   <option key={s} value={s}>
@@ -127,7 +127,7 @@ export default function AdminChecklistPage() {
               <input
                 {...register("label", { required: "Label is required" })}
                 placeholder="e.g. Verify insurance eligibility"
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
             </div>
             <div className="space-y-1.5">
@@ -136,7 +136,7 @@ export default function AdminChecklistPage() {
                 type="number"
                 {...register("sortOrder")}
                 placeholder="0"
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
@@ -147,7 +147,7 @@ export default function AdminChecklistPage() {
                 type="submit"
                 size="sm"
                 disabled={createItem.isPending}
-                className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+                className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
               >
                 {createItem.isPending ? "Adding..." : "Add Item"}
               </Button>
@@ -187,7 +187,7 @@ function ChecklistItemRow({
   }
 
   return (
-    <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-[#FFF0E5]/50 transition-colors group">
+    <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-[#EBF7EC]/50 transition-colors group">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         <div className="w-3.5 h-3.5 rounded border border-[#E5E7EB] shrink-0" />
         {editing ? (
@@ -200,7 +200,7 @@ function ChecklistItemRow({
                 if (e.key === "Escape") handleCancel()
               }}
               autoFocus
-              className="flex-1 h-7 px-2 rounded border border-[#E8792E] text-sm text-[#1A1B1E] focus:outline-none focus:ring-1 focus:ring-[#E8792E]/30"
+              className="flex-1 h-7 px-2 rounded border border-[#036638] text-sm text-[#1A1B1E] focus:outline-none focus:ring-1 focus:ring-[#036638]/30"
             />
             <button
               onClick={handleSave}
@@ -219,13 +219,13 @@ function ChecklistItemRow({
         ) : (
           <span
             onClick={() => !item.isDefault && setEditing(true)}
-            className={`text-sm text-[#374151] truncate ${item.isDefault ? "" : "cursor-pointer hover:text-[#E8792E]"}`}
+            className={`text-sm text-[#374151] truncate ${item.isDefault ? "" : "cursor-pointer hover:text-[#036638]"}`}
           >
             {item.label}
           </span>
         )}
         {item.isDefault && (
-          <span className="text-[10px] bg-[#FFF0E5] text-[#E8792E] px-1.5 py-0.5 rounded font-medium shrink-0">
+          <span className="text-[10px] bg-[#EBF7EC] text-[#036638] px-1.5 py-0.5 rounded font-medium shrink-0">
             Default
           </span>
         )}

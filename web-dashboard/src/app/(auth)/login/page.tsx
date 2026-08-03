@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md rounded-md bg-white p-10">
           <div className="mb-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#E8792E] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#E8792E]/20">
+            <div className="w-14 h-14 rounded-full bg-[#036638] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#036638]/20">
               <span className="text-white text-2xl font-bold tracking-tight">ECH</span>
             </div>
             <h1 className="text-xl font-bold text-[#1A1B1E]">Welcome back</h1>
@@ -55,7 +55,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 focus:border-[#E8792E] transition-all"
+                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all"
                 placeholder="name@example.com"
                 {...register("email")}
               />
@@ -73,7 +73,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 focus:border-[#E8792E] transition-all pr-10"
+                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all pr-10"
                   placeholder="Enter your password"
                   {...register("password")}
                 />
@@ -91,7 +91,7 @@ export default function LoginPage() {
               <div className="flex justify-end mt-1">
                 <Link
                   href={ROUTES.FORGOT_PASSWORD}
-                  className="text-[11px] text-[#6B7280] hover:text-[#E8792E] transition-colors"
+                  className="text-[11px] text-[#6B7280] hover:text-[#036638] transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -107,7 +107,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-10 bg-[#E8792E] hover:bg-[#D4691F] text-white font-semibold rounded-lg shadow shadow-[#E8792E]/20 disabled:opacity-60 transition-all"
+              className="w-full h-10 bg-[#036638] hover:bg-[#025030] text-white font-semibold rounded-lg shadow shadow-[#036638]/20 disabled:opacity-60 transition-all"
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">

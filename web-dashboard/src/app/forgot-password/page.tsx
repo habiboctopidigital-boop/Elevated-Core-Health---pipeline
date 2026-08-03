@@ -31,8 +31,8 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md bg-white rounded-xl border border-[#E5E7EB] p-8 shadow-sm">
         {sent ? (
           <div className="text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#FFF0E5] flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-6 h-6 text-[#E8792E]" />
+            <div className="w-12 h-12 rounded-full bg-[#EBF7EC] flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-6 h-6 text-[#036638]" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-[#1A1B1E]">Check your email</h1>
@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
             </div>
             <Link
               href={ROUTES.LOGIN}
-              className="inline-flex items-center gap-1.5 text-sm text-[#E8792E] font-medium hover:underline"
+              className="inline-flex items-center gap-1.5 text-sm text-[#036638] font-medium hover:underline"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to login
@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 transition-all"
+                  className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
                 />
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
             <Button
               type="submit"
               disabled={sending || !email.trim()}
-              className="w-full bg-[#E8792E] hover:bg-[#D4691F] text-white text-sm h-10"
+              className="w-full bg-[#036638] hover:bg-[#025030] text-white text-sm h-10"
             >
               {sending ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
 
             <Link
               href={ROUTES.LOGIN}
-              className="flex items-center justify-center gap-1.5 text-sm text-[#6B7280] hover:text-[#E8792E] transition-colors"
+              className="flex items-center justify-center gap-1.5 text-sm text-[#6B7280] hover:text-[#036638] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to login

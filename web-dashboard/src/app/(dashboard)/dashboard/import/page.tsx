@@ -62,7 +62,7 @@ function DataPreviewTable({
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#FFF0E5]/20">
+            <tr key={i} className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#EBF7EC]/20">
               <td className="text-[#6B7280] px-3 py-2.5 text-[10px]">{i + 1}</td>
               {displayCols.map((col) => (
                 <td key={col} className="text-[#374151] px-3 py-2.5 max-w-[200px] truncate whitespace-nowrap">
@@ -99,10 +99,10 @@ function UploadZone({
         className={cn(
           "relative rounded-2xl border-2 border-dashed p-10 sm:p-14 text-center cursor-pointer transition-all duration-200",
           state.status === "dragging"
-            ? "border-[#E8792E] bg-[#FFF0E5] scale-[1.01]"
+            ? "border-[#036638] bg-[#EBF7EC] scale-[1.01]"
             : state.status === "selected" || state.status === "uploading"
-              ? "border-[#E8792E]/40 bg-[#FFF0E5]/20"
-              : "border-[#E5E7EB] bg-white hover:border-[#E8792E]/30 hover:bg-[#FFF0E5]/10",
+              ? "border-[#036638]/40 bg-[#EBF7EC]/20"
+              : "border-[#E5E7EB] bg-white hover:border-[#036638]/30 hover:bg-[#EBF7EC]/10",
         )}
       >
         <input
@@ -118,20 +118,20 @@ function UploadZone({
 
         {state.status === "uploading" ? (
           <div className="py-6">
-            <Loader2 className="w-12 h-12 text-[#E8792E] mx-auto mb-4 animate-spin" />
+            <Loader2 className="w-12 h-12 text-[#036638] mx-auto mb-4 animate-spin" />
             <p className="text-base font-semibold text-[#374151]">Uploading & Parsing...</p>
             <p className="text-sm text-[#6B7280] mt-1.5">{state.file.name}</p>
           </div>
         ) : (
           <>
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FFF0E5] to-[#FBE7B2] flex items-center justify-center mx-auto mb-5">
-              <Upload className="w-8 h-8 text-[#E8792E]" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] flex items-center justify-center mx-auto mb-5">
+              <Upload className="w-8 h-8 text-[#036638]" />
             </div>
             <p className="text-base font-semibold text-[#374151]">
               {state.status === "dragging" ? "Release to upload" : "Drag & drop your file here"}
             </p>
             <p className="text-sm text-[#6B7280] mt-1.5">
-              or <span className="text-[#E8792E] font-medium underline underline-offset-2">browse files</span>
+              or <span className="text-[#036638] font-medium underline underline-offset-2">browse files</span>
             </p>
             <div className="flex items-center justify-center gap-4 mt-5 text-[11px] text-[#6B7280]">
               <span className="flex items-center gap-1">
@@ -152,11 +152,11 @@ function UploadZone({
           <div
             className={cn(
               "flex items-center gap-3 p-4 rounded-xl border",
-              state.status === "error" ? "bg-red-50 border-red-100" : "bg-[#FFF0E5]/40 border-[#FBE7B2]/50",
+              state.status === "error" ? "bg-red-50 border-red-100" : "bg-[#EBF7EC]/40 border-[#FBE7B2]/50",
             )}
           >
             <FileSpreadsheet
-              className={cn("w-10 h-10 shrink-0", state.status === "error" ? "text-red-400" : "text-[#E8792E]")}
+              className={cn("w-10 h-10 shrink-0", state.status === "error" ? "text-red-400" : "text-[#036638]")}
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-[#374151] truncate">{state.file.name}</p>
@@ -182,7 +182,7 @@ function UploadZone({
               <Button
                 size="sm"
                 onClick={upload}
-                className="gap-1.5 bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs h-9 shadow-sm"
+                className="gap-1.5 bg-[#036638] hover:bg-[#025030] text-white text-xs h-9 shadow-sm"
               >
                 <Upload className="w-3.5 h-3.5" />
                 Upload & Parse
@@ -272,7 +272,7 @@ function SuccessResult({
             {columns.map((col) => (
               <span
                 key={col}
-                className="text-[11px] font-mono bg-white text-[#E8792E] px-2.5 py-1 rounded-lg border border-[#FBE7B2]/60 shadow-sm"
+                className="text-[11px] font-mono bg-white text-[#036638] px-2.5 py-1 rounded-lg border border-[#FBE7B2]/60 shadow-sm"
               >
                 {col}
               </span>
@@ -293,7 +293,7 @@ function SuccessResult({
             {allCount > PREVIEW_LIMIT && (
               <button
                 onClick={() => setShowAll(!showAll)}
-                className="flex items-center gap-1 text-[10px] font-medium text-[#E8792E] hover:text-[#D4691F] transition-colors"
+                className="flex items-center gap-1 text-[10px] font-medium text-[#036638] hover:text-[#025030] transition-colors"
               >
                 {showAll ? (
                   <><EyeOff className="w-3 h-3" /> Show less</>
@@ -335,13 +335,13 @@ function HistoryRow({
   return (
     <div className="group">
       <div
-        className="flex items-center gap-3 px-4 py-3 hover:bg-[#FFF0E5]/20 transition-colors cursor-pointer"
+        className="flex items-center gap-3 px-4 py-3 hover:bg-[#EBF7EC]/20 transition-colors cursor-pointer"
         onClick={onToggle}
       >
         <button className="p-0.5 rounded text-[#6B7280] hover:text-[#374151]">
           {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         </button>
-        <FileSpreadsheet className="w-5 h-5 text-[#E8792E] shrink-0" />
+        <FileSpreadsheet className="w-5 h-5 text-[#036638] shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-[#374151] truncate">{entry.fileName}</p>
           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#6B7280]">
@@ -432,8 +432,8 @@ export default function ImportPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFF0E5] to-[#FBE7B2] flex items-center justify-center">
-            <Upload className="w-5 h-5 text-[#E8792E]" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] flex items-center justify-center">
+            <Upload className="w-5 h-5 text-[#036638]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-[#1A1B1E]">Bulk Import</h1>
@@ -451,8 +451,8 @@ export default function ImportPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#FFF0E5] flex items-center justify-center">
-              <Clock className="w-4 h-4 text-[#E8792E]" />
+            <div className="w-8 h-8 rounded-lg bg-[#EBF7EC] flex items-center justify-center">
+              <Clock className="w-4 h-4 text-[#036638]" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-[#1A1B1E]">Upload History</h2>

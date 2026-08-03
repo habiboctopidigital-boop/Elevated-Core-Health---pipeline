@@ -138,7 +138,7 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 text-[#E8792E] animate-spin" />
+        <Loader2 className="w-6 h-6 text-[#036638] animate-spin" />
       </div>
     )
   }
@@ -168,14 +168,14 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
                 className={cn(
                   "w-72 flex flex-col rounded-xl border shrink-0 transition-all duration-200",
                   isOver && !isDisabled
-                    ? "border-[#F2994A] bg-[#FFF0E5] shadow-lg shadow-[#F2994A]/10 scale-[1.02]"
-                    : "border-[#E5E7EB]/50 bg-[#FFF0E5]/40",
+                    ? "border-[#65BD6C] bg-[#EBF7EC] shadow-lg shadow-[#65BD6C]/10 scale-[1.02]"
+                    : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",
                 )}
               >
                 <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-[#E8792E] truncate">
+                      <h3 className="text-sm font-bold text-[#036638] truncate">
                         {STAGE_LABELS[stage]}
                       </h3>
                       <p className="text-[10px] text-[#6B7280] mt-0.5">
@@ -197,7 +197,7 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
                         <div key={patient.id} className="relative group">
                           {isPending && (
                             <div className="absolute inset-0 z-10 bg-white/70 rounded-lg flex items-center justify-center">
-                              <Loader2 className="w-5 h-5 text-[#E8792E] animate-spin" />
+                              <Loader2 className="w-5 h-5 text-[#036638] animate-spin" />
                             </div>
                           )}
                           <PatientCard
@@ -216,12 +216,12 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
                       className={cn(
                         "text-center py-8 rounded-lg border-2 border-dashed transition-colors",
                         isOver && !isDisabled
-                          ? "border-[#F2994A] bg-[#FFF0E5]"
+                          ? "border-[#65BD6C] bg-[#EBF7EC]"
                           : "border-transparent",
                       )}
                     >
                       {isOver && !isDisabled ? (
-                        <p className="text-xs text-[#E8792E] font-medium flex items-center justify-center gap-1.5">
+                        <p className="text-xs text-[#036638] font-medium flex items-center justify-center gap-1.5">
                           <GripVertical className="w-3.5 h-3.5" />
                           Drop here
                         </p>

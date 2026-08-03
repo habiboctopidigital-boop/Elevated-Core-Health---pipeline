@@ -75,7 +75,7 @@ export default function AdminUsersPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 text-[#E8792E] animate-spin" />
+        <Loader2 className="w-6 h-6 text-[#036638] animate-spin" />
       </div>
     )
   }
@@ -91,7 +91,7 @@ export default function AdminUsersPage() {
         </div>
         <Button
           onClick={openCreate}
-          className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs gap-1.5"
+          className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
         >
           <Plus className="w-4 h-4" />
           Add User
@@ -101,15 +101,15 @@ export default function AdminUsersPage() {
       <div className="bg-white rounded-xl border border-[#E5E7EB] divide-y divide-[#E5E7EB]/50 overflow-hidden">
         {users && users.length > 0 ? (
           users.map((user) => (
-            <div key={user.id} className="flex items-center gap-4 px-5 py-4 hover:bg-[#FFF0E5]/30 transition-colors">
+            <div key={user.id} className="flex items-center gap-4 px-5 py-4 hover:bg-[#EBF7EC]/30 transition-colors">
               <div className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                user.role === "admin" ? "bg-[#E8792E]" : "bg-[#FFF0E5]",
+                user.role === "admin" ? "bg-[#036638]" : "bg-[#EBF7EC]",
               )}>
                 {user.role === "admin" ? (
                   <Shield className="w-5 h-5 text-white" />
                 ) : (
-                  <UserIcon className="w-5 h-5 text-[#E8792E]" />
+                  <UserIcon className="w-5 h-5 text-[#036638]" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -120,8 +120,8 @@ export default function AdminUsersPage() {
                 <span className={cn(
                   "text-[10px] font-semibold uppercase px-2 py-0.5 rounded",
                   user.role === "admin"
-                    ? "bg-[#E8792E]/10 text-[#E8792E]"
-                    : "bg-[#FFF0E5] text-[#E8792E]",
+                    ? "bg-[#036638]/10 text-[#036638]"
+                    : "bg-[#EBF7EC] text-[#036638]",
                 )}>
                   {user.role}
                 </span>
@@ -134,7 +134,7 @@ export default function AdminUsersPage() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => openEdit(user)}
-                  className="p-1.5 rounded-lg hover:bg-[#FFF0E5] text-[#6B7280] hover:text-[#E8792E] transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-[#EBF7EC] text-[#6B7280] hover:text-[#036638] transition-colors"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
@@ -191,7 +191,7 @@ export default function AdminUsersPage() {
               <label className="text-xs font-semibold text-[#374151]">Name</label>
               <input
                 {...register("name", { required: "Name is required" })}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
               {errors.name && <p className="text-[11px] text-red-500">{errors.name.message as string}</p>}
             </div>
@@ -200,7 +200,7 @@ export default function AdminUsersPage() {
               <input
                 type="email"
                 {...register("email", { required: "Email is required" })}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
               {errors.email && <p className="text-[11px] text-red-500">{errors.email.message as string}</p>}
             </div>
@@ -211,7 +211,7 @@ export default function AdminUsersPage() {
               <input
                 type="password"
                 {...register("password", editingUser ? {} : { required: "Password is required" })}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
               {errors.password && <p className="text-[11px] text-red-500">{errors.password.message as string}</p>}
             </div>
@@ -220,7 +220,7 @@ export default function AdminUsersPage() {
                 <label className="text-xs font-semibold text-[#374151]">Role</label>
                 <select
                   {...register("role")}
-                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30 bg-white"
+                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
                 >
                   <option value="va">VA</option>
                   <option value="admin">Admin</option>
@@ -231,7 +231,7 @@ export default function AdminUsersPage() {
                 <input
                   {...register("shift")}
                   placeholder="e.g. Morning"
-                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#E8792E]/30"
+                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
                 />
               </div>
             </div>
@@ -243,7 +243,7 @@ export default function AdminUsersPage() {
                 type="submit"
                 size="sm"
                 disabled={createUser.isPending || updateUser.isPending}
-                className="bg-[#E8792E] hover:bg-[#D4691F] text-white text-xs"
+                className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
               >
                 {createUser.isPending || updateUser.isPending
                   ? "Saving..."

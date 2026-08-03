@@ -65,12 +65,12 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
       className={cn(
         "bg-white rounded-lg border p-3.5 transition-all duration-150 relative",
         canMoveStage ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
-        "hover:shadow-md hover:border-[#F2994A]/40 hover:-translate-y-0.5",
+        "hover:shadow-md hover:border-[#65BD6C]/40 hover:-translate-y-0.5",
         "active:shadow-sm active:translate-y-0",
         stale
           ? "border-amber-300 shadow-[0_0_0_1px_#FDE68A]"
           : "border-[#E5E7EB]",
-        patient.isFlagged && "bg-[#FFFAF5] border-[#E8792E] border-l-[3px] shadow-[0_0_0_1px_#E8792E]/20",
+        patient.isFlagged && "bg-[#F0F9F5] border-[#036638] border-l-[3px] shadow-[0_0_0_1px_#036638]/20",
         isDragging && "opacity-50 scale-95 shadow-lg rotate-2",
       )}
     >
@@ -96,8 +96,8 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {patient.isFlagged && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#E8792E]/10 border border-[#E8792E]/20 text-[9px] font-semibold text-[#E8792E]">
-              <Flag className="w-2.5 h-2.5" fill="#E8792E" />
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#036638]/10 border border-[#036638]/20 text-[9px] font-semibold text-[#036638]">
+              <Flag className="w-2.5 h-2.5" fill="#036638" />
               Flagged
             </span>
           )}
@@ -134,12 +134,12 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
       {/* - Assigned user - */}
       {patient.assignedUser ? (
         <div className="flex items-center gap-1.5 mb-2">
-          <div className="w-4 h-4 rounded-full bg-[#E8792E]/10 flex items-center justify-center">
-            <span className="text-[8px] font-bold text-[#E8792E]">
+          <div className="w-4 h-4 rounded-full bg-[#036638]/10 flex items-center justify-center">
+            <span className="text-[8px] font-bold text-[#036638]">
               {patient.assignedUser.name.charAt(0).toUpperCase()}
             </span>
           </div>
-          <span className="text-[10px] text-[#E8792E] font-medium">
+          <span className="text-[10px] text-[#036638] font-medium">
             {patient.assignedUser.name}
           </span>
         </div>
@@ -166,7 +166,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             </span>
             <span className={cn(
               "text-[10px] font-bold",
-              allComplete ? "text-emerald-600" : "text-[#E8792E]"
+              allComplete ? "text-emerald-600" : "text-[#036638]"
             )}>
               {completedCount}/{totalCount}
             </span>
@@ -176,7 +176,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
-                allComplete ? "bg-emerald-500" : "bg-[#E8792E]"
+                allComplete ? "bg-emerald-500" : "bg-[#036638]"
               )}
               style={{ width: `${progressPct}%` }}
             />
@@ -243,7 +243,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                 className={cn(
                   "flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium transition-colors",
                   allComplete
-                    ? "bg-[#E8792E] text-white hover:bg-[#d46b24]"
+                    ? "bg-[#036638] text-white hover:bg-[#025030]"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 )}
                 title={
@@ -268,7 +268,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   e.target.value = ""
                 }}
                 value=""
-                className="appearance-none w-full text-[10px] border border-[#E5E7EB] rounded px-2 py-0.5 pr-6 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#F2994A]/40 focus:outline-none focus:ring-1 focus:ring-[#E8792E]"
+                className="appearance-none w-full text-[10px] border border-[#E5E7EB] rounded px-2 py-0.5 pr-6 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
                 title="Assign VA"
               >
                 <option value="">{patient.assignedTo ? "Reassign..." : "Assign VA..."}</option>

@@ -76,7 +76,7 @@ function StaggerChildren({ children, className = "" }: { children: React.ReactNo
   )
 }
 
-const SECTION_LABEL = "text-[11px] font-semibold text-[#E8792E] uppercase tracking-[0.18em]"
+const SECTION_LABEL = "text-[11px] font-semibold text-[#036638] uppercase tracking-[0.18em]"
 
 // ─── Navbar ───
 function Navbar() {
@@ -92,7 +92,7 @@ function Navbar() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex items-center justify-between h-16 sm:h-20">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E8792E] to-[#F2994A] flex items-center justify-center shadow-lg shadow-[#E8792E]/20 group-hover:shadow-[#E8792E]/40 transition-shadow duration-300">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#036638] to-[#65BD6C] flex items-center justify-center shadow-lg shadow-[#036638]/20 group-hover:shadow-[#036638]/40 transition-shadow duration-300">
               <span className="text-white text-sm font-bold tracking-tight">ECH</span>
             </div>
             <span className="text-sm font-semibold text-white/80 hidden sm:block">Patient Pipeline Portal</span>
@@ -100,13 +100,13 @@ function Navbar() {
           <div className="flex items-center gap-3 sm:gap-5">
             <Link href="/login" className="group relative text-sm font-medium text-white/60 hover:text-white transition-colors duration-300">
               Sign In
-              <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-gradient-to-r from-[#E8792E] to-[#F2994A] group-hover:w-full transition-all duration-300" />
+              <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-gradient-to-r from-[#036638] to-[#65BD6C] group-hover:w-full transition-all duration-300" />
             </Link>
             <Link
               href="/login"
-              className="group relative inline-flex items-center gap-1.5 h-9 sm:h-10 px-5 sm:px-6 rounded-full bg-white text-[#E8792E] text-sm font-semibold overflow-hidden transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95"
+              className="group relative inline-flex items-center gap-1.5 h-9 sm:h-10 px-5 sm:px-6 rounded-full bg-white text-[#036638] text-sm font-semibold overflow-hidden transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95"
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-[#FFF0E5] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-[#EBF7EC] to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               <span className="relative">Enter Portal</span>
               <ArrowRight className="relative w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </Link>
@@ -123,9 +123,9 @@ function HeroSection() {
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[#0F0F0F]">
       {/* Mesh gradient layers */}
       <div className="absolute inset-0 opacity-60">
-        <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full bg-[#E8792E]/20 blur-[120px] animate-mesh" />
-        <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 rounded-full bg-[#F2994A]/15 blur-[120px] animate-mesh-2" />
-        <div className="absolute top-1/3 right-1/4 w-1/3 h-1/3 rounded-full bg-[#FFF0E5]/8 blur-[100px] animate-mesh" style={{ animationDelay: "-10s" }} />
+        <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 rounded-full bg-[#036638]/20 blur-[120px] animate-mesh" />
+        <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 rounded-full bg-[#65BD6C]/15 blur-[120px] animate-mesh-2" />
+        <div className="absolute top-1/3 right-1/4 w-1/3 h-1/3 rounded-full bg-[#EBF7EC]/8 blur-[100px] animate-mesh" style={{ animationDelay: "-10s" }} />
       </div>
 
       {/* Subtle grid */}
@@ -148,7 +148,7 @@ function HeroSection() {
               <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1.05] tracking-tight opacity-0 animate-slide-up-strong animate-delay-100">
                 <span className="text-white">Track.</span><br />
                 <span className="text-white">Manage.</span><br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F2994A] via-[#E8792E] to-[#F2994A]">Reconcile.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#65BD6C] via-[#036638] to-[#65BD6C]">Reconcile.</span>
               </h1>
               <p className="text-base sm:text-lg text-white/50 max-w-md leading-relaxed opacity-0 animate-slide-up animate-delay-300">
                 A purpose-built patient pipeline portal for Elevated Core Health.
@@ -160,7 +160,7 @@ function HeroSection() {
             <div className="flex flex-wrap gap-3 opacity-0 animate-slide-up animate-delay-400">
               <Link
                 href="/login"
-                className="group relative inline-flex items-center gap-2 h-11 sm:h-12 px-6 sm:px-8 rounded-full bg-gradient-to-r from-[#E8792E] to-[#F2994A] text-white font-semibold text-sm overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(232,121,46,0.4)] hover:scale-105 active:scale-95"
+                className="group relative inline-flex items-center gap-2 h-11 sm:h-12 px-6 sm:px-8 rounded-full bg-gradient-to-r from-[#036638] to-[#65BD6C] text-white font-semibold text-sm overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(232,121,46,0.4)] hover:scale-105 active:scale-95"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ boxShadow: "inset 0 0 20px rgba(255,255,255,0.1)" }} />
@@ -181,7 +181,7 @@ function HeroSection() {
             <div className="flex flex-wrap items-center gap-5 text-xs text-white/30 opacity-0 animate-fade-in animate-delay-600">
               <div className="flex items-center gap-2">
                 <div className="flex -space-x-1.5">
-                  {["#E8792E", "#F2994A", "#FFF0E5"].map((c, i) => (
+                  {["#036638", "#65BD6C", "#EBF7EC"].map((c, i) => (
                     <div key={i} className="w-5 h-5 rounded-full border-2 border-[#0F0F0F]" style={{ background: c }} />
                   ))}
                 </div>
@@ -202,7 +202,7 @@ function HeroSection() {
           <div className="lg:col-span-7 opacity-0 animate-slide-up-strong animate-delay-200">
             <div className="relative group">
               {/* Glow behind */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-[#E8792E]/10 to-[#F2994A]/5 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="absolute -inset-4 bg-gradient-to-r from-[#036638]/10 to-[#65BD6C]/5 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
 
               {/* Browser frame */}
               <div className="relative rounded-2xl overflow-hidden bg-[#1A1B1E] border border-white/10 shadow-2xl shadow-black/40 group-hover:border-white/20 transition-all duration-500">
@@ -219,7 +219,7 @@ function HeroSection() {
                   {/* Status bar */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#E8792E] to-[#F2994A] flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#036638] to-[#65BD6C] flex items-center justify-center">
                         <Activity className="w-3.5 h-3.5 text-white" />
                       </div>
                       <div>
@@ -236,12 +236,12 @@ function HeroSection() {
                   {/* Pipeline stages */}
                   <div className="grid gap-1.5">
                     {[
-                      { label: "Onboarding", count: 3, pct: 25, color: "from-[#F2994A] to-[#E8792E]" },
-                      { label: "Visit Complete", count: 5, pct: 42, color: "from-[#E8792E] to-[#D4691F]" },
-                      { label: "Post-Visit Docs", count: 2, pct: 17, color: "from-[#F2994A] to-[#D4691F]" },
-                      { label: "Chart Signed", count: 2, pct: 17, color: "from-[#E8792E] to-[#C45A14]" },
-                      { label: "Sent to Billing", count: 4, pct: 33, color: "from-[#F2994A] to-[#E8792E]" },
-                      { label: "Payment Posted", count: 1, pct: 8, color: "from-[#E8792E] to-[#B84E08]" },
+                      { label: "Onboarding", count: 3, pct: 25, color: "from-[#65BD6C] to-[#036638]" },
+                      { label: "Visit Complete", count: 5, pct: 42, color: "from-[#036638] to-[#025030]" },
+                      { label: "Post-Visit Docs", count: 2, pct: 17, color: "from-[#65BD6C] to-[#025030]" },
+                      { label: "Chart Signed", count: 2, pct: 17, color: "from-[#036638] to-[#C45A14]" },
+                      { label: "Sent to Billing", count: 4, pct: 33, color: "from-[#65BD6C] to-[#036638]" },
+                      { label: "Payment Posted", count: 1, pct: 8, color: "from-[#036638] to-[#B84E08]" },
                       { label: "Reconciled", count: 12, pct: 100, color: "from-green-500 to-emerald-500" },
                     ].map((s) => {
                       const maxBar = 12
@@ -282,7 +282,7 @@ function HeroSection() {
               </div>
 
               {/* Floating badge */}
-              <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 rounded-xl bg-gradient-to-br from-[#E8792E] to-[#F2994A] px-3 sm:px-4 py-2 shadow-xl animate-float-slow hidden sm:block">
+              <div className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 rounded-xl bg-gradient-to-br from-[#036638] to-[#65BD6C] px-3 sm:px-4 py-2 shadow-xl animate-float-slow hidden sm:block">
                 <p className="text-[9px] text-white/70 uppercase tracking-wider">Status</p>
                 <p className="text-sm font-bold text-white">All Caught Up</p>
               </div>
@@ -343,7 +343,7 @@ function HowItWorksSection() {
               const Icon = step.icon
               return (
                 <div key={step.title} className="group relative">
-                  <div className={`relative p-6 sm:p-8 rounded-2xl bg-white border border-[#E5E7EB] transition-all duration-500 hover:border-[#E8792E]/20 hover:shadow-xl hover:shadow-[#E8792E]/5 ${i === 1 ? "md:translate-y-6" : ""}`}
+                  <div className={`relative p-6 sm:p-8 rounded-2xl bg-white border border-[#E5E7EB] transition-all duration-500 hover:border-[#036638]/20 hover:shadow-xl hover:shadow-[#036638]/5 ${i === 1 ? "md:translate-y-6" : ""}`}
                     style={{
                       animation: `slide-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards`,
                       animationDelay: `${i * 150}ms`,
@@ -351,14 +351,14 @@ function HowItWorksSection() {
                     }}
                   >
                     {/* Hover gradient */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#FFF0E5]/0 to-[#FBE7B2]/0 group-hover:from-[#FFF0E5]/30 group-hover:to-[#FBE7B2]/20 transition-all duration-500 pointer-events-none" />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#EBF7EC]/0 to-[#FBE7B2]/0 group-hover:from-[#EBF7EC]/30 group-hover:to-[#FBE7B2]/20 transition-all duration-500 pointer-events-none" />
 
                     <div className="relative">
                       <div className="flex items-center justify-between mb-5">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FFF0E5] to-[#FBE7B2] group-hover:from-[#E8792E] group-hover:to-[#F2994A] transition-all duration-500 flex items-center justify-center">
-                          <Icon className="w-5 h-5 text-[#E8792E] group-hover:text-white transition-colors duration-500" />
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] group-hover:from-[#036638] group-hover:to-[#65BD6C] transition-all duration-500 flex items-center justify-center">
+                          <Icon className="w-5 h-5 text-[#036638] group-hover:text-white transition-colors duration-500" />
                         </div>
-                        <span className="text-2xl sm:text-3xl font-bold text-[#E8792E]/10 group-hover:text-[#E8792E]/20 transition-colors duration-500 tabular-nums">{step.number}</span>
+                        <span className="text-2xl sm:text-3xl font-bold text-[#036638]/10 group-hover:text-[#036638]/20 transition-colors duration-500 tabular-nums">{step.number}</span>
                       </div>
                       <h3 className="text-base sm:text-lg font-bold text-[#0F0F0F] mb-2">{step.title}</h3>
                       <p className="text-sm text-[#6B7280] leading-relaxed">{step.desc}</p>
@@ -429,9 +429,9 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[number]; ind
 
           <div className="flex flex-wrap gap-4 pt-2">
             {feature.stats.map((s) => (
-              <div key={s.label} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#FFF0E5]/50 border border-[#FBE7B2]/50">
+              <div key={s.label} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#EBF7EC]/50 border border-[#FBE7B2]/50">
                 <span className="text-[11px] text-[#6B7280]">{s.label}</span>
-                <span className="text-[11px] font-bold text-[#E8792E]">{s.value}</span>
+                <span className="text-[11px] font-bold text-[#036638]">{s.value}</span>
               </div>
             ))}
           </div>
@@ -439,14 +439,14 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[number]; ind
 
         {/* Visual side */}
         <div className={`${index % 2 === 1 ? "md:order-1" : ""}`}>
-          <div className="relative rounded-2xl bg-gradient-to-br from-[#FFF0E5]/40 to-[#FBE7B2]/20 border border-[#E5E7EB] p-6 sm:p-8 group-hover:border-[#E8792E]/10 group-hover:shadow-lg transition-all duration-500">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#E8792E] to-[#F2994A] flex items-center justify-center shadow-lg shadow-[#E8792E]/20 mb-5">
+          <div className="relative rounded-2xl bg-gradient-to-br from-[#EBF7EC]/40 to-[#FBE7B2]/20 border border-[#E5E7EB] p-6 sm:p-8 group-hover:border-[#036638]/10 group-hover:shadow-lg transition-all duration-500">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#036638] to-[#65BD6C] flex items-center justify-center shadow-lg shadow-[#036638]/20 mb-5">
               <Icon className="w-6 h-6 text-white" />
             </div>
             <div className="space-y-3">
               {[1, 2, 3].map((row) => (
                 <div key={row} className="flex items-center gap-3 p-3 rounded-xl bg-white/60 border border-[#E5E7EB]/50">
-                  <div className={`w-2 h-2 rounded-full ${row === 1 ? "bg-[#E8792E]" : row === 2 ? "bg-[#F2994A]" : "bg-green-500"}`} />
+                  <div className={`w-2 h-2 rounded-full ${row === 1 ? "bg-[#036638]" : row === 2 ? "bg-[#65BD6C]" : "bg-green-500"}`} />
                   <div className="flex-1 space-y-1">
                     <div className={`h-2 rounded-full bg-[#E5E7EB] ${row === 1 ? "w-3/4" : row === 2 ? "w-1/2" : "w-2/3"}`} />
                     <div className={`h-1.5 rounded-full bg-[#F0F2F5] ${row === 1 ? "w-full" : row === 2 ? "w-2/3" : "w-1/2"}`} />
@@ -463,7 +463,7 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[number]; ind
 
 function FeaturesSection() {
   return (
-    <section className="relative py-20 sm:py-28 bg-[#FFF0E5]/20">
+    <section className="relative py-20 sm:py-28 bg-[#EBF7EC]/20">
       <div className="mx-auto max-w-7xl px-6">
         <ScrollReveal className="text-center max-w-2xl mx-auto mb-14 sm:mb-20">
           <span className={SECTION_LABEL}>Features</span>
@@ -494,7 +494,7 @@ const PERSONAS = [
     initials: "DR",
     quote: "I need to see the full picture at a glance - what's been done, what's waiting, and what needs my attention - without logging into three different systems.",
     focus: ["Oversight", "Flag resolution", "Analytics"],
-    color: "from-[#E8792E] to-[#F2994A]",
+    color: "from-[#036638] to-[#65BD6C]",
   },
   {
     name: "Jude",
@@ -502,7 +502,7 @@ const PERSONAS = [
     initials: "J",
     quote: "When I start my shift, I want to see exactly where Amanda left off. No digging through emails - just open the board and pick up the next task.",
     focus: ["AM patients", "Checklist completion", "Handoff notes"],
-    color: "from-[#F2994A] to-[#E8792E]",
+    color: "from-[#65BD6C] to-[#036638]",
   },
   {
     name: "Amanda",
@@ -510,7 +510,7 @@ const PERSONAS = [
     initials: "A",
     quote: "I need to know which patients need follow-up before end of day and a clean way to hand off anything I couldn't finish to Jude for the morning.",
     focus: ["PM patients", "Flagging issues", "Close-out prep"],
-    color: "from-[#FFF0E5] to-[#FBE7B2]",
+    color: "from-[#EBF7EC] to-[#FBE7B2]",
   },
 ]
 
@@ -532,17 +532,17 @@ function TeamSection() {
         <div className="grid md:grid-cols-3 gap-5 sm:gap-6">
           {PERSONAS.map((persona, i) => (
             <ScrollReveal key={persona.name} delay={i * 100}>
-              <div className="group relative p-6 sm:p-8 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#E8792E]/20 transition-all duration-500 hover:shadow-xl hover:shadow-[#E8792E]/5">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#FFF0E5]/0 to-[#FBE7B2]/0 group-hover:from-[#FFF0E5]/20 group-hover:to-[#FBE7B2]/10 transition-all duration-500 pointer-events-none" />
+              <div className="group relative p-6 sm:p-8 rounded-2xl bg-white border border-[#E5E7EB] hover:border-[#036638]/20 transition-all duration-500 hover:shadow-xl hover:shadow-[#036638]/5">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#EBF7EC]/0 to-[#FBE7B2]/0 group-hover:from-[#EBF7EC]/20 group-hover:to-[#FBE7B2]/10 transition-all duration-500 pointer-events-none" />
 
                 <div className="relative">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${persona.color} flex items-center justify-center mb-5 shadow-lg ${i < 2 ? "shadow-[#E8792E]/20" : "shadow-black/5"} group-hover:scale-105 transition-transform duration-500`}>
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${persona.color} flex items-center justify-center mb-5 shadow-lg ${i < 2 ? "shadow-[#036638]/20" : "shadow-black/5"} group-hover:scale-105 transition-transform duration-500`}>
                     <span className="text-white text-lg font-bold">{persona.initials}</span>
                   </div>
 
                   <div className="mb-4">
                     <h3 className="text-base font-bold text-[#0F0F0F]">{persona.name}</h3>
-                    <p className="text-xs text-[#E8792E] font-medium">{persona.role}</p>
+                    <p className="text-xs text-[#036638] font-medium">{persona.role}</p>
                   </div>
 
                   <blockquote className="text-sm text-[#6B7280] leading-relaxed mb-5 italic">
@@ -551,7 +551,7 @@ function TeamSection() {
 
                   <div className="flex flex-wrap gap-2">
                     {persona.focus.map((f) => (
-                      <span key={f} className="text-[10px] font-medium text-[#E8792E]/70 bg-[#FFF0E5]/60 px-2.5 py-1 rounded-full border border-[#FBE7B2]/50">
+                      <span key={f} className="text-[10px] font-medium text-[#036638]/70 bg-[#EBF7EC]/60 px-2.5 py-1 rounded-full border border-[#FBE7B2]/50">
                         {f}
                       </span>
                     ))}
@@ -594,7 +594,7 @@ function StatCard({ value, suffix, label, sub, isActive, delay }: { value: numbe
         transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
-      <div className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2994A] to-[#E8792E] tabular-nums mb-1">
+      <div className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#65BD6C] to-[#036638] tabular-nums mb-1">
         {count}{suffix}
       </div>
       <p className="text-sm font-semibold text-white mb-0.5">{label}</p>
@@ -610,13 +610,13 @@ function TrustSection() {
     <section className="relative py-20 sm:py-28 bg-[#0F0F0F] overflow-hidden">
       <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: "40px 40px" }} />
       <div className="absolute inset-0">
-        <div className="absolute bottom-0 left-1/3 w-96 h-96 rounded-full bg-[#E8792E]/5 blur-[100px]" />
-        <div className="absolute top-0 right-1/4 w-64 h-64 rounded-full bg-[#F2994A]/5 blur-[100px]" />
+        <div className="absolute bottom-0 left-1/3 w-96 h-96 rounded-full bg-[#036638]/5 blur-[100px]" />
+        <div className="absolute top-0 right-1/4 w-64 h-64 rounded-full bg-[#65BD6C]/5 blur-[100px]" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-6">
         <ScrollReveal className="text-center max-w-2xl mx-auto mb-14 sm:mb-20">
-          <span className="text-[11px] font-semibold text-[#F2994A] uppercase tracking-[0.18em]">Built Different</span>
+          <span className="text-[11px] font-semibold text-[#65BD6C] uppercase tracking-[0.18em]">Built Different</span>
           <h2 className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold text-white mt-4 mb-4 leading-tight">
             Security & Simplicity
           </h2>
@@ -640,7 +640,7 @@ function TrustSection() {
               const Icon = badge.icon
               return (
                 <div key={badge.label} className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-300">
-                  <Icon className="w-4 h-4 text-white/30 group-hover:text-[#F2994A] transition-colors duration-300" />
+                  <Icon className="w-4 h-4 text-white/30 group-hover:text-[#65BD6C] transition-colors duration-300" />
                   <div>
                     <p className="text-xs font-semibold text-white/70 group-hover:text-white transition-colors duration-300">{badge.label}</p>
                     <p className="text-[10px] text-white/30">{badge.desc}</p>
@@ -664,12 +664,12 @@ function CTASection() {
           <div className="relative rounded-3xl bg-gradient-to-br from-[#0F0F0F] via-[#1A0E06] to-[#0F0F0F] p-10 sm:p-16 text-center overflow-hidden">
             {/* Inner glow */}
             <div className="absolute inset-0">
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 rounded-full bg-[#E8792E]/8 blur-[100px]" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 rounded-full bg-[#036638]/8 blur-[100px]" />
             </div>
             <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: "40px 40px" }} />
 
             <div className="relative">
-              <span className="text-[11px] font-semibold text-[#F2994A] uppercase tracking-[0.18em]">Get Started</span>
+              <span className="text-[11px] font-semibold text-[#65BD6C] uppercase tracking-[0.18em]">Get Started</span>
               <h2 className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold text-white mt-4 mb-4 leading-tight max-w-2xl mx-auto">
                 Ready to Streamline Your Pipeline?
               </h2>
@@ -679,7 +679,7 @@ function CTASection() {
               </p>
               <Link
                 href="/login"
-                className="group relative inline-flex items-center gap-2 h-12 sm:h-13 px-7 sm:px-9 rounded-full bg-gradient-to-r from-[#E8792E] to-[#F2994A] text-white font-semibold text-sm overflow-hidden transition-all duration-300 hover:shadow-[0_0_35px_rgba(232,121,46,0.45)] hover:scale-105 active:scale-95"
+                className="group relative inline-flex items-center gap-2 h-12 sm:h-13 px-7 sm:px-9 rounded-full bg-gradient-to-r from-[#036638] to-[#65BD6C] text-white font-semibold text-sm overflow-hidden transition-all duration-300 hover:shadow-[0_0_35px_rgba(232,121,46,0.45)] hover:scale-105 active:scale-95"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                 <span className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ boxShadow: "inset 0 0 25px rgba(255,255,255,0.1)" }} />
@@ -701,7 +701,7 @@ function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-10 sm:py-12">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#E8792E] to-[#F2994A] flex items-center justify-center shadow-lg shadow-[#E8792E]/20">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#036638] to-[#65BD6C] flex items-center justify-center shadow-lg shadow-[#036638]/20">
               <span className="text-white text-xs font-bold">ECH</span>
             </div>
             <div className="text-left">
