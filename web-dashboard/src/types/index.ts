@@ -1,13 +1,20 @@
 export type UserRole = "admin" | "va"
 
-export type PatientStage =
-  | "onboarding"
-  | "visit_complete"
-  | "post_visit_docs"
-  | "chart_signed"
-  | "sent_to_billing"
-  | "payment_posted"
-  | "reconciled"
+// Stages are DB-driven now — a stage key is just a stable string slug
+// (e.g. "onboarding"). The API returns the full list via GET /stages.
+export type PatientStage = string
+
+export interface PipelineStage {
+  id: string
+  key: string
+  name: string
+  hint: string | null
+  sortOrder: number
+  isFinal: boolean
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
 
 export interface User {
   id: string
@@ -137,32 +144,23 @@ export interface ApiResponse<T> {
   statusCode: number
 }
 
-export const STAGE_LABELS: Record<PatientStage, string> = {
-  onboarding: "Onboarding",
-  visit_complete: "Visit Complete",
-  post_visit_docs: "Post-Visit Docs",
-  chart_signed: "Chart Signed",
-  sent_to_billing: "Sent to Billing",
-  payment_posted: "Payment Posted",
-  reconciled: "Reconciled",
-}
-
-export const STAGE_HINTS: Record<PatientStage, string> = {
-  onboarding: "Scheduled on calendar",
-  visit_complete: "Encounter finished",
-  post_visit_docs: "Letter + labs sent",
-  chart_signed: "Optimantra finalized",
-  sent_to_billing: "Claim submitted",
-  payment_posted: "Payment received",
-  reconciled: "Closed out",
-}
-
-export const STAGE_ORDER: PatientStage[] = [
-  "onboarding",
-  "visit_complete",
-  "post_visit_docs",
-  "chart_signed",
-  "sent_to_billing",
-  "payment_posted",
-  "reconciled",
+// Static fallback used while stages load from the API — never the source of truth.
+export const DEFAULT_STAGES: PipelineStage[] = [
+  { id: "stage_onboarding", key: "onboarding", name: "Onboarding", hint: "Scheduled on calendar", sortOrder: 0, isFinal: false, isActive: true },
+  { id: "stage_visit_complete", key: "visit_complete", name: "Visit Complete", hint: "Encounter finished", sortOrder: 1, isFinal: false, isActive: true },
+  { id: "stage_post_visit_docs", key: "post_visit_docs", name: "Post-Visit Docs", hint: "Letter + labs sent", sortOrder: 2, isFinal: false, isActive: true },
+  { id: "stage_chart_signed", key: "chart_signed", name: "Chart Signed", hint: "Optimantra finalized", sortOrder: 3, isFinal: false, isActive: true },
+  { id: "stage_sent_to_billing", key: "sent_to_billing", name: "Sent to Billing", hint: "Claim submitted", sortOrder: 4, isFinal: false, isActive: true },
+  { id: "stage_payment_posted", key: "payment_posted", name: "Payment Posted", hint: "Payment received", sortOrder: 5, isFinal: false, isActive: true },
+  { id: "stage_reconciled", key: "reconciled", name: "Reconciled", hint: "Closed out", sortOrder: 6, isFinal: true, isActive: true },
 ]
+
+export const STAGE_LABELS: Record<string, string> = Object.fromEntries(
+  DEFAULT_STAGES.map((s) => [s.key, s.name]),
+)
+
+export const STAGE_HINTS: Record<string, string> = Object.fromEntries(
+  DEFAULT_STAGES.map((s) => [s.key, s.hint ?? ""]),
+)
+
+export const STAGE_ORDER: string[] = DEFAULT_STAGES.map((s) => s.key)

@@ -22,15 +22,8 @@ export const UpdateUserSchema = z.object({
 
 export const ChecklistItemSchema = z.object({
 	body: z.object({
-		stage: z.enum([
-			"onboarding",
-			"visit_complete",
-			"post_visit_docs",
-			"chart_signed",
-			"sent_to_billing",
-			"payment_posted",
-			"reconciled",
-		]),
+		// Stage keys are DB-driven; existence is validated in the service.
+		stage: z.string().trim().min(1).max(100),
 		label: z.string().trim().min(1).max(200),
 		status: z.enum(["required", "optional"]).default("required"),
 		sortOrder: z.number().int().min(0).default(0),
@@ -39,9 +32,35 @@ export const ChecklistItemSchema = z.object({
 
 export const UpdateChecklistItemSchema = z.object({
 	body: z.object({
+		stage: z.string().trim().min(1).max(100).optional(),
 		label: z.string().trim().min(1).max(200).optional(),
 		status: z.enum(["required", "optional"]).optional(),
 		sortOrder: z.number().int().min(0).optional(),
+	}),
+});
+
+export const StageCreateSchema = z.object({
+	body: z.object({
+		name: z.string().trim().min(1).max(100),
+		hint: z.string().trim().max(300).optional().nullable(),
+		isFinal: z.boolean().optional(),
+		isActive: z.boolean().optional(),
+	}),
+});
+
+export const StageUpdateSchema = z.object({
+	body: z.object({
+		name: z.string().trim().min(1).max(100).optional(),
+		hint: z.string().trim().max(300).optional().nullable(),
+		sortOrder: z.number().int().min(0).optional(),
+		isFinal: z.boolean().optional(),
+		isActive: z.boolean().optional(),
+	}),
+});
+
+export const StageReorderSchema = z.object({
+	body: z.object({
+		keys: z.array(z.string().trim().min(1).max(100)).min(1),
 	}),
 });
 

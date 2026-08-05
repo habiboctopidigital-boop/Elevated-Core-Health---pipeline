@@ -1,18 +1,9 @@
 import { z } from "zod";
 
-const stageEnum = z.enum([
-	"onboarding",
-	"visit_complete",
-	"post_visit_docs",
-	"chart_signed",
-	"sent_to_billing",
-	"payment_posted",
-	"reconciled",
-]);
-
 export const StageMoveSchema = z.object({
 	body: z.object({
-		targetStage: stageEnum,
+		// Stage keys are now DB-driven; existence is validated in the service.
+		targetStage: z.string().trim().min(1, "Target stage is required").max(100),
 	}),
 });
 

@@ -7,6 +7,9 @@ import type {
 	ChecklistItemSchema,
 	CreateEligibilityRuleSchema,
 	CreateUserSchema,
+	StageCreateSchema,
+	StageReorderSchema,
+	StageUpdateSchema,
 	UpdateChecklistItemSchema,
 	UpdateEligibilityRuleSchema,
 	UpdateUserSchema,
@@ -18,6 +21,19 @@ type ChecklistItemInput = z.infer<typeof ChecklistItemSchema>["body"];
 type UpdateChecklistItemInput = z.infer<typeof UpdateChecklistItemSchema>["body"];
 type CreateEligibilityRuleInput = z.infer<typeof CreateEligibilityRuleSchema>["body"];
 type UpdateEligibilityRuleInput = z.infer<typeof UpdateEligibilityRuleSchema>["body"];
+type CreateStageInput = z.infer<typeof StageCreateSchema>["body"];
+type UpdateStageInput = z.infer<typeof StageUpdateSchema>["body"];
+type StageReorderInput = z.infer<typeof StageReorderSchema>["body"];
+
+/** Turn a stage display name into a stable, immutable key slug. */
+function slugify(input: string): string {
+	return input
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "_")
+		.replace(/^_+|_+$/g, "")
+		.slice(0, 50);
+}
 
 export const adminService = {
 	// User management
@@ -84,11 +100,147 @@ export const adminService = {
 		return ServiceResponse.success("User deleted.", null);
 	},
 
+	// Stage management
+	async listStages() {
+		const stages = await prisma.stage.findMany({ orderBy: { sortOrder: "asc" } });
+		return ServiceResponse.success("Stages retrieved.", stages);
+	},
+
+	async createStage(input: CreateStageInput) {
+		const key = slugify(input.name);
+		if (!key) {
+			return ServiceResponse.failure(
+				"Stage name must contain at least one letter or number.",
+				null,
+				StatusCodes.BAD_REQUEST,
+			);
+		}
+
+		const existing = await prisma.stage.findUnique({ where: { key } });
+		if (existing) {
+			return ServiceResponse.failure(
+				`A stage with key "${key}" already exists. Choose a different name.`,
+				null,
+				StatusCodes.CONFLICT,
+			);
+		}
+
+		const maxOrder = await prisma.stage.aggregate({ _max: { sortOrder: true } });
+
+		const stage = await prisma.stage.create({
+			data: {
+				key,
+				name: input.name.trim(),
+				hint: input.hint?.trim() || null,
+				sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+				isFinal: input.isFinal ?? false,
+				isActive: input.isActive ?? true,
+			},
+		});
+
+		return ServiceResponse.success("Stage created.", stage, StatusCodes.CREATED);
+	},
+
+	async updateStage(key: string, input: UpdateStageInput) {
+		const stage = await prisma.stage.findUnique({ where: { key } });
+		if (!stage) {
+			return ServiceResponse.failure("Stage not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const data: Record<string, unknown> = {};
+		if (input.name !== undefined) data.name = input.name.trim();
+		if (input.hint !== undefined) data.hint = input.hint?.trim() || null;
+		if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder;
+		if (input.isFinal !== undefined) data.isFinal = input.isFinal;
+		if (input.isActive !== undefined) {
+			if (!input.isActive) {
+				const patientCount = await prisma.patient.count({ where: { stage: key } });
+				if (patientCount > 0) {
+					return ServiceResponse.failure(
+						"Cannot disable a stage that still has patients. Move them out first.",
+						null,
+						StatusCodes.BAD_REQUEST,
+					);
+				}
+				const activeCount = await prisma.stage.count({ where: { isActive: true } });
+				if (activeCount <= 1) {
+					return ServiceResponse.failure("Cannot disable the last active stage.", null, StatusCodes.BAD_REQUEST);
+				}
+			}
+			data.isActive = input.isActive;
+		}
+
+		const updated = await prisma.stage.update({ where: { key }, data });
+		return ServiceResponse.success("Stage updated.", updated);
+	},
+
+	async reorderStages(input: StageReorderInput) {
+		const existing = await prisma.stage.findMany({ select: { key: true } });
+		const existingKeys = new Set(existing.map((s) => s.key));
+		if (input.keys.length !== existingKeys.size || !input.keys.every((k) => existingKeys.has(k))) {
+			return ServiceResponse.failure(
+				"Reorder list must contain exactly the current stage keys.",
+				null,
+				StatusCodes.BAD_REQUEST,
+			);
+		}
+
+		await prisma.$transaction(
+			input.keys.map((key, index) => prisma.stage.update({ where: { key }, data: { sortOrder: index } })),
+		);
+
+		return ServiceResponse.success("Stage order updated.", null);
+	},
+
+	async deleteStage(key: string) {
+		const stage = await prisma.stage.findUnique({ where: { key } });
+		if (!stage) {
+			return ServiceResponse.failure("Stage not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const [patientCount, itemCount] = await Promise.all([
+			prisma.patient.count({ where: { stage: key } }),
+			prisma.checklistItem.count({ where: { stage: key } }),
+		]);
+
+		if (patientCount > 0) {
+			return ServiceResponse.failure(
+				"Cannot delete a stage that still has patients. Move them out first.",
+				null,
+				StatusCodes.BAD_REQUEST,
+			);
+		}
+		if (itemCount > 0) {
+			return ServiceResponse.failure(
+				"Cannot delete a stage that still has checklist items. Remove them first.",
+				null,
+				StatusCodes.BAD_REQUEST,
+			);
+		}
+
+		const totalStages = await prisma.stage.count();
+		if (totalStages <= 1) {
+			return ServiceResponse.failure(
+				"Cannot delete the last stage. At least one stage is required.",
+				null,
+				StatusCodes.BAD_REQUEST,
+			);
+		}
+
+		await prisma.stage.delete({ where: { key } });
+		return ServiceResponse.success("Stage deleted.", null);
+	},
+
 	// Checklist management
 	async createChecklistItem(input: ChecklistItemInput) {
+		const stage = await prisma.stage.findUnique({ where: { key: input.stage } });
+		if (!stage) {
+			return ServiceResponse.failure("Stage not found. Create the stage first.", null, StatusCodes.BAD_REQUEST);
+		}
+
 		const item = await prisma.checklistItem.create({
 			data: {
-				stage: input.stage as never,
+				stage: input.stage,
 				label: input.label,
 				status: input.status,
 				sortOrder: input.sortOrder,
@@ -123,9 +275,17 @@ export const adminService = {
 			return ServiceResponse.failure("Checklist item not found.", null, StatusCodes.NOT_FOUND);
 		}
 
+		if (input.stage !== undefined) {
+			const stage = await prisma.stage.findUnique({ where: { key: input.stage } });
+			if (!stage) {
+				return ServiceResponse.failure("Stage not found.", null, StatusCodes.BAD_REQUEST);
+			}
+		}
+
 		const updated = await prisma.checklistItem.update({
 			where: { id },
 			data: {
+				...(input.stage !== undefined ? { stage: input.stage } : {}),
 				...(input.label !== undefined ? { label: input.label } : {}),
 				...(input.status !== undefined ? { status: input.status } : {}),
 				...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),

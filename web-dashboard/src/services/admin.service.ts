@@ -1,6 +1,6 @@
 import axiosInstance from "@/lib/axios"
 import { API_ENDPOINTS } from "@/constants"
-import type { ApiResponse, User, ChecklistItemDef, AdminAnalytics, EligibilityRule } from "@/types"
+import type { ApiResponse, User, ChecklistItemDef, AdminAnalytics, EligibilityRule, PipelineStage } from "@/types"
 
 export const AdminService = {
   async listUsers(): Promise<User[]> {
@@ -42,6 +42,51 @@ export const AdminService = {
     await axiosInstance.delete(`${API_ENDPOINTS.ADMIN.USERS}/${id}`)
   },
 
+  async listStages(): Promise<PipelineStage[]> {
+    const { data } = await axiosInstance.get<ApiResponse<PipelineStage[]>>(
+      API_ENDPOINTS.ADMIN.STAGES,
+    )
+    return data.data
+  },
+
+  async createStage(input: {
+    name: string
+    hint?: string | null
+    isFinal?: boolean
+    isActive?: boolean
+  }): Promise<PipelineStage> {
+    const { data } = await axiosInstance.post<ApiResponse<PipelineStage>>(
+      API_ENDPOINTS.ADMIN.STAGES,
+      input,
+    )
+    return data.data
+  },
+
+  async updateStage(
+    key: string,
+    input: Partial<{
+      name: string
+      hint: string | null
+      sortOrder: number
+      isFinal: boolean
+      isActive: boolean
+    }>,
+  ): Promise<PipelineStage> {
+    const { data } = await axiosInstance.patch<ApiResponse<PipelineStage>>(
+      `${API_ENDPOINTS.ADMIN.STAGES}/${key}`,
+      input,
+    )
+    return data.data
+  },
+
+  async reorderStages(keys: string[]): Promise<void> {
+    await axiosInstance.patch(`${API_ENDPOINTS.ADMIN.STAGES}/reorder`, { keys })
+  },
+
+  async deleteStage(key: string): Promise<void> {
+    await axiosInstance.delete(`${API_ENDPOINTS.ADMIN.STAGES}/${key}`)
+  },
+
   async listChecklistItems(): Promise<ChecklistItemDef[]> {
     const { data } = await axiosInstance.get<ApiResponse<ChecklistItemDef[]>>(
       API_ENDPOINTS.ADMIN.CHECKLIST_ITEMS,
@@ -62,7 +107,7 @@ export const AdminService = {
     return data.data
   },
 
-  async updateChecklistItem(id: string, input: { label: string; status?: "required" | "optional"; sortOrder?: number }): Promise<ChecklistItemDef> {
+  async updateChecklistItem(id: string, input: { label: string; status?: "required" | "optional"; sortOrder?: number; stage?: string }): Promise<ChecklistItemDef> {
     const { data } = await axiosInstance.patch<ApiResponse<ChecklistItemDef>>(
       `${API_ENDPOINTS.ADMIN.CHECKLIST_ITEMS}/${id}`,
       input,

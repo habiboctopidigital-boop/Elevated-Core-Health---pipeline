@@ -12,16 +12,6 @@ enum UserRole {
   va
 }
 
-enum PatientStage {
-  onboarding
-  visit_complete
-  post_visit_docs
-  chart_signed
-  sent_to_billing
-  payment_posted
-  reconciled
-}
-
 enum ChecklistStatus {
   required
   optional
@@ -31,6 +21,24 @@ enum EligibilityStatus {
   not_checked
   eligible
   not_eligible
+}
+
+model Stage {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  hint      String?
+  sortOrder Int      @default(0) @map("sort_order")
+  isFinal   Boolean  @default(false) @map("is_final")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  checklistItems ChecklistItem[]
+  patients       Patient[]
+
+  @@index([sortOrder])
+  @@map("stages")
 }
 
 model User {
@@ -58,7 +66,8 @@ model Patient {
   name                String
   email               String?
   phone               String?
-  stage               PatientStage @default(onboarding)
+  stage               String       @default("onboarding")
+  stageRef            Stage?       @relation(fields: [stage], references: [key], onDelete: Restrict)
   assignedTo          String?      @map("assigned_to")
   notes               String?
   checklistState      Json         @default("{}") @map("checklist_state")
@@ -128,7 +137,8 @@ model RefreshToken {
 
 model ChecklistItem {
   id          String          @id @default(uuid())
-  stage       PatientStage
+  stage       String
+  stageRef    Stage           @relation(fields: [stage], references: [key], onDelete: Restrict)
   label       String
   description String?
   status      ChecklistStatus @default(required)

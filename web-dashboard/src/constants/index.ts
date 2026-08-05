@@ -21,7 +21,7 @@ export const ROUTES = {
     LOG: "/admin/dashboard/log",
     IMPORT: "/admin/dashboard/import",
     USERS: "/admin/dashboard/users",
-    CHECKLIST: "/admin/dashboard/checklist",
+    STAGES: "/admin/dashboard/stages",
     ELIGIBILITY: "/admin/dashboard/eligibility",
     PROFILE: "/admin/dashboard/profile",
   },
@@ -38,6 +38,7 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: "/auth/forgot-password",
     RESET_PASSWORD: "/auth/reset-password",
   },
+  STAGES: "/stages",
   PATIENTS: "/patients",
   PATIENTS_INTAKE: "/patients/intake",
   PATIENTS_INTAKE_TEST: "/patients/intake-test",
@@ -47,6 +48,7 @@ export const API_ENDPOINTS = {
   DASHBOARD_SUMMARY: "/dashboard/summary",
   ADMIN: {
     USERS: "/admin/users",
+    STAGES: "/admin/stages",
     CHECKLIST_ITEMS: "/admin/checklist-items",
     ELIGIBILITY_RULES: "/admin/eligibility-rules",
     ANALYTICS: "/admin/analytics",
@@ -68,8 +70,10 @@ export const QUERY_KEYS = {
   DASHBOARD: {
     SUMMARY: ["dashboard", "summary"] as const,
   },
+  STAGES: ["stages"] as const,
   ADMIN: {
     USERS: ["admin", "users"] as const,
+    STAGES: ["admin", "stages"] as const,
     ANALYTICS: ["admin", "analytics"] as const,
     ELIGIBILITY_RULES: ["admin", "eligibility-rules"] as const,
   },

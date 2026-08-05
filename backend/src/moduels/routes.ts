@@ -6,6 +6,7 @@ import { authRouter } from "./auth/auth.router";
 import { dashboardRouter } from "./dashboard/dashboard.router";
 import { importRouter } from "./import/import.router";
 import { patientsPublicRouter, patientsRouter } from "./patients/patients.router";
+import { stagesRouter } from "./stages/stages.router";
 import { usersRouter } from "./users/users.router";
 
 export const apiRouter: Router = Router();
@@ -17,4 +18,5 @@ apiRouter.use("/patients/import", importRouter);
 apiRouter.use("/activity-log", activityLogRouter);
 apiRouter.use("/dashboard", dashboardRouter);
 apiRouter.use("/admin", adminRouter);
+apiRouter.use("/stages", stagesRouter);
 apiRouter.use("/users", usersRouter);

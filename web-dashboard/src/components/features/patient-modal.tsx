@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react"
 import type { Patient, PatientStage } from "@/types"
-import { STAGE_ORDER, STAGE_LABELS, STAGE_HINTS } from "@/types"
 import { ROLES, STALE_HOURS } from "@/constants"
+import { useStageMeta } from "@/hooks/query/useStages"
 import {
   X,
   Flag,
@@ -118,6 +118,7 @@ const VOB_LABELS: Array<[string, string]> = [
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
   const isAdmin = user?.role === "admin"
+  const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
   const { data: patient, isLoading } = usePatient(patientId || "")
   const { data: logData } = useActivityLog(
     patientId ? { patientId, limit: 20 } : undefined,
@@ -208,8 +209,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const handleMoveStage = async (target: PatientStage) => {
     if (!patient) return
-    const currentIdx = STAGE_ORDER.indexOf(patient.stage)
-    const targetIdx = STAGE_ORDER.indexOf(target)
+    const currentIdx = stageOrder.indexOf(patient.stage)
+    const targetIdx = stageOrder.indexOf(target)
 
     // For VAs: check if moving forward requires complete checklist
     if (!isAdmin && targetIdx > currentIdx && !allComplete) {
@@ -235,7 +236,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const stale =
     patient &&
-    patient.stage !== "reconciled" &&
+    !(stageByKey.get(patient.stage)?.isFinal ?? false) &&
     (Date.now() - new Date(patient.updatedAt).getTime()) / (1000 * 60 * 60) >
       STALE_HOURS
 
@@ -278,7 +279,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                    {STAGE_LABELS[patient.stage]}
+                    {stageLabels[patient.stage]}
                   </span>
                   <p className="text-sm text-white/80">
                     Created {new Date(patient.createdAt).toLocaleDateString()}
@@ -302,9 +303,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   Pipeline Stage
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {STAGE_ORDER.map((stage) => {
-                    const idx = STAGE_ORDER.indexOf(stage)
-                    const currentIdx = STAGE_ORDER.indexOf(patient.stage)
+                  {stageOrder.map((stage) => {
+                    const idx = stageOrder.indexOf(stage)
+                    const currentIdx = stageOrder.indexOf(patient.stage)
                     const isComplete = idx < currentIdx
                     const isCurrent = stage === patient.stage
                     const isNext = idx === currentIdx + 1
@@ -331,7 +332,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         key={stage}
                         onClick={() => isClickable && handleMoveStage(stage)}
                         disabled={moveStage.isPending || !isClickable}
-                        title={isDisabledReason || STAGE_LABELS[stage]}
+                        title={isDisabledReason || stageLabels[stage]}
                         className={cn(
                           "flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all border",
                           // Current stage (dark green)
@@ -352,7 +353,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         )}
                       >
                         {isComplete && <Check className="w-3.5 h-3.5" />}
-                        {STAGE_LABELS[stage]}
+                        {stageLabels[stage]}
                       </button>
                     )
                   })}
@@ -364,7 +365,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
-                    Checklist - {STAGE_LABELS[patient.stage]}
+                    Checklist - {stageLabels[patient.stage]}
                   </p>
                   {!allComplete && totalItems > 0 && !isAdmin && (
                     <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">

@@ -7,6 +7,9 @@ import {
 	ChecklistItemSchema,
 	CreateEligibilityRuleSchema,
 	CreateUserSchema,
+	StageCreateSchema,
+	StageReorderSchema,
+	StageUpdateSchema,
 	UpdateChecklistItemSchema,
 	UpdateEligibilityRuleSchema,
 	UpdateUserSchema,
@@ -21,6 +24,13 @@ adminRouter.get("/users", adminController.listUsers);
 adminRouter.post("/users", validateRequest(CreateUserSchema), adminController.createUser);
 adminRouter.patch("/users/:id", validateRequest(UpdateUserSchema), adminController.updateUser);
 adminRouter.delete("/users/:id", adminController.deleteUser);
+
+// Stage management (reorder must be registered before /:key routes)
+adminRouter.get("/stages", adminController.listStages);
+adminRouter.post("/stages", validateRequest(StageCreateSchema), adminController.createStage);
+adminRouter.patch("/stages/reorder", validateRequest(StageReorderSchema), adminController.reorderStages);
+adminRouter.patch("/stages/:key", validateRequest(StageUpdateSchema), adminController.updateStage);
+adminRouter.delete("/stages/:key", adminController.deleteStage);
 
 // Checklist management
 adminRouter.get("/checklist-items", adminController.listChecklistItems);

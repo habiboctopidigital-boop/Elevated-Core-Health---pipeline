@@ -13,7 +13,7 @@ export interface ChecklistItemDef {
 export async function getChecklistItemsForStage(stage: string): Promise<ChecklistItemDef[]> {
 	try {
 		const items = await prisma.checklistItem.findMany({
-			where: { stage: stage as never },
+			where: { stage },
 			orderBy: { sortOrder: "asc" },
 			select: { id: true, label: true, description: true, status: true, isDefault: true, sortOrder: true },
 		});

@@ -8,6 +8,11 @@ function paramId(req: Request): string {
 	return Array.isArray(id) ? id[0] : id;
 }
 
+function paramKey(req: Request): string {
+	const key = req.params.key;
+	return Array.isArray(key) ? key[0] : key;
+}
+
 export const adminController = {
 	// Users
 	async listUsers(_req: Request, res: Response): Promise<void> {
@@ -27,6 +32,32 @@ export const adminController = {
 
 	async deleteUser(req: Request, res: Response): Promise<void> {
 		const serviceResponse = await adminService.deleteUser(paramId(req));
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	// Stages
+	async listStages(_req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.listStages();
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async createStage(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.createStage(req.body);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async updateStage(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.updateStage(paramKey(req), req.body);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async reorderStages(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.reorderStages(req.body);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async deleteStage(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.deleteStage(paramKey(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 

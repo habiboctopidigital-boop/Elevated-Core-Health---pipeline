@@ -1,11 +1,11 @@
 "use client"
 
 import type { Patient, PatientStage } from "@/types"
-import { STAGE_ORDER, STAGE_LABELS } from "@/types"
 import { AlertTriangle, Flag, Clock, ArrowLeft, ArrowRight, CheckSquare, Square, Lock, Phone, CheckCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { STALE_HOURS } from "@/constants"
 import { useChecklistItems, useListVas, useAssignPatient } from "@/hooks/query/usePatients"
+import { useStageMeta } from "@/hooks/query/useStages"
 import { useAuth } from "@/hooks/auth/useAuth"
 
 interface PatientCardProps {
@@ -34,9 +34,11 @@ function timeAgo(dateStr: string): string {
 }
 
 export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragStart, onDragEnd }: PatientCardProps) {
-  const stale = patient.stage !== "reconciled" && isStale(patient.updatedAt)
-  const currentIdx = STAGE_ORDER.indexOf(patient.stage)
-  const canAdvance = currentIdx < STAGE_ORDER.length - 1
+  const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
+  const isFinalStage = stageByKey.get(patient.stage)?.isFinal ?? false
+  const stale = !isFinalStage && isStale(patient.updatedAt)
+  const currentIdx = stageOrder.indexOf(patient.stage)
+  const canAdvance = currentIdx < stageOrder.length - 1
   const canRetreat = currentIdx > 0
   const { data: checklistDefs } = useChecklistItems()
   const { user: currentUser } = useAuth()
@@ -240,11 +242,11 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                 draggable={false}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onMoveStage(patient.id, STAGE_ORDER[currentIdx - 1])
+                  onMoveStage(patient.id, stageOrder[currentIdx - 1])
                 }}
                 className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium
                   text-[#6B7280] hover:bg-gray-100 hover:text-[#1A1B1E] transition-colors"
-                title={`Move back to ${STAGE_LABELS[STAGE_ORDER[currentIdx - 1]]}`}
+                title={`Move back to ${stageLabels[stageOrder[currentIdx - 1]]}`}
               >
                 <ArrowLeft className="w-3 h-3" />
                 Back
@@ -256,7 +258,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                 disabled={!allComplete}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onMoveStage(patient.id, STAGE_ORDER[currentIdx + 1])
+                  onMoveStage(patient.id, stageOrder[currentIdx + 1])
                 }}
                 className={cn(
                   "flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium transition-colors",
@@ -266,7 +268,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                 )}
                 title={
                   allComplete
-                    ? `Move to ${STAGE_LABELS[STAGE_ORDER[currentIdx + 1]]}`
+                    ? `Move to ${stageLabels[stageOrder[currentIdx + 1]]}`
                     : "Complete all checklist items first"
                 }
               >

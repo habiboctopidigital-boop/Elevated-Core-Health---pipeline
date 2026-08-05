@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
 import { isChecklistComplete } from "@/config/checklists";
+import { getFirstStageKey, getStageOrder } from "@/config/stages";
 import type { AuthenticatedUser } from "@/lib/types";
 import { emailService } from "@/services/email.service";
 import { logger } from "@/utils/logger";
@@ -17,18 +18,6 @@ import type {
 	NotesInput,
 	StageMoveInput,
 } from "./patients.validation";
-
-const STAGE_ORDER = [
-	"onboarding",
-	"visit_complete",
-	"post_visit_docs",
-	"chart_signed",
-	"sent_to_billing",
-	"payment_posted",
-	"reconciled",
-] as const;
-
-type Stage = (typeof STAGE_ORDER)[number];
 
 /**
  * Server-side simulated verification of benefits. In a later phase this will
@@ -111,7 +100,7 @@ async function logActivity(patientId: string, author: string, message: string, t
 
 export const patientsService = {
 	async list(stage?: string) {
-		const where = stage ? { stage: stage as Stage } : {};
+		const where = stage ? { stage } : {};
 		const patients = await prisma.patient.findMany({
 			where,
 			orderBy: { updatedAt: "desc" },
@@ -154,8 +143,13 @@ export const patientsService = {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
-		const curIdx = STAGE_ORDER.indexOf(patient.stage as Stage);
-		const tgtIdx = STAGE_ORDER.indexOf(input.targetStage as Stage);
+		const order = await getStageOrder();
+		if (!order.includes(input.targetStage)) {
+			return ServiceResponse.failure("Target stage does not exist or is disabled.", null, StatusCodes.BAD_REQUEST);
+		}
+
+		const curIdx = order.indexOf(patient.stage);
+		const tgtIdx = order.indexOf(input.targetStage);
 
 		if (tgtIdx - curIdx > 1) {
 			return ServiceResponse.failure(
@@ -180,7 +174,7 @@ export const patientsService = {
 
 		const updated = await prisma.patient.update({
 			where: { id },
-			data: { stage: input.targetStage as Stage, updatedAt: new Date(), updatedById: user.id },
+			data: { stage: input.targetStage, updatedAt: new Date(), updatedById: user.id },
 		});
 
 		await logActivity(id, user.name, `Moved from ${patient.stage} to ${input.targetStage}`, "auto");
@@ -365,7 +359,7 @@ export const patientsService = {
 
 	async listChecklistItems() {
 		const items = await prisma.checklistItem.findMany({
-			orderBy: [{ stage: "asc" as never }, { sortOrder: "asc" }],
+			orderBy: [{ stage: "asc" }, { sortOrder: "asc" }],
 			select: { id: true, stage: true, label: true, description: true, status: true, isDefault: true, sortOrder: true },
 		});
 		return ServiceResponse.success("Checklist items retrieved.", items);
@@ -456,13 +450,14 @@ export const patientsService = {
 
 	async intake(input: IntakeInput) {
 		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
+		const firstStage = await getFirstStageKey();
 
 		const patient = await prisma.patient.create({
 			data: {
 				name: input.name,
 				email: input.email ?? null,
 				phone: input.phone ?? null,
-				stage: "onboarding",
+				stage: firstStage,
 				appointmentDatetime,
 				bookingPlatform: input.bookingPlatform ?? null,
 				problemDescription: input.problemDescription ?? null,

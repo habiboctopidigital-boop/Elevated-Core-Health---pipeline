@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { useDashboard } from "@/hooks/query/useDashboard"
 import { usePatients } from "@/hooks/query/usePatients"
+import { useStageMeta } from "@/hooks/query/useStages"
 import { ROUTES } from "@/constants"
-import { STAGE_ORDER, STAGE_LABELS } from "@/types"
 import {
   Columns3,
   ClipboardList,
@@ -25,6 +25,7 @@ export default function VADashboardPage() {
   const { user } = useAuth()
   const { data: summary } = useDashboard()
   const { data: patients } = usePatients()
+  const { order: stageOrder, labels: stageLabels } = useStageMeta()
 
   const totalPatients = patients?.length || 0
   const patientsByStage =
@@ -141,14 +142,14 @@ export default function VADashboardPage() {
         <h2 className="text-sm font-semibold text-[#1A1B1E] mb-3">Pipeline Overview</h2>
         <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
           <div className="space-y-3">
-            {STAGE_ORDER.map((stage) => {
+            {stageOrder.map((stage) => {
               const count = patientsByStage[stage] || 0
               const maxCount = Math.max(...Object.values(patientsByStage), 1)
               const barWidth = (count / maxCount) * 100
               return (
                 <div key={stage} className="flex items-center gap-3">
                   <span className="text-xs text-[#6B7280] w-24 truncate shrink-0">
-                    {STAGE_LABELS[stage]}
+                    {stageLabels[stage]}
                   </span>
                   <div className="flex-1 h-6 bg-[#EBF7EC] rounded-full overflow-hidden">
                     {count > 0 && (

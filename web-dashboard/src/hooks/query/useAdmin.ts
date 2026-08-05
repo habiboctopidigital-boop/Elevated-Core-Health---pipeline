@@ -99,8 +99,8 @@ export function useCreateChecklistItem() {
 export function useUpdateChecklistItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, label, status }: { id: string; label: string; status?: "required" | "optional" }) =>
-      AdminService.updateChecklistItem(id, { label, ...(status ? { status } : {}) }),
+    mutationFn: ({ id, label, status, stage }: { id: string; label: string; status?: "required" | "optional"; stage?: string }) =>
+      AdminService.updateChecklistItem(id, { label, ...(status ? { status } : {}), ...(stage ? { stage } : {}) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
       toast.success("Checklist item updated")

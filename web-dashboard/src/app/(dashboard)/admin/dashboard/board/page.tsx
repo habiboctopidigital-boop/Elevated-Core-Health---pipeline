@@ -6,13 +6,14 @@ import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { StatusBar } from "@/components/features/status-bar"
 import { ImportDialog } from "@/components/features/import-dialog"
-import { STAGE_ORDER, STAGE_LABELS, STAGE_HINTS } from "@/types"
+import { useStageMeta } from "@/hooks/query/useStages"
 import type { Patient, PatientStage } from "@/types"
 import { Loader2, LayoutGrid, ShieldCheck } from "lucide-react"
 
 export default function AdminBoardPage() {
   const { data: patients, isLoading, error } = usePatients()
   const moveStage = useMoveStage()
+  const { order: stageOrder, labels: stageLabels, hints: stageHints } = useStageMeta()
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
 
   const groupedPatients =
@@ -66,7 +67,7 @@ export default function AdminBoardPage() {
       {/* - Kanban Board - */}
       <div className="h-[calc(100vh-12rem)] -mx-6 -mb-6 overflow-x-auto">
         <div className="inline-flex h-full gap-3 p-6 min-w-max">
-          {STAGE_ORDER.map((stage) => {
+          {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             return (
               <div
@@ -77,10 +78,10 @@ export default function AdminBoardPage() {
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-[#036638] truncate">
-                        {STAGE_LABELS[stage]}
+                        {stageLabels[stage]}
                       </h3>
                       <p className="text-[10px] text-[#6B7280] mt-0.5">
-                        {STAGE_HINTS[stage]}
+                        {stageHints[stage]}
                       </p>
                     </div>
                     <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center shrink-0 border border-[#E5E7EB]">
