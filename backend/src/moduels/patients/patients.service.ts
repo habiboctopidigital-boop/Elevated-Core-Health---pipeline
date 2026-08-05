@@ -99,11 +99,13 @@ function evaluateRule(
  * assigned VA (or admin); admins always bypass it.
  */
 function canEditPatient(
-	patient: { isPrivate: boolean; privateLockedById: string | null },
+	patient: { isPrivate: boolean; privateLockedById: string | null; assignedTo: string | null },
 	user: AuthenticatedUser,
 ): boolean {
 	if (user.role === "admin") return true;
-	if (patient.isPrivate && patient.privateLockedById && patient.privateLockedById !== user.id) {
+	if (patient.isPrivate) {
+		if (patient.assignedTo === user.id) return true;
+		if (patient.privateLockedById && patient.privateLockedById === user.id) return true;
 		return false;
 	}
 	return true;
