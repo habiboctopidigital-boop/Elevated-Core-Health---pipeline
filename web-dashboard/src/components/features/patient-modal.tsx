@@ -355,7 +355,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     const currentIdx = stageOrder.indexOf(patient.stage)
     const targetIdx = stageOrder.indexOf(target)
 
-    // Phase 3: checklist gate applies to EVERYONE (admin included) — server enforces too.
+    // Phase 3: checklist gate applies to EVERYONE (admin included) - server enforces too.
     if (targetIdx > currentIdx && !allComplete) {
       return // Prevent progression if checklist incomplete
     }
@@ -648,7 +648,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </div>
                     ) : (
                       <p className="text-xs text-[#6B7280] italic mb-4">
-                        No required items — this stage can advance without checking anything.
+                        No required items - this stage can advance without checking anything.
                       </p>
                     )}
 
@@ -759,7 +759,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 <ul className="space-y-1.5">
                   {STAGE_SOPs[patient.stage]?.map((sop, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
-                      <span className="text-amber-600 font-bold mt-0.5">•</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600 mt-[7px] shrink-0" />
                       <span>{sop}</span>
                     </li>
                   ))}
@@ -1004,7 +1004,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     <p className="text-[11px] text-[#6B7280] mt-2 font-medium">
                       by <span className="text-[#036638] font-semibold">{patient.flaggedByUser.name}</span>
                       {patient.flaggedAt &&
-                        ` • ${new Date(patient.flaggedAt).toLocaleString()}`}
+                        ` - ${new Date(patient.flaggedAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
@@ -1024,7 +1024,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     <p className="text-[11px] text-[#6B7280] mt-2 font-medium">
                       by <span className="text-[#036638] font-semibold">Donna Rhodes</span>
                       {patient.flagClearedAt &&
-                        ` • ${new Date(patient.flagClearedAt).toLocaleString()}`}
+                        ` - ${new Date(patient.flagClearedAt).toLocaleString()}`}
                     </p>
                   )}
                 </div>
@@ -1089,7 +1089,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       ) : patient.status === "active" ? (
                         <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium border border-gray-200 bg-white text-[#6B7280] shadow-sm">
                           <Unlock className="w-3.5 h-3.5" />
-                          Open — any VA can work
+                          Open - any VA can work
                         </span>
                       ) : null}
                     </div>

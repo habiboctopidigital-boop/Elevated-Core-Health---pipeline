@@ -221,7 +221,7 @@ export function WorkloadCalendar() {
           >
             {vaInitial}
           </span>
-          {patient.isFlagged && <span className="shrink-0">🚩</span>}
+          {patient.isFlagged && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />}
         </div>
       )
     }
@@ -230,7 +230,7 @@ export function WorkloadCalendar() {
       <div className="px-2 py-1 w-full">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-bold truncate">{patient.name}</span>
-          {patient.isFlagged && <span className="shrink-0 text-[10px]">🚩</span>}
+          {patient.isFlagged && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />}
         </div>
         <div className="text-[10px] opacity-90 flex items-center gap-1 mt-0.5">
           <Clock className="w-2.5 h-2.5" />
@@ -282,7 +282,7 @@ export function WorkloadCalendar() {
             {isFetching && <Loader2 className="w-3.5 h-3.5 text-[#65BD6C] animate-spin" />}
           </h1>
           <p className="text-sm text-[#6B7280] mt-0.5">
-            {isAdmin ? "Central scheduling dashboard — every appointment across the pipeline" : "Your team's scheduled appointments"}
+            {isAdmin ? "Central scheduling dashboard - every appointment across the pipeline" : "Your team's scheduled appointments"}
           </p>
         </div>
         <div className="flex items-center gap-2">

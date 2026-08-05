@@ -134,13 +134,13 @@ function DiffSummary({ log, stageLabels }: { log: ActivityLog; stageLabels: Reco
         {keys.map((k) => {
           const pv = prev[k]
           const nv = next[k]
-          const fmt = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v))
+          const fmt = (v: unknown) => (v === null || v === undefined || v === "" ? "-" : String(v))
           if (fmt(pv) === fmt(nv)) return null
           return (
             <div key={k} className="flex items-center gap-2 text-[11px]">
               <span className="text-[#9CA3AF] w-20 shrink-0 truncate capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
               <span className="text-red-600 bg-red-50 rounded px-1.5 py-0.5 max-w-[160px] truncate">{fmt(pv)}</span>
-              <span className="text-[#9CA3AF]">→</span>
+              <span className="text-[#9CA3AF]">-&gt;</span>
               <span className="text-green-700 bg-green-50 rounded px-1.5 py-0.5 max-w-[160px] truncate">{fmt(nv)}</span>
             </div>
           )
@@ -225,7 +225,7 @@ export function HandoffLog() {
             {isFetching && !isLoading && <Loader2 className="w-3.5 h-3.5 text-[#65BD6C] animate-spin" />}
           </h1>
           <p className="text-sm text-[#6B7280] mt-0.5">
-            Every stage move, checklist change, assignment, and flag — who did it, when, and what changed
+            Every stage move, checklist change, assignment, and flag - who did it, when, and what changed
           </p>
         </div>
         {total > 0 && (

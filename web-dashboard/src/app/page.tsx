@@ -78,7 +78,7 @@ function StaggerChildren({ children, className = "" }: { children: React.ReactNo
 
 const SECTION_LABEL = "text-[11px] font-semibold text-[#036638] uppercase tracking-[0.18em]"
 
-// ─── Navbar ───
+// --- Navbar ---
 function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -117,7 +117,7 @@ function Navbar() {
   )
 }
 
-// ─── Hero ───
+// --- Hero ---
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[#0F0F0F]">
@@ -300,7 +300,7 @@ function HeroSection() {
   )
 }
 
-// ─── How It Works ───
+// --- How It Works ---
 const STEPS = [
   {
     number: "01",
@@ -379,7 +379,7 @@ function HowItWorksSection() {
   )
 }
 
-// ─── Features (alternating split) ───
+// --- Features (alternating split) ---
 const FEATURES = [
   {
     title: "Visual Pipeline Board",
@@ -486,7 +486,7 @@ function FeaturesSection() {
   )
 }
 
-// ─── Built for Your Team ───
+// --- Built for Your Team ---
 const PERSONAS = [
   {
     name: "Donna Rhodes",
@@ -566,7 +566,7 @@ function TeamSection() {
   )
 }
 
-// ─── Trust Bar ───
+// --- Trust Bar ---
 const STATS = [
   { value: 7, suffix: "", label: "Pipeline Stages", sub: "Onboarding to reconciled" },
   { value: 3, suffix: "", label: "Team Members", sub: "Admin + 2 VAs" },
@@ -655,7 +655,7 @@ function TrustSection() {
   )
 }
 
-// ─── Final CTA ───
+// --- Final CTA ---
 function CTASection() {
   return (
     <section className="relative py-20 sm:py-28 bg-white">
@@ -694,7 +694,7 @@ function CTASection() {
   )
 }
 
-// ─── Footer ───
+// --- Footer ---
 function Footer() {
   return (
     <footer className="bg-[#0F0F0F] border-t border-white/5">
@@ -721,7 +721,7 @@ function Footer() {
   )
 }
 
-// ─── Page ───
+// --- Page ---
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">

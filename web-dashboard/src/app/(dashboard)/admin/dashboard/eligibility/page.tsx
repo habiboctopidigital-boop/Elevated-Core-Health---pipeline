@@ -160,7 +160,7 @@ export default function AdminEligibilityPage() {
                 <p className="text-xs text-[#6B7280] mt-1">
                   <span className="font-medium text-[#374151]">{FIELD_LABELS[rule.field] || rule.field}</span>{" "}
                   <span className="text-[#036638] font-medium">{OPERATOR_LABELS[rule.operator] || rule.operator}</span>
-                  {rule.value ? <span className="font-medium text-[#374151]"> “{rule.value}”</span> : null}
+                  {rule.value ? <span className="font-medium text-[#374151]"> "{rule.value}"</span> : null}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
@@ -197,7 +197,7 @@ export default function AdminEligibilityPage() {
           <ShieldCheck className="w-8 h-8 text-[#65BD6C] mx-auto mb-3" />
           <p className="text-sm font-semibold text-[#1A1B1E]">No eligibility rules yet</p>
           <p className="text-xs text-[#6B7280] mt-1 max-w-md mx-auto">
-            Add a rule such as “Insurance provider is not empty”. Until a rule is
+            Add a rule such as "Insurance provider is not empty". Until a rule is
             added, every eligibility check will return Eligible.
           </p>
         </div>

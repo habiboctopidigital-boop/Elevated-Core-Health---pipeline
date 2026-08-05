@@ -16,7 +16,7 @@ const badgeVariants = cva(
         outline: "text-foreground",
         // Soft-tone pills: tinted background + brand-color text, no heavy fill.
         // Matches the pattern already hand-rolled across the app for
-        // flag/eligibility/role chips — use these instead of one-off classes.
+        // flag/eligibility/role chips - use these instead of one-off classes.
         "soft-brand": "border-transparent bg-[#EBF7EC] text-[#036638]",
         "soft-success": "border-transparent bg-emerald-50 text-emerald-700",
         "soft-warning": "border-transparent bg-amber-50 text-amber-700",
