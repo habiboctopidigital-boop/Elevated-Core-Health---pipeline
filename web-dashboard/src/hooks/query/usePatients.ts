@@ -245,3 +245,79 @@ export function useIntake() {
     },
   })
 }
+
+export function useUpdatePatient() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...input
+    }: { id: string } & Partial<{
+      firstName: string | null
+      lastName: string | null
+      location: string | null
+      email: string | null
+      phone: string | null
+      copayAmount: string | null
+      amountPaid: string | null
+    }>) => PatientsService.updatePatient(id, input),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      toast.success("Patient updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update patient")
+    },
+  })
+}
+
+export function useLockPatient() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => PatientsService.lockPatient(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      toast.success("Patient locked")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to lock patient")
+    },
+  })
+}
+
+export function useUnlockPatient() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => PatientsService.unlockPatient(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      toast.success("Patient unlocked")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to unlock patient")
+    },
+  })
+}
+
+export function useUpdatePatientStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & { status: "active" | "cancelled"; reason?: string | null }) =>
+      PatientsService.updateStatus(id, input),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      toast.success("Status updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update status")
+    },
+  })
+}

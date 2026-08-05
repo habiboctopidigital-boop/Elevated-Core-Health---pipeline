@@ -8,6 +8,7 @@ export const activityLogService = {
 		const patientId = rawQuery.patientId as string | undefined;
 		const type = rawQuery.type as string | undefined;
 		const author = rawQuery.author as string | undefined;
+		const action = rawQuery.action as string | undefined;
 		const startDate = rawQuery.startDate as string | undefined;
 		const endDate = rawQuery.endDate as string | undefined;
 		const page = Math.max(1, Number(rawQuery.page) || 1);
@@ -16,6 +17,7 @@ export const activityLogService = {
 		if (patientId) where.patientId = patientId;
 		if (type && ["auto", "manual"].includes(type)) where.type = type;
 		if (author) where.author = { contains: author };
+		if (action) where.action = action;
 		if (startDate || endDate) {
 			where.createdAt = {};
 			if (startDate) (where.createdAt as Record<string, unknown>).gte = new Date(startDate);

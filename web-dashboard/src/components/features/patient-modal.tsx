@@ -17,6 +17,10 @@ import {
   ChevronDown,
   Zap,
   Shield,
+  Lock,
+  Unlock,
+  Ban,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -33,6 +37,10 @@ import {
   useChecklistItems,
   useListVas,
   useCheckEligibility,
+  useUpdatePatient,
+  useLockPatient,
+  useUnlockPatient,
+  useUpdatePatientStatus,
 } from "@/hooks/query/usePatients"
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
@@ -131,6 +139,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const clearFlag = useClearFlag()
   const claimPatient = useClaimPatient()
   const assignPatient = useAssignPatient()
+  const updatePatient = useUpdatePatient()
+  const lockPatient = useLockPatient()
+  const unlockPatient = useUnlockPatient()
+  const updateStatus = useUpdatePatientStatus()
 
   const { data: checklistDefs } = useChecklistItems()
 
@@ -162,6 +174,18 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [savingNotes, setSavingNotes] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("")
   const [insuranceProvider, setInsuranceProvider] = useState("")
+  const [contactForm, setContactForm] = useState({
+    firstName: "",
+    lastName: "",
+    location: "",
+    phone: "",
+    email: "",
+    copayAmount: "",
+    amountPaid: "",
+  })
+  const [savingContact, setSavingContact] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [showCancelInput, setShowCancelInput] = useState(false)
   const checkEligibility = useCheckEligibility()
 
   useEffect(() => {
@@ -169,10 +193,21 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     else setNotesText("")
     setPaymentMethod(patient?.paymentMethod ?? "")
     setInsuranceProvider(patient?.insuranceProvider ?? "")
+    setContactForm({
+      firstName: patient?.firstName ?? "",
+      lastName: patient?.lastName ?? "",
+      location: patient?.location ?? "",
+      phone: patient?.phone ?? "",
+      email: patient?.email ?? "",
+      copayAmount: patient?.copayAmount ?? "",
+      amountPaid: patient?.amountPaid ?? "",
+    })
     setShowFlagInput(false)
     setFlagReason("")
     setShowClearInput(false)
     setClearReason("")
+    setShowCancelInput(false)
+    setCancelReason("")
   }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider])
 
   // ESC key to close modal
@@ -212,8 +247,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     const currentIdx = stageOrder.indexOf(patient.stage)
     const targetIdx = stageOrder.indexOf(target)
 
-    // For VAs: check if moving forward requires complete checklist
-    if (!isAdmin && targetIdx > currentIdx && !allComplete) {
+    // Phase 3: checklist gate applies to EVERYONE (admin included) — server enforces too.
+    if (targetIdx > currentIdx && !allComplete) {
       return // Prevent progression if checklist incomplete
     }
 
@@ -233,6 +268,35 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       insuranceProvider: insuranceProvider.trim() || null,
     })
   }
+
+  const handleSaveContact = async () => {
+    if (!patient) return
+    setSavingContact(true)
+    await updatePatient.mutateAsync({
+      id: patient.id,
+      firstName: contactForm.firstName.trim() || null,
+      lastName: contactForm.lastName.trim() || null,
+      location: contactForm.location.trim() || null,
+      phone: contactForm.phone.trim() || null,
+      email: contactForm.email.trim() || null,
+      copayAmount: contactForm.copayAmount.trim() || null,
+      amountPaid: contactForm.amountPaid.trim() || null,
+    })
+    setSavingContact(false)
+  }
+
+  const handleCancelPatient = async () => {
+    if (!patient) return
+    await updateStatus.mutateAsync({ id: patient.id, status: "cancelled", reason: cancelReason.trim() || null })
+    setShowCancelInput(false)
+    setCancelReason("")
+  }
+
+  const canLock =
+    !!patient && (isAdmin || patient.assignedTo === user?.id)
+  const canUnlock =
+    !!patient &&
+    (isAdmin || patient.assignedTo === user?.id || patient.privateLockedByUser?.id === user?.id)
 
   const stale =
     patient &&
@@ -281,6 +345,22 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
                     {stageLabels[patient.stage]}
                   </span>
+                  {patient.status !== "active" && (
+                    <span
+                      className={cn(
+                        "px-3 py-1 text-xs font-semibold rounded-full",
+                        patient.status === "completed" ? "bg-[#65BD6C] text-white" : "bg-red-500 text-white",
+                      )}
+                    >
+                      {patient.status === "completed" ? "Completed" : "Cancelled"}
+                    </span>
+                  )}
+                  {patient.isPrivate && (
+                    <span className="px-3 py-1 bg-amber-400/90 text-amber-950 text-xs font-semibold rounded-full flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Locked
+                    </span>
+                  )}
                   <p className="text-sm text-white/80">
                     Created {new Date(patient.createdAt).toLocaleDateString()}
                   </p>
@@ -717,6 +797,152 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   )}
                 </div>
               )}
+
+              {/* Patient Status & Access (admin / assigned VA) */}
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
+                  Status & Access
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Lock / Unlock */}
+                  {patient.isPrivate ? (
+                    <>
+                      <span className="text-xs text-[#6B7280] mr-1">
+                        Locked{patient.privateLockedByUser ? ` by ${patient.privateLockedByUser.name}` : ""} — only they or an admin can edit.
+                      </span>
+                      {canUnlock && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => unlockPatient.mutate(patient.id)}
+                          disabled={unlockPatient.isPending}
+                          className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                        >
+                          <Unlock className="w-3.5 h-3.5" />
+                          Unlock
+                        </Button>
+                      )}
+                    </>
+                  ) : canLock ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => lockPatient.mutate(patient.id)}
+                      disabled={lockPatient.isPending}
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      Lock (restrict other VAs)
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-[#6B7280]">Open — any VA can work this patient.</span>
+                  )}
+
+                  {/* Cancel / Reactivate (admin) */}
+                  {isAdmin && patient.status !== "cancelled" && !showCancelInput && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowCancelInput(true)}
+                      className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-50 ml-2"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      Mark Cancelled
+                    </Button>
+                  )}
+                  {isAdmin && patient.status === "cancelled" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateStatus.mutate({ id: patient.id, status: "active" })}
+                      disabled={updateStatus.isPending}
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] ml-2"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Reactivate
+                    </Button>
+                  )}
+                </div>
+
+                {isAdmin && showCancelInput && (
+                  <div className="space-y-2 mt-3">
+                    <Textarea
+                      placeholder="Reason for cancelling (optional)..."
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      className="text-sm min-h-[60px]"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleCancelPatient}
+                        disabled={updateStatus.isPending}
+                        className="bg-red-600 hover:bg-red-700 text-white text-xs"
+                      >
+                        {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowCancelInput(false)}
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {patient.status === "cancelled" && patient.cancelledReason && (
+                  <p className="text-xs text-[#6B7280] mt-2 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                    <span className="font-semibold text-red-700">Reason:</span> {patient.cancelledReason}
+                  </p>
+                )}
+              </div>
+
+              {/* Contact & Payment Info */}
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
+                    Contact & Payment Info
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveContact}
+                    disabled={savingContact || updatePatient.isPending}
+                    className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
+                  >
+                    {savingContact || updatePatient.isPending ? "Saving..." : "Save Details"}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {(
+                    [
+                      ["firstName", "First Name"],
+                      ["lastName", "Last Name"],
+                      ["location", "Location"],
+                      ["phone", "Phone"],
+                      ["email", "Email"],
+                      ["copayAmount", "Copay Amount"],
+                      ["amountPaid", "Total Paid"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <div key={key} className="space-y-1">
+                      <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                        {label}
+                      </label>
+                      <input
+                        value={contactForm[key]}
+                        onChange={(e) =>
+                          setContactForm((f) => ({ ...f, [key]: e.target.value }))
+                        }
+                        className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Flag Controls */}
               {!isAdmin && !patient.isFlagged ? (

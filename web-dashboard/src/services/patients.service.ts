@@ -67,6 +67,47 @@ export const PatientsService = {
     return data.data
   },
 
+  async updatePatient(
+    id: string,
+    input: Partial<{
+      firstName: string | null
+      lastName: string | null
+      location: string | null
+      email: string | null
+      phone: string | null
+      copayAmount: string | null
+      amountPaid: string | null
+    }>,
+  ): Promise<Patient> {
+    const { data } = await axiosInstance.patch<ApiResponse<Patient>>(
+      `${API_ENDPOINTS.PATIENTS}/${id}`,
+      input,
+    )
+    return data.data
+  },
+
+  async lockPatient(id: string): Promise<Patient> {
+    const { data } = await axiosInstance.post<ApiResponse<Patient>>(
+      `${API_ENDPOINTS.PATIENTS}/${id}/lock`,
+    )
+    return data.data
+  },
+
+  async unlockPatient(id: string): Promise<Patient> {
+    const { data } = await axiosInstance.post<ApiResponse<Patient>>(
+      `${API_ENDPOINTS.PATIENTS}/${id}/unlock`,
+    )
+    return data.data
+  },
+
+  async updateStatus(id: string, input: { status: "active" | "cancelled"; reason?: string | null }): Promise<Patient> {
+    const { data } = await axiosInstance.patch<ApiResponse<Patient>>(
+      `${API_ENDPOINTS.PATIENTS}/${id}/status`,
+      input,
+    )
+    return data.data
+  },
+
   async listVas(): Promise<VaUser[]> {
     const { data } = await axiosInstance.get<ApiResponse<VaUser[]>>(
       "/users/vas",

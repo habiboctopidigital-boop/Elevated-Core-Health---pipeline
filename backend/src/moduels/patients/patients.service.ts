@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { isChecklistComplete } from "@/config/checklists";
 import { getFirstStageKey, getStageOrder } from "@/config/stages";
+import { audit } from "@/lib/audit";
 import type { AuthenticatedUser } from "@/lib/types";
 import { emailService } from "@/services/email.service";
 import { logger } from "@/utils/logger";
@@ -17,6 +18,8 @@ import type {
 	IntakeInput,
 	NotesInput,
 	StageMoveInput,
+	UpdatePatientInput,
+	UpdateStatusInput,
 } from "./patients.validation";
 
 /**
@@ -90,13 +93,29 @@ function evaluateRule(
 	}
 }
 
-async function logActivity(patientId: string, author: string, message: string, type: "auto" | "manual") {
-	try {
-		await prisma.activityLog.create({ data: { patientId, author, message, type } });
-	} catch (err) {
-		logger.error({ err }, "Failed to log activity");
+/**
+ * Shared-editing rule (Phase 3): board is open by default — admins and any VA
+ * can work any patient. The ONLY restriction is a privacy lock set by the
+ * assigned VA (or admin); admins always bypass it.
+ */
+function canEditPatient(
+	patient: { isPrivate: boolean; privateLockedById: string | null },
+	user: AuthenticatedUser,
+): boolean {
+	if (user.role === "admin") return true;
+	if (patient.isPrivate && patient.privateLockedById && patient.privateLockedById !== user.id) {
+		return false;
 	}
+	return true;
 }
+
+const patientInclude = {
+	assignedUser: { select: { id: true, name: true } },
+	flaggedByUser: { select: { id: true, name: true } },
+	flagClearedByUser: { select: { id: true, name: true } },
+	cancelledByUser: { select: { id: true, name: true } },
+	privateLockedByUser: { select: { id: true, name: true } },
+} as const;
 
 export const patientsService = {
 	async list(stage?: string) {
@@ -104,11 +123,7 @@ export const patientsService = {
 		const patients = await prisma.patient.findMany({
 			where,
 			orderBy: { updatedAt: "desc" },
-			include: {
-				assignedUser: { select: { id: true, name: true } },
-				flaggedByUser: { select: { id: true, name: true } },
-				flagClearedByUser: { select: { id: true, name: true } },
-			},
+			include: patientInclude,
 		});
 		return ServiceResponse.success("Patients retrieved.", patients);
 	},
@@ -117,9 +132,7 @@ export const patientsService = {
 		const patient = await prisma.patient.findUnique({
 			where: { id },
 			include: {
-				assignedUser: { select: { id: true, name: true } },
-				flaggedByUser: { select: { id: true, name: true } },
-				flagClearedByUser: { select: { id: true, name: true } },
+				...patientInclude,
 				activityLogs: { orderBy: { createdAt: "desc" }, take: 50 },
 			},
 		});
@@ -130,17 +143,17 @@ export const patientsService = {
 	},
 
 	async moveStage(id: string, input: StageMoveInput, user: AuthenticatedUser) {
-		if (user.role === "admin") {
-			return ServiceResponse.failure(
-				"Admin cannot move stages. Assign a VA to move the patient.",
-				null,
-				StatusCodes.FORBIDDEN,
-			);
-		}
-
 		const patient = await prisma.patient.findUnique({ where: { id } });
 		if (!patient) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can move it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
 		}
 
 		const order = await getStageOrder();
@@ -172,12 +185,34 @@ export const patientsService = {
 			}
 		}
 
-		const updated = await prisma.patient.update({
-			where: { id },
-			data: { stage: input.targetStage, updatedAt: new Date(), updatedById: user.id },
+		// Auto-complete: entering a final stage marks the patient Completed;
+		// leaving a final stage while Completed reverts to Active.
+		const targetStage = await prisma.stage.findUnique({
+			where: { key: input.targetStage },
+			select: { isFinal: true },
 		});
+		const data: Record<string, unknown> = { stage: input.targetStage, updatedAt: new Date(), updatedById: user.id };
+		if (targetStage?.isFinal && patient.status !== "cancelled") {
+			data.status = "completed";
+			data.completedAt = new Date();
+		} else if (patient.status === "completed" && !targetStage?.isFinal) {
+			data.status = "active";
+			data.completedAt = null;
+		}
 
-		await logActivity(id, user.name, `Moved from ${patient.stage} to ${input.targetStage}`, "auto");
+		const updated = await prisma.patient.update({ where: { id }, data });
+
+		await audit({
+			patientId: id,
+			user,
+			action: "stage.move",
+			entityType: "stage",
+			entityId: input.targetStage,
+			prevValue: { stage: patient.stage },
+			newValue: { stage: input.targetStage },
+			message: `Moved from ${patient.stage} to ${input.targetStage}`,
+			type: "auto",
+		});
 
 		return ServiceResponse.success("Stage updated.", updated);
 	},
@@ -188,12 +223,34 @@ export const patientsService = {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
+		// Lock-aware: a VA must never self-assign a locked patient to bypass the lock.
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can assign it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
 		const updated = await prisma.patient.update({
 			where: { id },
 			data: { assignedTo: input.assignedTo, updatedAt: new Date(), updatedById: user.id },
 		});
 
-		await logActivity(id, user.name, `Assigned patient`, "manual");
+		const assignedName = input.assignedTo
+			? (await prisma.user.findUnique({ where: { id: input.assignedTo }, select: { name: true } }))?.name
+			: null;
+
+		await audit({
+			patientId: id,
+			user,
+			action: "assignment.change",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { assignedTo: patient.assignedTo },
+			newValue: { assignedTo: input.assignedTo, name: assignedName },
+			message: assignedName ? `Assigned patient to ${assignedName}` : "Unassigned patient",
+		});
 
 		return ServiceResponse.success("Assignment updated.", updated);
 	},
@@ -202,6 +259,14 @@ export const patientsService = {
 		const patient = await prisma.patient.findUnique({ where: { id } });
 		if (!patient) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
 		}
 
 		const state = { ...((patient.checklistState ?? {}) as Record<string, Record<string, boolean>>) };
@@ -221,7 +286,18 @@ export const patientsService = {
 
 		const action = input.checked ? "checked" : "unchecked";
 		const label = item?.label ?? input.itemId;
-		await logActivity(id, user.name, `Checklist item "${label}" ${action}`, "auto");
+		await audit({
+			patientId: id,
+			user,
+			action: "checklist.toggle",
+			entityType: "checklist_item",
+			entityId: input.itemId,
+			prevValue: { checked: !input.checked },
+			newValue: { checked: input.checked },
+			metadata: { stage: currentStage, label },
+			message: `Checklist item "${label}" ${action}`,
+			type: "auto",
+		});
 
 		return ServiceResponse.success("Checklist updated.", updated);
 	},
@@ -232,17 +308,29 @@ export const patientsService = {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
 		const updated = await prisma.patient.update({
 			where: { id },
 			data: { notes: input.notes, updatedAt: new Date(), updatedById: user.id },
 		});
 
-		await logActivity(
-			id,
-			user.name,
-			`Note updated: "${input.notes.slice(0, 60)}${input.notes.length > 60 ? "..." : ""}"`,
-			"manual",
-		);
+		await audit({
+			patientId: id,
+			user,
+			action: "notes.update",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { notes: patient.notes },
+			newValue: { notes: input.notes },
+			message: `Note updated: "${input.notes.slice(0, 60)}${input.notes.length > 60 ? "..." : ""}"`,
+		});
 
 		return ServiceResponse.success("Notes updated.", updated);
 	},
@@ -265,7 +353,16 @@ export const patientsService = {
 			},
 		});
 
-		await logActivity(id, user.name, `Flagged for Donna: ${input.reason}`, "manual");
+		await audit({
+			patientId: id,
+			user,
+			action: "flag.create",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { isFlagged: false },
+			newValue: { isFlagged: true, reason: input.reason },
+			message: `Flagged for Donna: ${input.reason}`,
+		});
 
 		try {
 			const admin = await prisma.user.findFirst({ where: { role: "admin" }, select: { email: true } });
@@ -303,7 +400,16 @@ export const patientsService = {
 			},
 		});
 
-		await logActivity(id, user.name, `Flag cleared — ${input.clearReason}`, "manual");
+		await audit({
+			patientId: id,
+			user,
+			action: "flag.clear",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { isFlagged: true },
+			newValue: { isFlagged: false, reason: input.clearReason },
+			message: `Flag cleared — ${input.clearReason}`,
+		});
 
 		// Email the original flagger with Donna's feedback
 		try {
@@ -327,6 +433,203 @@ export const patientsService = {
 		return ServiceResponse.success("Patient deleted.", null);
 	},
 
+	async updatePatient(id: string, input: UpdatePatientInput, user: AuthenticatedUser) {
+		const patient = await prisma.patient.findUnique({ where: { id } });
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
+		const data: Record<string, unknown> = {};
+		const prev: Record<string, unknown> = {};
+		const next: Record<string, unknown> = {};
+
+		const firstName = input.firstName !== undefined ? (input.firstName ?? null) : null;
+		const lastName = input.lastName !== undefined ? (input.lastName ?? null) : null;
+		if (input.firstName !== undefined) {
+			data.firstName = input.firstName;
+			prev.firstName = patient.firstName;
+			next.firstName = input.firstName;
+		}
+		if (input.lastName !== undefined) {
+			data.lastName = input.lastName;
+			prev.lastName = patient.lastName;
+			next.lastName = input.lastName;
+		}
+		// Keep the display `name` in sync when name parts change.
+		if (input.firstName !== undefined || input.lastName !== undefined) {
+			const derived = `${firstName ?? patient.firstName ?? ""} ${lastName ?? patient.lastName ?? ""}`.trim();
+			if (derived) data.name = derived;
+		}
+		if (input.location !== undefined) {
+			data.location = input.location;
+			prev.location = patient.location;
+			next.location = input.location;
+		}
+		if (input.email !== undefined) {
+			data.email = input.email;
+			prev.email = patient.email;
+			next.email = input.email;
+		}
+		if (input.phone !== undefined) {
+			data.phone = input.phone;
+			prev.phone = patient.phone;
+			next.phone = input.phone;
+		}
+		if (input.copayAmount !== undefined) {
+			data.copayAmount = input.copayAmount === null || input.copayAmount === "" ? null : String(input.copayAmount);
+			prev.copayAmount = patient.copayAmount?.toString() ?? null;
+			next.copayAmount = data.copayAmount;
+		}
+		if (input.amountPaid !== undefined) {
+			data.amountPaid = input.amountPaid === null || input.amountPaid === "" ? null : String(input.amountPaid);
+			prev.amountPaid = patient.amountPaid?.toString() ?? null;
+			next.amountPaid = data.amountPaid;
+		}
+
+		data.updatedAt = new Date();
+		data.updatedById = user.id;
+
+		const updated = await prisma.patient.update({ where: { id }, data });
+
+		await audit({
+			patientId: id,
+			user,
+			action: "patient.update",
+			entityType: "patient",
+			entityId: id,
+			prevValue: prev,
+			newValue: next,
+			message: "Updated patient details",
+		});
+
+		return ServiceResponse.success("Patient updated.", updated);
+	},
+
+	async lockPatient(id: string, user: AuthenticatedUser) {
+		const patient = await prisma.patient.findUnique({ where: { id } });
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		if (user.role !== "admin" && patient.assignedTo !== user.id) {
+			return ServiceResponse.failure(
+				"Only the assigned VA or an admin can lock this patient.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
+		const updated = await prisma.patient.update({
+			where: { id },
+			data: {
+				isPrivate: true,
+				privateLockedById: user.id,
+				privateLockedAt: new Date(),
+				updatedAt: new Date(),
+				updatedById: user.id,
+			},
+		});
+
+		await audit({
+			patientId: id,
+			user,
+			action: "lock.set",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { isPrivate: false },
+			newValue: { isPrivate: true },
+			message: "Locked patient — only the assigned VA or an admin can edit",
+		});
+
+		return ServiceResponse.success("Patient locked.", updated);
+	},
+
+	async unlockPatient(id: string, user: AuthenticatedUser) {
+		const patient = await prisma.patient.findUnique({ where: { id } });
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const canUnlock = user.role === "admin" || patient.assignedTo === user.id || patient.privateLockedById === user.id;
+		if (!canUnlock) {
+			return ServiceResponse.failure(
+				"Only the assigned VA, the person who locked it, or an admin can unlock this patient.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
+		const updated = await prisma.patient.update({
+			where: { id },
+			data: {
+				isPrivate: false,
+				privateLockedById: null,
+				privateLockedAt: null,
+				updatedAt: new Date(),
+				updatedById: user.id,
+			},
+		});
+
+		await audit({
+			patientId: id,
+			user,
+			action: "lock.clear",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { isPrivate: true },
+			newValue: { isPrivate: false },
+			message: "Unlocked patient — open for all VAs again",
+		});
+
+		return ServiceResponse.success("Patient unlocked.", updated);
+	},
+
+	async updateStatus(id: string, input: UpdateStatusInput, user: AuthenticatedUser) {
+		if (user.role !== "admin") {
+			return ServiceResponse.failure("Only admins can change patient status.", null, StatusCodes.FORBIDDEN);
+		}
+
+		const patient = await prisma.patient.findUnique({ where: { id } });
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const data: Record<string, unknown> = { status: input.status, updatedAt: new Date(), updatedById: user.id };
+		if (input.status === "cancelled") {
+			data.cancelledAt = new Date();
+			data.cancelledById = user.id;
+			data.cancelledReason = input.reason ?? null;
+			data.completedAt = null;
+		} else if (input.status === "active") {
+			data.cancelledAt = null;
+			data.cancelledById = null;
+			data.cancelledReason = null;
+		}
+
+		const updated = await prisma.patient.update({ where: { id }, data });
+
+		await audit({
+			patientId: id,
+			user,
+			action: "status.update",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { status: patient.status },
+			newValue: { status: input.status, reason: input.reason ?? null },
+			message: `Status changed from ${patient.status} to ${input.status}${input.reason ? ` — ${input.reason}` : ""}`,
+		});
+
+		return ServiceResponse.success("Status updated.", updated);
+	},
+
 	async claim(id: string, input: ClaimInput, user: AuthenticatedUser) {
 		const patient = await prisma.patient.findUnique({ where: { id } });
 		if (!patient) {
@@ -342,7 +645,16 @@ export const patientsService = {
 			data: { assignedTo: input.userId, updatedAt: new Date(), updatedById: user.id },
 		});
 
-		await logActivity(id, user.name, `Claimed responsibility for patient`, "manual");
+		await audit({
+			patientId: id,
+			user,
+			action: "assignment.claim",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { assignedTo: null },
+			newValue: { assignedTo: input.userId },
+			message: `Claimed responsibility for patient`,
+		});
 
 		try {
 			const vas = await prisma.user.findMany({ where: { role: "va" }, select: { id: true, name: true, email: true } });
@@ -372,6 +684,14 @@ export const patientsService = {
 		}
 
 		const body = input ?? {};
+
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can run eligibility checks.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
 
 		// 1. Persist any payment info supplied during the check (e.g. from a VA
 		//    reading the card / insurance details). Webhook intake data is also
@@ -435,12 +755,17 @@ export const patientsService = {
 			},
 		});
 
-		await logActivity(
-			id,
-			user.name,
-			`Eligibility check completed — ${status === "eligible" ? "Eligible" : "Not Eligible"}${reason ? ` (${reason})` : ""}`,
-			"auto",
-		);
+		await audit({
+			patientId: id,
+			user,
+			action: "eligibility.check",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { eligibilityStatus: patient.eligibilityStatus },
+			newValue: { eligibilityStatus: status, reason },
+			message: `Eligibility check completed — ${status === "eligible" ? "Eligible" : "Not Eligible"}${reason ? ` (${reason})` : ""}`,
+			type: "auto",
+		});
 
 		return ServiceResponse.success(
 			status === "eligible" ? "Patient is eligible." : "Patient is not eligible.",
@@ -471,7 +796,16 @@ export const patientsService = {
 		});
 
 		const platformLabel = input.bookingPlatform ?? "email";
-		await logActivity(patient.id, "system", `New patient auto-created from booking email (${platformLabel})`, "auto");
+		await audit({
+			patientId: patient.id,
+			user: null,
+			action: "patient.create",
+			entityType: "patient",
+			entityId: patient.id,
+			newValue: { source: "webhook", platform: platformLabel },
+			message: `New patient auto-created from booking email (${platformLabel})`,
+			type: "auto",
+		});
 
 		try {
 			const vas = await prisma.user.findMany({ where: { role: "va" }, select: { email: true } });

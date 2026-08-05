@@ -11,9 +11,10 @@ import {
   ClipboardList,
   Users,
   Settings,
+  Contact,
   ScrollText,
   ShieldCheck,
-  Upload,
+  BarChart3,
   LogOut,
   User,
   Loader2,
@@ -27,19 +28,21 @@ import { useAuth } from "@/hooks/auth/useAuth"
 const VA_NAV = [
   { href: ROUTES.DASHBOARD.HOME, icon: LayoutDashboard, label: "Dashboard" },
   { href: ROUTES.DASHBOARD.BOARD, icon: Columns3, label: "Board" },
-  { href: ROUTES.DASHBOARD.IMPORT, icon: Upload, label: "Patients Import" },
   { href: ROUTES.DASHBOARD.LOG, icon: ClipboardList, label: "Activity Log" },
   { href: ROUTES.DASHBOARD.SOP, icon: ScrollText, label: "SOP Reference" },
+  { href: ROUTES.DASHBOARD.REPORTING, icon: BarChart3, label: "My Report" },
   { href: ROUTES.DASHBOARD.PROFILE, icon: User, label: "Profile" },
 ]
 
 const ADMIN_NAV = [
   { href: ROUTES.ADMIN.HOME, icon: LayoutDashboard, label: "Dashboard" },
   { href: ROUTES.ADMIN.BOARD, icon: Columns3, label: "Board" },
-  { href: ROUTES.ADMIN.IMPORT, icon: Upload, label: "Patients Import" },
   { href: ROUTES.ADMIN.LOG, icon: ClipboardList, label: "Activity Log" },
+  { href: ROUTES.ADMIN.SOP, icon: ScrollText, label: "SOP Reference" },
+  { href: ROUTES.ADMIN.REPORTING, icon: BarChart3, label: "Reporting" },
   { href: ROUTES.ADMIN.USERS, icon: Users, label: "Users" },
   { href: ROUTES.ADMIN.STAGES, icon: Settings, label: "Stage Settings" },
+  { href: ROUTES.ADMIN.CRM, icon: Contact, label: "CRM" },
   { href: ROUTES.ADMIN.ELIGIBILITY, icon: ShieldCheck, label: "Eligibility Rules" },
   { href: ROUTES.ADMIN.PROFILE, icon: User, label: "Profile"},
 ]

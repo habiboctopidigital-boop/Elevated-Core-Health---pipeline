@@ -80,6 +80,42 @@ export const patientsController = {
 		handleServiceResponse(serviceResponse, res);
 	},
 
+	async updatePatient(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.updatePatient(paramId(req), req.body, req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async lockPatient(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.lockPatient(paramId(req), req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async unlockPatient(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.unlockPatient(paramId(req), req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async updateStatus(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.updateStatus(paramId(req), req.body, req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
 	async claim(req: Request, res: Response): Promise<void> {
 		if (!req.user) {
 			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);

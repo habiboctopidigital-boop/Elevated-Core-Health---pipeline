@@ -4,14 +4,40 @@ import { useState } from "react"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { Search, Loader2 } from "lucide-react"
 
+const ACTION_LABELS: Record<string, string> = {
+  "stage.move": "Stage Move",
+  "checklist.toggle": "Checklist",
+  "assignment.change": "Assignment",
+  "assignment.claim": "Claim",
+  "notes.update": "Notes",
+  "flag.create": "Flag",
+  "flag.clear": "Flag Cleared",
+  "eligibility.check": "Eligibility",
+  "patient.create": "Created",
+  "patient.update": "Details Updated",
+  "status.update": "Status",
+  "lock.set": "Locked",
+  "lock.clear": "Unlocked",
+}
+
+const ACTION_OPTIONS = Object.entries(ACTION_LABELS).map(([value, label]) => ({ value, label }))
+
+function formatValue(v: unknown): string {
+  if (v === null || v === undefined) return "—"
+  if (typeof v === "object") return JSON.stringify(v)
+  return String(v)
+}
+
 export function HandoffLog() {
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<string>("")
+  const [actionFilter, setActionFilter] = useState<string>("")
   const [page, setPage] = useState(1)
   const { data, isLoading } = useActivityLog({
     page,
     limit: 30,
     ...(typeFilter ? { type: typeFilter } : {}),
+    ...(actionFilter ? { action: actionFilter } : {}),
   })
 
   const logs = data?.logs || []
@@ -38,8 +64,18 @@ export function HandoffLog() {
           />
         </div>
         <select
+          value={actionFilter}
+          onChange={(e) => { setActionFilter(e.target.value); setPage(1) }}
+          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+        >
+          <option value="">All actions</option>
+          {ACTION_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <select
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          onChange={(e) => { setTypeFilter(e.target.value); setPage(1) }}
           className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
         >
           <option value="">All types</option>
@@ -95,9 +131,25 @@ export function HandoffLog() {
                         </span>
                       )}
                     </div>
+                    {log.action && (
+                      <span className="inline-block mt-1 text-[10px] font-semibold bg-[#036638]/10 text-[#036638] px-2 py-0.5 rounded-full">
+                        {ACTION_LABELS[log.action] || log.action}
+                      </span>
+                    )}
                     <p className="text-sm text-[#374151] mt-0.5">
                       {log.message}
                     </p>
+                    {log.prevValue && log.newValue && (
+                      <div className="mt-1.5 flex items-start gap-2 text-[11px]">
+                        <span className="text-red-600 bg-red-50 rounded px-1.5 py-0.5 max-w-[240px] truncate">
+                          {formatValue(log.prevValue)}
+                        </span>
+                        <span className="text-[#9CA3AF]">→</span>
+                        <span className="text-green-700 bg-green-50 rounded px-1.5 py-0.5 max-w-[240px] truncate">
+                          {formatValue(log.newValue)}
+                        </span>
+                      </div>
+                    )}
                     {log.patient && (
                       <p className="text-xs text-[#6B7280] mt-0.5">
                         Patient: {log.patient.name}

@@ -29,6 +29,8 @@ export type ChecklistStatus = "required" | "optional"
 
 export type EligibilityStatus = "not_checked" | "eligible" | "not_eligible"
 
+export type PatientStatus = "active" | "completed" | "cancelled"
+
 export interface ChecklistItemDef {
   id: string
   label: string
@@ -57,9 +59,13 @@ export interface EligibilityDetails {
 export interface Patient {
   id: string
   name: string
+  firstName?: string | null
+  lastName?: string | null
+  location?: string | null
   email?: string | null
   phone?: string | null
   stage: PatientStage
+  status: PatientStatus
   assignedTo?: string | null
   assignedUser?: Pick<User, "id" | "name"> | null
   notes?: string | null
@@ -71,16 +77,25 @@ export interface Patient {
   flagClearedReason?: string | null
   flagClearedByUser?: Pick<User, "id" | "name"> | null
   flagClearedAt?: string | null
+  completedAt?: string | null
+  cancelledAt?: string | null
+  cancelledReason?: string | null
+  cancelledByUser?: Pick<User, "id" | "name"> | null
   source: string
   bookingPlatform?: string | null
   appointmentDatetime?: string | null
   paymentMethod?: string | null
   insuranceProvider?: string | null
   paymentDetails?: Record<string, unknown> | null
+  copayAmount?: string | null
+  amountPaid?: string | null
   eligibilityStatus: EligibilityStatus
   eligibilityCheckedAt?: string | null
   eligibilityDetails?: EligibilityDetails | null
   eligibilityReason?: string | null
+  isPrivate: boolean
+  privateLockedByUser?: Pick<User, "id" | "name"> | null
+  privateLockedAt?: string | null
   updatedAt: string
   createdAt: string
   activityLogs?: ActivityLog[]
@@ -92,8 +107,38 @@ export interface ActivityLog {
   author: string
   message: string
   type: "auto" | "manual"
+  actorId?: string | null
+  action?: string | null
+  entityType?: string | null
+  entityId?: string | null
+  prevValue?: Record<string, unknown> | null
+  newValue?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
   createdAt: string
   patient?: Pick<Patient, "id" | "name">
+}
+
+export interface ImportBatch {
+  id: string
+  fileName: string
+  fileType: string
+  totalRows: number
+  successCount: number
+  failCount: number
+  duplicateCount: number
+  status: "processing" | "completed" | "completed_with_errors" | "failed"
+  errorDetails?: Array<{ row: number; message: string }> | null
+  importedByUser?: Pick<User, "id" | "name"> | null
+  createdAt: string
+  completedAt?: string | null
+}
+
+export interface CrmContactsResponse {
+  contacts: Patient[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
 }
 
 export interface AuthTokens {
@@ -135,6 +180,83 @@ export interface AdminAnalytics {
   patientsPerStage: Record<string, number>
   vaLoad: Array<{ id: string; name: string; patientCount: number }>
   reconciledThisWeek: number
+}
+
+export interface ReportTotals {
+  total: number
+  active: number
+  completed: number
+  cancelled: number
+}
+
+export interface StageCount {
+  stage: string
+  label: string
+  count: number
+}
+
+export interface WorkflowMetrics {
+  reconciledThisWeek: number
+  staleCount: number
+  flaggedCount: number
+  avgCompletionDays: number
+  completionRate: number
+}
+
+export interface VaComparisonRow {
+  id: string
+  name: string
+  assigned: number
+  active: number
+  completed: number
+  cancelled: number
+  handledCases: number
+  actions: number
+  avgCompletionDays: number
+  stageCompletionRate: number
+}
+
+export interface AdminReport {
+  totals: ReportTotals
+  byStage: StageCount[]
+  workflow: WorkflowMetrics
+  vaComparison: VaComparisonRow[]
+}
+
+export interface VaActions {
+  today: number
+  thisWeek: number
+  thisMonth: number
+}
+
+export interface VaReportPerformance {
+  handledCases: number
+  actions: VaActions
+  avgCompletionDays: number
+  stageCompletionRate: number
+}
+
+export interface ReportSeries {
+  label: string
+  count: number
+}
+
+export interface VaReport {
+  va: Pick<User, "id" | "name" | "email">
+  totals: {
+    assigned: number
+    active: number
+    completed: number
+    cancelled: number
+  }
+  workload: number
+  stageDistribution: StageCount[]
+  performance: VaReportPerformance
+  series: {
+    daily: ReportSeries[]
+    weekly: ReportSeries[]
+    monthly: ReportSeries[]
+  }
 }
 
 export interface ApiResponse<T> {

@@ -44,6 +44,9 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const { user: currentUser } = useAuth()
   const { data: vaList } = useListVas()
   const assignPatient = useAssignPatient()
+  // Phase 3 shared editing: board is open — any VA or admin can move any patient.
+  const isAdmin = currentUser?.role === "admin"
+  const canMoveStage = true
 
   // - Checklist progress for this stage (only REQUIRED items gate moves) —
   const stageDefs = checklistDefs?.filter((d) => d.stage === patient.stage) || []
@@ -53,11 +56,6 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const totalCount = requiredDefs.length
   const allComplete = totalCount > 0 ? completedCount === totalCount : true
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100
-
-  // - Assignment-gated stage changes —
-  const isAdmin = currentUser?.role === "admin"
-  const isAssignedUser = !!patient.assignedTo && patient.assignedTo === currentUser?.id
-  const canMoveStage = !isAdmin && isAssignedUser
 
   return (
     <div
@@ -98,6 +96,19 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
           )}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
+          {patient.isPrivate && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-semibold text-amber-700"
+              title={
+                patient.privateLockedByUser
+                  ? `Locked by ${patient.privateLockedByUser.name}`
+                  : "Locked by assigned VA"
+              }
+            >
+              <Lock className="w-2.5 h-2.5" />
+              Locked
+            </span>
+          )}
           {patient.isFlagged && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#036638]/10 border border-[#036638]/20 text-[9px] font-semibold text-[#036638]">
               <Flag className="w-2.5 h-2.5" fill="#036638" />
@@ -277,34 +288,27 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
               </button>
             )}
           </div>
-        ) : (
-          /* Admin can assign, or non-assigned see lock */
-          isAdmin ? (
-            <div className="relative inline-block w-[110px]" onClick={(e) => e.stopPropagation()}>
-              <select
-                onChange={(e) => {
-                  const val = e.target.value
-                  if (val) assignPatient.mutate({ id: patient.id, assignedTo: val })
-                  e.target.value = ""
-                }}
-                value=""
-                className="appearance-none w-full text-[10px] border border-[#E5E7EB] rounded px-2 py-0.5 pr-6 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
-                title="Assign VA"
-              >
-                <option value="">{patient.assignedTo ? "Reassign..." : "Assign VA..."}</option>
-                {vaList?.filter(v => v.id !== currentUser?.id).map((va) => (
-                  <option key={va.id} value={va.id}>
-                    {va.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 text-[10px] text-gray-400" title="Only the assigned VA can move this patient">
-              <Lock className="w-3 h-3" />
-              <span>{patient.assignedTo ? "Not your patient" : "Unassigned"}</span>
-            </div>
-          )
+        ) : null}
+        {isAdmin && (
+          <div className="relative inline-block w-[110px]" onClick={(e) => e.stopPropagation()}>
+            <select
+              onChange={(e) => {
+                const val = e.target.value
+                if (val) assignPatient.mutate({ id: patient.id, assignedTo: val })
+                e.target.value = ""
+              }}
+              value=""
+              className="appearance-none w-full text-[10px] border border-[#E5E7EB] rounded px-2 py-0.5 pr-6 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
+              title="Assign VA"
+            >
+              <option value="">{patient.assignedTo ? "Reassign..." : "Assign VA..."}</option>
+              {vaList?.map((va) => (
+                <option key={va.id} value={va.id}>
+                  {va.name}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
     </div>

@@ -62,6 +62,31 @@ export const CheckEligibilitySchema = z.object({
 		.optional(),
 });
 
+const moneyValue = z
+	.string()
+	.trim()
+	.regex(/^\d+(\.\d{1,2})?$/, "Amount must be a number (e.g. 30 or 30.50)")
+	.or(z.number().nonnegative());
+
+export const UpdatePatientSchema = z.object({
+	body: z.object({
+		firstName: z.string().trim().max(100).optional().nullable(),
+		lastName: z.string().trim().max(100).optional().nullable(),
+		location: z.string().trim().max(200).optional().nullable(),
+		email: z.string().trim().email().optional().nullable(),
+		phone: z.string().trim().max(50).optional().nullable(),
+		copayAmount: moneyValue.optional().nullable(),
+		amountPaid: moneyValue.optional().nullable(),
+	}),
+});
+
+export const UpdateStatusSchema = z.object({
+	body: z.object({
+		status: z.enum(["active", "cancelled"]),
+		reason: z.string().trim().max(300).optional().nullable(),
+	}),
+});
+
 export const ClaimSchema = z.object({
 	body: z.object({
 		userId: z.string().uuid(),
@@ -77,3 +102,5 @@ export type ClearFlagInput = z.infer<typeof ClearFlagSchema>["body"];
 export type IntakeInput = z.infer<typeof IntakeSchema>["body"];
 export type ClaimInput = z.infer<typeof ClaimSchema>["body"];
 export type CheckEligibilityInput = z.infer<typeof CheckEligibilitySchema>["body"];
+export type UpdatePatientInput = z.infer<typeof UpdatePatientSchema>["body"];
+export type UpdateStatusInput = z.infer<typeof UpdateStatusSchema>["body"];
