@@ -5,6 +5,7 @@ export interface ChecklistItemDef {
 	id: string;
 	label: string;
 	description: string | null;
+	status: "required" | "optional";
 	isDefault: boolean;
 	sortOrder: number;
 }
@@ -14,7 +15,7 @@ export async function getChecklistItemsForStage(stage: string): Promise<Checklis
 		const items = await prisma.checklistItem.findMany({
 			where: { stage: stage as never },
 			orderBy: { sortOrder: "asc" },
-			select: { id: true, label: true, description: true, isDefault: true, sortOrder: true },
+			select: { id: true, label: true, description: true, status: true, isDefault: true, sortOrder: true },
 		});
 		return items;
 	} catch (err) {
@@ -25,11 +26,16 @@ export async function getChecklistItemsForStage(stage: string): Promise<Checklis
 	}
 }
 
+/**
+ * A stage's checklist is considered complete when every REQUIRED item is
+ * checked. Optional items never block a forward stage move.
+ */
 export async function isChecklistComplete(stage: string, checklistState: Record<string, boolean>): Promise<boolean> {
 	try {
 		const items = await getChecklistItemsForStage(stage);
-		if (items.length === 0) return true;
-		return items.every((item) => checklistState[item.id] === true);
+		const required = items.filter((item) => item.status === "required");
+		if (required.length === 0) return true;
+		return required.every((item) => checklistState[item.id] === true);
 	} catch (err) {
 		// Fail open: if we can't verify, allow the move rather than block the user.
 		logger.warn({ err, stage }, "isChecklistComplete: failed to check, defaulting to true");

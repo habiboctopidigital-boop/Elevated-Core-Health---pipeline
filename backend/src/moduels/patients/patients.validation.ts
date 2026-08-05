@@ -55,7 +55,20 @@ export const IntakeSchema = z.object({
 		appointmentDatetime: z.string().datetime().optional().nullable(),
 		bookingPlatform: z.enum(["klarity", "zocdoc"]).optional().nullable(),
 		problemDescription: z.string().max(2000).optional().nullable(),
+		paymentMethod: z.string().max(100).optional().nullable(),
+		insuranceProvider: z.string().max(200).optional().nullable(),
+		paymentDetails: z.record(z.string(), z.unknown()).optional().nullable(),
 	}),
+});
+
+export const CheckEligibilitySchema = z.object({
+	body: z
+		.object({
+			paymentMethod: z.string().max(100).optional().nullable(),
+			insuranceProvider: z.string().max(200).optional().nullable(),
+			paymentDetails: z.record(z.string(), z.unknown()).optional().nullable(),
+		})
+		.optional(),
 });
 
 export const ClaimSchema = z.object({
@@ -72,3 +85,4 @@ export type FlagInput = z.infer<typeof FlagSchema>["body"];
 export type ClearFlagInput = z.infer<typeof ClearFlagSchema>["body"];
 export type IntakeInput = z.infer<typeof IntakeSchema>["body"];
 export type ClaimInput = z.infer<typeof ClaimSchema>["body"];
+export type CheckEligibilityInput = z.infer<typeof CheckEligibilitySchema>["body"];

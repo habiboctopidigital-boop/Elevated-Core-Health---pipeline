@@ -5,50 +5,25 @@ import {
   STAGE_LABELS,
   STAGE_HINTS,
 } from "@/types"
-import { ScrollText, CheckCircle, AlertTriangle, Flag } from "lucide-react"
-
-const CHECKLISTS: Record<string, string[]> = {
-  onboarding: [
-    "Confirm appointment on calendar",
-    "Send intake paperwork",
-    "Verify insurance eligibility",
-  ],
-  visit_complete: [
-    "Mark encounter as finished in Optimantra",
-    "Collect any outstanding patient paperwork",
-  ],
-  post_visit_docs: [
-    "Send patient instruction letter",
-    "Send lab orders (if applicable)",
-    "Document all communications in Optimantra",
-  ],
-  chart_signed: [
-    "Verify Optimantra note is signed",
-    "CPT level check - appropriate for services rendered",
-    "ICD-10 alignment - codes match documentation",
-    "Documentation support check - all billed services documented",
-  ],
-  sent_to_billing: [
-    "Claim submitted to correct payer (Headway / Grow Therapy / self-pay)",
-    "Confirm claim accepted by clearinghouse",
-    "Record claim reference number",
-  ],
-  payment_posted: [
-    "Verify payment amount matches expected reimbursement",
-    "Post payment to patient account",
-    "Update payment status in tracking system",
-  ],
-  reconciled: [
-    "Compare payment to billed amount",
-    "Resolve any discrepancies",
-    "Close out patient record in pipeline",
-    "Archive all operational notes",
-  ],
-}
+import { ScrollText, CheckCircle, AlertTriangle, Flag, Loader2 } from "lucide-react"
+import { useChecklistItems } from "@/hooks/query/usePatients"
+import { cn } from "@/lib/utils"
 
 export default function SOPPage() {
+  const { data: items, isLoading } = useChecklistItems()
+
+  const itemsByStage =
+    items?.reduce(
+      (acc, item) => {
+        if (!acc[item.stage]) acc[item.stage] = []
+        acc[item.stage].push(item)
+        return acc
+      },
+      {} as Record<string, typeof items>,
+    ) || {}
+
   return (
-    <div className="space-y-6  max-w-[1600px] mx-auto pb-12">
+    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
       <div>
         <div className="flex items-center gap-3 mb-1">
           <ScrollText className="w-5 h-5 text-[#036638]" />
@@ -69,8 +44,8 @@ export default function SOPPage() {
             <CheckCircle className="w-4 h-4 text-[#65BD6C] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
               <strong>Forward moves are checklist-gated.</strong> A patient cannot advance
-              until every checklist item for the current stage is checked. Backward moves
-              are always allowed.
+              until every <strong>Required</strong> checklist item for the current stage is
+              checked. Optional items never block advancement.
             </p>
           </div>
           <div className="flex items-start gap-2.5">
@@ -98,24 +73,57 @@ export default function SOPPage() {
       </div>
 
       {/* Stage Checklists */}
-      {STAGE_ORDER.map((stage) => (
-        <div key={stage} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
-          <div className="mb-3">
-            <h3 className="text-sm font-bold text-[#036638]">
-              {STAGE_LABELS[stage]}
-            </h3>
-            <p className="text-xs text-[#6B7280]">{STAGE_HINTS[stage]}</p>
+      {STAGE_ORDER.map((stage) => {
+        const stageItems = itemsByStage[stage] || []
+        return (
+          <div key={stage} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
+            <div className="mb-3">
+              <h3 className="text-sm font-bold text-[#036638]">
+                {STAGE_LABELS[stage]}
+              </h3>
+              <p className="text-xs text-[#6B7280]">{STAGE_HINTS[stage]}</p>
+            </div>
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-xs text-[#6B7280]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading checklist...
+              </div>
+            ) : stageItems.length > 0 ? (
+              <ul className="space-y-1.5">
+                {stageItems
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((item) => (
+                    <li key={item.id} className="flex items-start gap-2.5 text-sm text-[#374151]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#65BD6C] mt-1.5 shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-center gap-2 flex-wrap">
+                          {item.label}
+                          <span
+                            className={cn(
+                              "text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0",
+                              item.status === "required"
+                                ? "bg-red-50 text-red-700"
+                                : "bg-[#EBF7EC] text-[#036638]",
+                            )}
+                          >
+                            {item.status === "required" ? "Required" : "Optional"}
+                          </span>
+                        </span>
+                        {item.description && (
+                          <span className="block text-xs text-[#6B7280] mt-0.5">
+                            {item.description}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[#6B7280] italic">No checklist items configured for this stage</p>
+            )}
           </div>
-          <ul className="space-y-1.5">
-            {CHECKLISTS[stage]?.map((item, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm text-[#374151]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#65BD6C] mt-1.5 shrink-0" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

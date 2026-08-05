@@ -209,6 +209,28 @@ export function useClaimPatient() {
   })
 }
 
+export function useCheckEligibility() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...input
+    }: { id: string } & Partial<{
+      paymentMethod?: string | null
+      insuranceProvider?: string | null
+      paymentDetails?: Record<string, unknown> | null
+    }>) => PatientsService.checkEligibility(id, input),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      toast.success("Eligibility check completed")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Eligibility check failed")
+    },
+  })
+}
+
 export function useIntake() {
   const qc = useQueryClient()
   return useMutation({

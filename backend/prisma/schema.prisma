@@ -22,6 +22,17 @@ enum PatientStage {
   reconciled
 }
 
+enum ChecklistStatus {
+  required
+  optional
+}
+
+enum EligibilityStatus {
+  not_checked
+  eligible
+  not_eligible
+}
+
 model User {
   id                   String    @id @default(uuid())
   name                 String
@@ -62,6 +73,13 @@ model Patient {
   bookingPlatform     String?      @map("booking_platform")
   appointmentDatetime DateTime?    @map("appointment_datetime")
   problemDescription  String?      @map("problem_description")
+  paymentMethod       String?      @map("payment_method")
+  insuranceProvider   String?      @map("insurance_provider")
+  paymentDetails      Json?        @map("payment_details")
+  eligibilityStatus   EligibilityStatus @default(not_checked) @map("eligibility_status")
+  eligibilityCheckedAt DateTime?   @map("eligibility_checked_at")
+  eligibilityDetails  Json?        @map("eligibility_details")
+  eligibilityReason   String?      @map("eligibility_reason")
   updatedAt           DateTime     @default(now()) @updatedAt @map("updated_at")
   updatedById         String?      @map("updated_by")
   createdAt           DateTime     @default(now()) @map("created_at")
@@ -109,15 +127,28 @@ model RefreshToken {
 }
 
 model ChecklistItem {
-  id          String       @id @default(uuid())
+  id          String          @id @default(uuid())
   stage       PatientStage
   label       String
   description String?
-  isDefault   Boolean      @default(false) @map("is_default")
-  sortOrder   Int          @default(0) @map("sort_order")
-  createdAt   DateTime     @default(now()) @map("created_at")
+  status      ChecklistStatus @default(required)
+  isDefault   Boolean         @default(false) @map("is_default")
+  sortOrder   Int             @default(0) @map("sort_order")
+  createdAt   DateTime        @default(now()) @map("created_at")
 
   @@unique([stage, label])
   @@index([stage])
   @@map("checklist_items")
+}
+
+model EligibilityRule {
+  id        String   @id @default(uuid())
+  label     String
+  field     String
+  operator  String
+  value     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("eligibility_rules")
 }

@@ -51,6 +51,27 @@ export const adminController = {
 		handleServiceResponse(serviceResponse, res);
 	},
 
+	// Eligibility rules
+	async listEligibilityRules(_req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.listEligibilityRules();
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async createEligibilityRule(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.createEligibilityRule(req.body);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async updateEligibilityRule(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.updateEligibilityRule(paramId(req), req.body);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async deleteEligibilityRule(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.deleteEligibilityRule(paramId(req));
+		handleServiceResponse(serviceResponse, res);
+	},
+
 	// Analytics
 	async getAnalytics(_req: Request, res: Response): Promise<void> {
 		const serviceResponse = await adminService.getAnalytics();

@@ -9,6 +9,8 @@ import {
   Flag,
   Clock,
   Check,
+  CheckCircle,
+  XCircle,
   AlertTriangle,
   MessageSquare,
   UserCheck,
@@ -30,6 +32,7 @@ import {
   useAssignPatient,
   useChecklistItems,
   useListVas,
+  useCheckEligibility,
 } from "@/hooks/query/usePatients"
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
@@ -88,22 +91,6 @@ const STAGE_SOPs: Record<PatientStage, string[]> = {
   ],
 }
 
-// Mock VOB (Verification of Benefits) data
-const generateMockVOBData = () => ({
-  coverage: "Active",
-  payer: "Blue Cross Blue Shield",
-  memberId: "BCB123456789",
-  groupNumber: "G789012",
-  copay: "$30",
-  coinsurance: "20%",
-  deductible: "$1,500",
-  deductibleMet: "$750",
-  outOfPocketMax: "$5,000",
-  authorizationRequired: false,
-  visitsCoveredPerYear: "Unlimited",
-  checkDate: new Date().toLocaleDateString(),
-})
-
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const hours = Math.floor(diff / (1000 * 60 * 60))
@@ -112,6 +99,21 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hours / 24)
   return `${days}d ago`
 }
+
+const VOB_LABELS: Array<[string, string]> = [
+  ["coverage", "Coverage"],
+  ["payer", "Payer"],
+  ["memberId", "Member ID"],
+  ["groupNumber", "Group Number"],
+  ["copay", "Copay"],
+  ["coinsurance", "Coinsurance"],
+  ["deductible", "Deductible"],
+  ["deductibleMet", "Deductible Met"],
+  ["outOfPocketMax", "Out-of-Pocket Max"],
+  ["authorizationRequired", "Authorization"],
+  ["visitsCoveredPerYear", "Visits / Year"],
+  ["checkDate", "Checked"],
+]
 
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
@@ -140,8 +142,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const currentState = patient?.checklistState?.[patient.stage] || {}
 
-  const totalItems = currentStageItems.length
-  const completedItems = currentStageItems.filter(
+  // Only REQUIRED items gate forward moves; optional items are informational.
+  const requiredItems = currentStageItems.filter((item) => item.status === "required")
+  const totalItems = requiredItems.length
+  const completedItems = requiredItems.filter(
     (item) => currentState[item.id] === true,
   ).length
   const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 100
@@ -155,17 +159,20 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [clearReason, setClearReason] = useState("")
   const [showClearInput, setShowClearInput] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
-  const [eligibilityStatus, setEligibilityStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
-  const [eligibilityData, setEligibilityData] = useState<ReturnType<typeof generateMockVOBData> | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState("")
+  const [insuranceProvider, setInsuranceProvider] = useState("")
+  const checkEligibility = useCheckEligibility()
 
   useEffect(() => {
     if (patient?.notes) setNotesText(patient.notes)
     else setNotesText("")
+    setPaymentMethod(patient?.paymentMethod ?? "")
+    setInsuranceProvider(patient?.insuranceProvider ?? "")
     setShowFlagInput(false)
     setFlagReason("")
     setShowClearInput(false)
     setClearReason("")
-  }, [patient?.id, patient?.notes])
+  }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider])
 
   // ESC key to close modal
   useEffect(() => {
@@ -218,11 +225,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   }
 
   const handleCheckEligibility = async () => {
-    setEligibilityStatus("loading")
-    // Simulate API call with 1.5s delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setEligibilityData(generateMockVOBData())
-    setEligibilityStatus("success")
+    if (!patient) return
+    await checkEligibility.mutateAsync({
+      id: patient.id,
+      paymentMethod: paymentMethod.trim() || null,
+      insuranceProvider: insuranceProvider.trim() || null,
+    })
   }
 
   const stale =
@@ -365,9 +373,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   )}
                 </div>
 
-                {totalItems > 0 ? (
+                {currentStageItems.length > 0 ? (
                   <>
-                    {/* Progress Indicator */}
+                    {totalItems > 0 ? (
                     <div className="mb-4">
                       <div className="flex items-center justify-between text-xs text-[#6B7280] mb-2">
                         <span className="font-medium">
@@ -393,6 +401,11 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         </p>
                       )}
                     </div>
+                    ) : (
+                      <p className="text-xs text-[#6B7280] italic mb-4">
+                        No required items — this stage can advance without checking anything.
+                      </p>
+                    )}
 
                     {/* Checklist Items */}
                     <div className="space-y-2">
@@ -427,8 +440,15 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                 >
                                   {item.label}
                                 </span>
-                                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold rounded-full uppercase tracking-wider">
-                                  Required
+                                <span
+                                  className={cn(
+                                    "px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider",
+                                    item.status === "required"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-[#EBF7EC] text-[#036638]",
+                                  )}
+                                >
+                                  {item.status === "required" ? "Required" : "Optional"}
                                 </span>
                               </div>
                               {item.description && (
@@ -467,71 +487,114 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </ul>
               </div>
 
-              {/* Eligibility Check (VOB) */}
+              {/* Eligibility Check */}
               <div className="bg-gradient-to-br from-[#F0F9F5] to-[#E8F5F2] border border-[#65BD6C]/30 rounded-xl p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
                     <Shield className="w-5 h-5 text-[#036638]" />
                     <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest">
-                      Verification of Benefits (VOB)
+                      Eligibility Check
                     </p>
                   </div>
                   <button
                     onClick={handleCheckEligibility}
-                    disabled={eligibilityStatus === "loading"}
+                    disabled={checkEligibility.isPending}
                     className={cn(
                       "text-[10px] font-medium px-2.5 py-1 rounded transition-all",
-                      eligibilityStatus === "loading"
+                      checkEligibility.isPending
                         ? "bg-[#036638]/20 text-[#036638] cursor-wait"
-                        : "bg-[#036638] text-white hover:bg-[#025030]"
+                        : "bg-[#036638] text-white hover:bg-[#025030]",
                     )}
                   >
-                    {eligibilityStatus === "loading" ? "Checking..." : "Check Eligibility"}
+                    {checkEligibility.isPending
+                      ? "Checking..."
+                      : patient.eligibilityStatus !== "not_checked"
+                        ? "Re-check Eligibility"
+                        : "Check Eligibility"}
                   </button>
                 </div>
 
-                {eligibilityStatus === "success" && eligibilityData && (
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium">Coverage</p>
-                      <p className="text-sm font-semibold text-[#036638]">{eligibilityData.coverage}</p>
-                    </div>
-                    <div className="bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium">Payer</p>
-                      <p className="text-sm font-semibold text-[#1A1B1E]">{eligibilityData.payer}</p>
-                    </div>
-                    <div className="bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium">Member ID</p>
-                      <p className="text-sm font-semibold font-mono text-[#1A1B1E]">{eligibilityData.memberId}</p>
-                    </div>
-                    <div className="bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium">Copay</p>
-                      <p className="text-sm font-semibold text-[#1A1B1E]">{eligibilityData.copay}</p>
-                    </div>
-                    <div className="bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium">Deductible</p>
-                      <p className="text-sm font-semibold text-[#1A1B1E]">{eligibilityData.deductible}</p>
-                    </div>
-                    <div className="bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium">Met</p>
-                      <p className="text-sm font-semibold text-[#036638]">{eligibilityData.deductibleMet}</p>
-                    </div>
-                    <div className="col-span-2 bg-white rounded p-2">
-                      <p className="text-[10px] text-[#6B7280] font-medium mb-1">Authorization</p>
-                      <p className="text-sm font-semibold text-[#036638]">
-                        {eligibilityData.authorizationRequired ? "Required" : "Not Required"}
-                      </p>
-                    </div>
-                    <p className="col-span-2 text-[10px] text-[#6B7280] text-right">
-                      Checked: {eligibilityData.checkDate}
-                    </p>
+                {/* Payment details used for the check (persisted to the patient record) */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                      Payment Method
+                    </label>
+                    <input
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      placeholder="e.g. Self-pay, Insurance"
+                      className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                      Insurance Provider
+                    </label>
+                    <input
+                      value={insuranceProvider}
+                      onChange={(e) => setInsuranceProvider(e.target.value)}
+                      placeholder="e.g. Blue Cross Blue Shield"
+                      className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {patient.eligibilityStatus === "eligible" && (
+                  <div className="bg-white rounded-lg p-3 border border-[#65BD6C]/40 mb-3 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <p className="text-sm font-semibold text-emerald-700">Eligible</p>
+                    {patient.eligibilityCheckedAt && (
+                      <span className="text-[10px] text-[#6B7280] ml-auto">
+                        Checked {new Date(patient.eligibilityCheckedAt).toLocaleString()}
+                      </span>
+                    )}
                   </div>
                 )}
 
-                {eligibilityStatus === "idle" && (
-                  <p className="text-sm text-[#6B7280] italic">
-                    Click "Check Eligibility" to verify patient benefits and coverage details.
+                {patient.eligibilityStatus === "not_eligible" && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="w-4 h-4 text-red-600" />
+                      <p className="text-sm font-semibold text-red-700">Not Eligible</p>
+                      {patient.eligibilityCheckedAt && (
+                        <span className="text-[10px] text-[#6B7280] ml-auto">
+                          Checked {new Date(patient.eligibilityCheckedAt).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {patient.eligibilityReason && (
+                      <p className="text-xs text-red-700/80 mt-1.5">{patient.eligibilityReason}</p>
+                    )}
+                  </div>
+                )}
+
+                {patient.eligibilityStatus === "not_checked" && (
+                  <p className="text-sm text-[#6B7280] italic mb-3">
+                    Click "Check Eligibility" to compare this patient's payment details
+                    against the configured rules.
                   </p>
+                )}
+
+                {patient.eligibilityDetails?.vob && (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {VOB_LABELS.map(([key, label]) => {
+                      const value = patient.eligibilityDetails?.vob?.[key]
+                      if (value === undefined || value === null) return null
+                      const display =
+                        typeof value === "boolean"
+                          ? value
+                            ? "Required"
+                            : "Not Required"
+                          : String(value)
+                      return (
+                        <div key={key} className="bg-white rounded p-2">
+                          <p className="text-[10px] text-[#6B7280] font-medium">{label}</p>
+                          <p className="text-sm font-semibold text-[#1A1B1E]">{display}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
 
@@ -579,6 +642,26 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </p>
                     <p className="text-sm font-medium text-[#1A1B1E]">
                       {patient.bookingPlatform}
+                    </p>
+                  </div>
+                )}
+                {patient.paymentMethod && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
+                      Payment Method
+                    </p>
+                    <p className="text-sm font-medium text-[#1A1B1E]">
+                      {patient.paymentMethod}
+                    </p>
+                  </div>
+                )}
+                {patient.insuranceProvider && (
+                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
+                      Insurance Provider
+                    </p>
+                    <p className="text-sm font-medium text-[#1A1B1E]">
+                      {patient.insuranceProvider}
                     </p>
                   </div>
                 )}

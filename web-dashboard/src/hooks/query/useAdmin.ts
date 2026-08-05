@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query"
 import { AdminService } from "@/services/admin.service"
 import { QUERY_KEYS } from "@/constants"
-import type { User, ChecklistItemDef } from "@/types"
+import type { User, ChecklistItemDef, EligibilityRule } from "@/types"
 import { toast } from "sonner"
 
 export function useAdminUsers() {
@@ -84,7 +84,7 @@ export function useAdminChecklist() {
 export function useCreateChecklistItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { stage: string; label: string; sortOrder?: number }) =>
+    mutationFn: (input: { stage: string; label: string; status: "required" | "optional"; sortOrder?: number }) =>
       AdminService.createChecklistItem(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
@@ -99,8 +99,8 @@ export function useCreateChecklistItem() {
 export function useUpdateChecklistItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, label }: { id: string; label: string }) =>
-      AdminService.updateChecklistItem(id, { label }),
+    mutationFn: ({ id, label, status }: { id: string; label: string; status?: "required" | "optional" }) =>
+      AdminService.updateChecklistItem(id, { label, ...(status ? { status } : {}) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
       toast.success("Checklist item updated")
@@ -129,5 +129,66 @@ export function useAdminAnalytics() {
   return useQuery({
     queryKey: QUERY_KEYS.ADMIN.ANALYTICS,
     queryFn: () => AdminService.getAnalytics(),
+  })
+}
+
+export function useEligibilityRules() {
+  return useQuery({
+    queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES,
+    queryFn: () => AdminService.listEligibilityRules(),
+  })
+}
+
+export function useCreateEligibilityRule() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      label: string
+      field: string
+      operator: string
+      value?: string | null
+      isActive: boolean
+    }) => AdminService.createEligibilityRule(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES })
+      toast.success("Eligibility rule added")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to create rule")
+    },
+  })
+}
+
+export function useUpdateEligibilityRule() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & Partial<{
+      label: string
+      field: string
+      operator: string
+      value: string | null
+      isActive: boolean
+    }>) => AdminService.updateEligibilityRule(id, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES })
+      toast.success("Eligibility rule updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update rule")
+    },
+  })
+}
+
+export function useDeleteEligibilityRule() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => AdminService.deleteEligibilityRule(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES })
+      toast.success("Eligibility rule removed")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to delete rule")
+    },
   })
 }

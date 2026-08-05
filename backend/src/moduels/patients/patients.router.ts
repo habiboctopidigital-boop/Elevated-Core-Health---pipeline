@@ -7,6 +7,7 @@ import { ServiceResponse } from "@/utils/serviceResponse";
 import { patientsController } from "./patients.controller";
 import {
 	AssignSchema,
+	CheckEligibilitySchema,
 	ChecklistToggleSchema,
 	ClaimSchema,
 	ClearFlagSchema,
@@ -45,7 +46,17 @@ patientsRouter.patch("/:id/assign", validateRequest(AssignSchema), patientsContr
 patientsRouter.patch("/:id/checklist", validateRequest(ChecklistToggleSchema), patientsController.toggleChecklist);
 patientsRouter.post("/:id/notes", validateRequest(NotesSchema), patientsController.updateNotes);
 patientsRouter.post("/:id/flag", validateRequest(FlagSchema), patientsController.flag);
-patientsRouter.patch("/:id/flag/clear", requireRole("admin"), validateRequest(ClearFlagSchema), patientsController.clearFlag);
+patientsRouter.post(
+	"/:id/check-eligibility",
+	validateRequest(CheckEligibilitySchema),
+	patientsController.checkEligibility,
+);
+patientsRouter.patch(
+	"/:id/flag/clear",
+	requireRole("admin"),
+	validateRequest(ClearFlagSchema),
+	patientsController.clearFlag,
+);
 patientsRouter.delete("/:id", requireRole("admin"), patientsController.deletePatient);
 patientsRouter.post("/:id/claim", validateRequest(ClaimSchema), patientsController.claim);
 

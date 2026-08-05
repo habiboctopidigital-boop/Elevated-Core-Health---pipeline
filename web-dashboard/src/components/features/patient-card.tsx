@@ -2,7 +2,7 @@
 
 import type { Patient, PatientStage } from "@/types"
 import { STAGE_ORDER, STAGE_LABELS } from "@/types"
-import { AlertTriangle, Flag, Clock, ArrowLeft, ArrowRight, CheckSquare, Square, Lock, Phone } from "lucide-react"
+import { AlertTriangle, Flag, Clock, ArrowLeft, ArrowRight, CheckSquare, Square, Lock, Phone, CheckCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { STALE_HOURS } from "@/constants"
 import { useChecklistItems, useListVas, useAssignPatient } from "@/hooks/query/usePatients"
@@ -43,11 +43,12 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const { data: vaList } = useListVas()
   const assignPatient = useAssignPatient()
 
-  // - Checklist progress for this stage —
+  // - Checklist progress for this stage (only REQUIRED items gate moves) —
   const stageDefs = checklistDefs?.filter((d) => d.stage === patient.stage) || []
   const stageState = patient.checklistState?.[patient.stage] || {}
-  const completedCount = stageDefs.filter((d) => stageState[d.id] === true).length
-  const totalCount = stageDefs.length
+  const requiredDefs = stageDefs.filter((d) => d.status === "required")
+  const completedCount = requiredDefs.filter((d) => stageState[d.id] === true).length
+  const totalCount = requiredDefs.length
   const allComplete = totalCount > 0 ? completedCount === totalCount : true
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100
 
@@ -107,6 +108,18 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
               Stale
             </span>
           )}
+          {patient.eligibilityStatus === "eligible" && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] font-semibold text-emerald-700">
+              <CheckCircle className="w-2.5 h-2.5" />
+              Eligible
+            </span>
+          )}
+          {patient.eligibilityStatus === "not_eligible" && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-[9px] font-semibold text-red-600">
+              <XCircle className="w-2.5 h-2.5" />
+              Not Eligible
+            </span>
+          )}
         </div>
       </div>
 
@@ -162,7 +175,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
               ) : (
                 <Square className="w-3 h-3 text-[#6B7280]" />
               )}
-              Checklist
+              Required
             </span>
             <span className={cn(
               "text-[10px] font-bold",
@@ -198,6 +211,11 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   )}>
                     {item.label}
                   </span>
+                  {item.status === "optional" && (
+                    <span className="text-[8px] font-semibold text-[#036638] bg-[#EBF7EC] px-1 rounded-full shrink-0">
+                      Opt
+                    </span>
+                  )}
                 </div>
               )
             })}

@@ -89,6 +89,21 @@ export const PatientsService = {
     return data.data
   },
 
+  async checkEligibility(
+    id: string,
+    input?: {
+      paymentMethod?: string | null
+      insuranceProvider?: string | null
+      paymentDetails?: Record<string, unknown> | null
+    },
+  ): Promise<Patient> {
+    const { data } = await axiosInstance.post<ApiResponse<Patient>>(
+      API_ENDPOINTS.PATIENT_CHECK_ELIGIBILITY(id),
+      input ?? {},
+    )
+    return data.data
+  },
+
   async intake(input: {
     name: string
     email?: string | null
@@ -96,6 +111,9 @@ export const PatientsService = {
     appointmentDatetime?: string | null
     bookingPlatform?: string | null
     problemDescription?: string | null
+    paymentMethod?: string | null
+    insuranceProvider?: string | null
+    paymentDetails?: Record<string, unknown> | null
   }, webhookSecret?: string): Promise<Patient> {
     const headers: Record<string, string> = {}
     if (webhookSecret) {
