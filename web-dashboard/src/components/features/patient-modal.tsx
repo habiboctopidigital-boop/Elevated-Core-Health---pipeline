@@ -463,18 +463,19 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#0F1115]/60 backdrop-blur-sm"
         onClick={() => !assigning && onClose()}
       />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden mx-4 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-[#FAFAFA]/95 backdrop-blur-3xl rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border border-white/20 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden mx-4 animate-in fade-in zoom-in-95 duration-300">
         {isLoading || !patient ? (
           <div className="flex-1 flex items-center justify-center p-8 text-center text-[#6B7280] text-sm">
             {isLoading ? "Loading..." : "Patient not found"}
           </div>
         ) : (
           <>
-            <div className="flex-shrink-0 bg-gradient-to-r from-[#036638] to-[#025030] px-8 py-6 flex items-start justify-between rounded-t-2xl shadow-sm">
-              <div className="min-w-0 flex-1">
+            <div className="flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-8 py-8 flex items-start justify-between border-b border-white/10 shadow-[0_4px_24px_rgba(3,102,56,0.3)]">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+              <div className="min-w-0 flex-1 relative z-10">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-2xl font-bold text-white truncate">
                     {patient.name}
@@ -526,7 +527,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               <button
                 onClick={onClose}
                 title="Press ESC to close"
-                className="p-2 rounded-lg hover:bg-white/15 text-white hover:text-white transition-all ml-4 flex-shrink-0"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all ml-4 flex-shrink-0 relative z-10 shadow-sm border border-white/10"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -535,10 +536,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
             <div className="p-8 space-y-7">
               {/* Stage Navigation (sticky so the pipeline is always visible while scrolling) */}
-              <div className="sticky top-0 z-10 bg-white -mx-8 px-8">
-              <div className="bg-gradient-to-br from-[#F9FAFB] to-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
-                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
+              <div className="sticky top-0 z-20 bg-[#FAFAFA]/80 backdrop-blur-2xl border-b border-gray-200/50 -mx-8 px-8 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
+                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full shadow-[0_0_8px_rgba(3,102,56,0.6)]"></span>
                   Pipeline Stage
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -598,10 +598,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   })}
                 </div>
               </div>
-              </div>
 
               {/* Checklist */}
-              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm relative overflow-hidden">
+              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2.5">
                     <div className="p-1.5 bg-[#EBF7EC] rounded-lg border border-[#65BD6C]/20">
@@ -750,7 +749,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Stage-Specific SOPs */}
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 shadow-sm">
+              <div className="bg-gradient-to-br from-amber-50/90 to-orange-50/90 backdrop-blur-md border border-amber-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(245,158,11,0.06)] transition-all hover:shadow-[0_12px_40px_rgba(245,158,11,0.1)]">
                 <div className="flex items-center gap-2.5 mb-4">
                   <Zap className="w-5 h-5 text-amber-600" />
                   <p className="text-[11px] font-bold text-amber-900 uppercase tracking-widest">
@@ -768,7 +767,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Eligibility Check */}
-              <div className="bg-gradient-to-br from-[#F0F9F5] to-[#E8F5F2] border border-[#65BD6C]/30 rounded-xl p-6 shadow-sm">
+              <div className="bg-gradient-to-br from-[#F0F9F5]/90 to-[#E8F5F2]/90 backdrop-blur-md border border-[#65BD6C]/30 rounded-3xl p-7 shadow-[0_8px_30px_rgba(3,102,56,0.06)] transition-all hover:shadow-[0_12px_40px_rgba(3,102,56,0.1)]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
                     <Shield className="w-5 h-5 text-[#036638]" />
@@ -915,7 +914,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               {/* Details */}
               <div className="grid grid-cols-2 gap-4">
                 {patient.appointmentDatetime && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Appointment
                     </p>
@@ -932,7 +931,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
                 )}
                 {patient.assignedUser && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Assigned To
                     </p>
@@ -941,7 +940,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </p>
                   </div>
                 )}
-                <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                   <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                     Source
                   </p>
@@ -950,7 +949,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </p>
                 </div>
                 {patient.bookingPlatform && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Booking Platform
                     </p>
@@ -960,7 +959,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
                 )}
                 {patient.paymentMethod && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Payment Method
                     </p>
@@ -970,7 +969,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
                 )}
                 {patient.insuranceProvider && (
-                  <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                       Insurance Provider
                     </p>
@@ -979,7 +978,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </p>
                   </div>
                 )}
-                <div className="bg-gray-50 rounded-lg p-3 border border-[#E5E7EB]">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                   <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
                     Last Updated
                   </p>
@@ -1032,7 +1031,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               )}
 
               {/* Patient Status & Access */}
-              <div className="bg-gradient-to-br from-white to-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm relative overflow-hidden">
+              <div className="bg-gradient-to-br from-white/95 to-[#F9FAFB]/95 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 {/* Decorative background element */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#EBF7EC]/50 to-transparent rounded-bl-full pointer-events-none" />
                 
@@ -1226,7 +1225,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Contact & Payment Info */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
@@ -1415,7 +1414,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               )}
 
               {/* Operational Notes */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                   Operational Notes
@@ -1446,7 +1445,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <MessageSquare className="w-4 h-4" />
                   Activity Log
                 </p>
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-2 bg-gray-50 rounded-xl p-4 border border-[#E5E7EB]">
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2 relative before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-gray-200/60">
                   {logData?.logs && logData.logs.length > 0 ? (
                     logData.logs.map((log) => {
                       const isAdminMessage = log.author === "Donna Rhodes" || log.author.toLowerCase() === "admin"
@@ -1454,12 +1453,16 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         <div
                           key={log.id}
                           className={cn(
-                            "flex items-start gap-2.5 text-xs py-2 px-2.5 rounded-md mb-1 transition-colors border-b",
+                            "relative flex items-start gap-3 text-xs py-3 px-4 rounded-2xl ml-6 transition-all border bg-white shadow-sm hover:shadow-md",
                             isAdminMessage 
-                              ? "bg-[#EBF7EC]/80 border-[#65BD6C]/20 shadow-sm" 
-                              : "border-[#E5E7EB]/30 hover:bg-gray-50/50"
+                              ? "border-[#65BD6C]/30 ring-1 ring-[#65BD6C]/10" 
+                              : "border-gray-200/60"
                           )}
                         >
+                          <div className={cn(
+                            "absolute top-5 -left-[29px] w-2.5 h-2.5 rounded-full border-2 border-white ring-4 ring-white shadow-sm",
+                            isAdminMessage ? "bg-[#036638]" : "bg-gray-400"
+                          )} />
                           <span className={cn(
                             "text-[10px] whitespace-nowrap pt-0.5 min-w-[70px]",
                             isAdminMessage ? "text-[#036638] font-medium" : "text-[#9CA3AF]"

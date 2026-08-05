@@ -74,15 +74,15 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
 
   return (
     <aside className={cn(
-      "shrink-0 bg-[#16181C] flex flex-col h-screen fixed left-0 top-0 z-30 transition-all duration-300",
+      "shrink-0 bg-[#0F1115]/90 backdrop-blur-2xl flex flex-col h-screen fixed left-0 top-0 z-30 transition-all duration-300 border-r border-white/10 shadow-[4px_0_24px_rgba(0,0,0,0.2)]",
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className={cn(
         "flex items-center h-16 border-b border-white/5 px-5 relative",
         isCollapsed ? "justify-center" : "gap-3"
       )}>
-        <div className="w-8 h-8 rounded-full bg-[#036638] flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-bold">ECH</span>
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#036638] to-[#024a28] flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(3,102,56,0.4)] border border-white/20">
+          <span className="text-white text-xs font-bold font-space tracking-wide">ECH</span>
         </div>
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
@@ -111,11 +111,11 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center rounded-lg text-sm font-medium transition-all duration-150",
+                "flex items-center rounded-xl text-sm font-medium transition-all duration-200",
                 isCollapsed ? "justify-center px-0 py-3" : "px-3 py-2.5 gap-3",
                 isActive
-                  ? "bg-[#036638] text-white shadow-md"
-                  : "text-[#9CA3AF] hover:text-white hover:bg-white/5",
+                  ? "bg-gradient-to-r from-[#036638]/90 to-[#024a28]/80 text-white shadow-[0_4px_16px_rgba(3,102,56,0.3)] border border-white/10"
+                  : "text-[#9CA3AF] hover:text-white hover:bg-white/10",
               )}
               title={isCollapsed ? item.label : undefined}
             >
