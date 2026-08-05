@@ -108,6 +108,29 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`
 }
 
+const PAYMENT_METHOD_OPTIONS = [
+  "Self-pay",
+  "Insurance",
+  "Sliding Scale",
+  "Employee Assistance Program (EAP)",
+  "Medicare",
+  "Medicaid",
+]
+
+const INSURANCE_PROVIDER_OPTIONS = [
+  "Blue Cross Blue Shield",
+  "Aetna",
+  "Cigna",
+  "United Healthcare",
+  "Humana",
+  "Kaiser Permanente",
+  "Tricare",
+  "Medicare",
+  "Medicaid",
+]
+
+const OTHER_OPTION = "Other"
+
 const VOB_LABELS: Array<[string, string]> = [
   ["coverage", "Coverage"],
   ["payer", "Payer"],
@@ -122,6 +145,64 @@ const VOB_LABELS: Array<[string, string]> = [
   ["visitsCoveredPerYear", "Visits / Year"],
   ["checkDate", "Checked"],
 ]
+
+/**
+ * Dropdown of common presets with an "Other" option that reveals a free-text
+ * input. The parent owns `otherMode` so it can reset in lockstep with `value`
+ * whenever the selected patient changes.
+ */
+function SelectOrOther({
+  value,
+  onChange,
+  otherMode,
+  onOtherModeChange,
+  options,
+  placeholder,
+}: {
+  value: string
+  onChange: (value: string) => void
+  otherMode: boolean
+  onOtherModeChange: (other: boolean) => void
+  options: string[]
+  placeholder: string
+}) {
+  const selectValue = otherMode ? OTHER_OPTION : options.includes(value) ? value : ""
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={selectValue}
+        onChange={(e) => {
+          if (e.target.value === OTHER_OPTION) {
+            onOtherModeChange(true)
+            onChange("")
+          } else {
+            onOtherModeChange(false)
+            onChange(e.target.value)
+          }
+        }}
+        className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+        <option value={OTHER_OPTION}>Other (specify)</option>
+      </select>
+      {otherMode && (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter name..."
+          autoFocus
+          className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+        />
+      )}
+    </div>
+  )
+}
 
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
@@ -174,6 +255,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [savingNotes, setSavingNotes] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("")
   const [insuranceProvider, setInsuranceProvider] = useState("")
+  const [paymentMethodOther, setPaymentMethodOther] = useState(false)
+  const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
   const [contactForm, setContactForm] = useState({
     firstName: "",
     lastName: "",
@@ -191,8 +274,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   useEffect(() => {
     if (patient?.notes) setNotesText(patient.notes)
     else setNotesText("")
-    setPaymentMethod(patient?.paymentMethod ?? "")
-    setInsuranceProvider(patient?.insuranceProvider ?? "")
+    const pm = patient?.paymentMethod ?? ""
+    const ip = patient?.insuranceProvider ?? ""
+    setPaymentMethod(pm)
+    setInsuranceProvider(ip)
+    setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
+    setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
     setContactForm({
       firstName: patient?.firstName ?? "",
       lastName: patient?.lastName ?? "",
@@ -599,36 +686,56 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
-                      Payment Method
+                      Payment Type
                     </label>
-                    <input
+                    <SelectOrOther
                       value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      placeholder="e.g. Self-pay, Insurance"
-                      className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                      onChange={setPaymentMethod}
+                      otherMode={paymentMethodOther}
+                      onOtherModeChange={setPaymentMethodOther}
+                      options={PAYMENT_METHOD_OPTIONS}
+                      placeholder="Select payment type..."
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
-                      Insurance Provider
+                      Insurance Company
                     </label>
-                    <input
+                    <SelectOrOther
                       value={insuranceProvider}
-                      onChange={(e) => setInsuranceProvider(e.target.value)}
-                      placeholder="e.g. Blue Cross Blue Shield"
-                      className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                      onChange={setInsuranceProvider}
+                      otherMode={insuranceProviderOther}
+                      onOtherModeChange={setInsuranceProviderOther}
+                      options={INSURANCE_PROVIDER_OPTIONS}
+                      placeholder="Select insurance company..."
                     />
                   </div>
                 </div>
 
                 {patient.eligibilityStatus === "eligible" && (
-                  <div className="bg-white rounded-lg p-3 border border-[#65BD6C]/40 mb-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                    <p className="text-sm font-semibold text-emerald-700">Eligible</p>
-                    {patient.eligibilityCheckedAt && (
-                      <span className="text-[10px] text-[#6B7280] ml-auto">
-                        Checked {new Date(patient.eligibilityCheckedAt).toLocaleString()}
-                      </span>
+                  <div className="bg-white rounded-lg p-3 border border-[#65BD6C]/40 mb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      <p className="text-sm font-semibold text-emerald-700">Eligible</p>
+                      {patient.eligibilityCheckedAt && (
+                        <span className="text-[10px] text-[#6B7280] ml-auto">
+                          Checked {new Date(patient.eligibilityCheckedAt).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {(patient.paymentMethod || patient.insuranceProvider) && (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        {patient.paymentMethod && (
+                          <span className="text-[10px] font-medium bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded-full">
+                            {patient.paymentMethod}
+                          </span>
+                        )}
+                        {patient.insuranceProvider && (
+                          <span className="text-[10px] font-medium bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded-full">
+                            {patient.insuranceProvider}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -644,6 +751,20 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         </span>
                       )}
                     </div>
+                    {(patient.paymentMethod || patient.insuranceProvider) && (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        {patient.paymentMethod && (
+                          <span className="text-[10px] font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                            {patient.paymentMethod}
+                          </span>
+                        )}
+                        {patient.insuranceProvider && (
+                          <span className="text-[10px] font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                            {patient.insuranceProvider}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {patient.eligibilityReason && (
                       <p className="text-xs text-red-700/80 mt-1.5">{patient.eligibilityReason}</p>
                     )}

@@ -108,6 +108,7 @@ export interface ActivityLog {
   message: string
   type: "auto" | "manual"
   actorId?: string | null
+  actor?: Pick<User, "id" | "name" | "role"> | null
   action?: string | null
   entityType?: string | null
   entityId?: string | null

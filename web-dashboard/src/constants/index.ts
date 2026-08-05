@@ -10,6 +10,7 @@ export const ROUTES = {
   DASHBOARD: {
     HOME: "/dashboard",
     BOARD: "/dashboard/board",
+    WORKLOAD: "/dashboard/workload",
     LOG: "/dashboard/log",
     SOP: "/dashboard/sop",
     REPORTING: "/dashboard/reporting",
@@ -19,6 +20,7 @@ export const ROUTES = {
   ADMIN: {
     HOME: "/admin/dashboard",
     BOARD: "/admin/dashboard/board",
+    WORKLOAD: "/admin/dashboard/workload",
     LOG: "/admin/dashboard/log",
     SOP: "/admin/dashboard/sop",
     REPORTING: "/admin/dashboard/reporting",
@@ -61,6 +63,8 @@ export const API_ENDPOINTS = {
   PATIENT_CHECK_ELIGIBILITY: (id: string) => `/patients/${id}/check-eligibility`,
   ACTIVITY_LOG: "/activity-log",
   DASHBOARD_SUMMARY: "/dashboard/summary",
+  USERS: "/users",
+  USERS_VAS: "/users/vas",
   ADMIN: {
     USERS: "/admin/users",
     STAGES: "/admin/stages",
@@ -81,6 +85,10 @@ export const QUERY_KEYS = {
   },
   ACTIVITY_LOG: {
     LIST: (params?: string) => ["activity-log", params] as const,
+  },
+  USERS: {
+    ALL: ["users", "all"] as const,
+    VAS: ["users", "vas"] as const,
   },
   CRM: {
     CONTACTS: ["crm", "contacts"] as const,

@@ -14,4 +14,14 @@ export const usersController = {
 
 		handleServiceResponse(ServiceResponse.success("VA users retrieved.", vas), res);
 	},
+
+	/** All users (admin + VAs) — used for activity-log actor filters etc. */
+	async list(_req: Request, res: Response): Promise<void> {
+		const users = await prisma.user.findMany({
+			select: { id: true, name: true, email: true, role: true },
+			orderBy: { name: "asc" },
+		});
+
+		handleServiceResponse(ServiceResponse.success("Users retrieved.", users), res);
+	},
 };

@@ -7,6 +7,8 @@ export const ActivityLogService = {
     patientId?: string
     type?: string
     author?: string
+    actorId?: string
+    action?: string
     startDate?: string
     endDate?: string
     page?: number
