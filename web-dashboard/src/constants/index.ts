@@ -22,6 +22,7 @@ export const ROUTES = {
     IMPORT: "/admin/dashboard/import",
     USERS: "/admin/dashboard/users",
     CHECKLIST: "/admin/dashboard/checklist",
+    ELIGIBILITY: "/admin/dashboard/eligibility",
     PROFILE: "/admin/dashboard/profile",
   },
 }
@@ -41,11 +42,13 @@ export const API_ENDPOINTS = {
   PATIENTS_INTAKE: "/patients/intake",
   PATIENTS_INTAKE_TEST: "/patients/intake-test",
   PATIENTS_IMPORT: "/patients/import",
+  PATIENT_CHECK_ELIGIBILITY: (id: string) => `/patients/${id}/check-eligibility`,
   ACTIVITY_LOG: "/activity-log",
   DASHBOARD_SUMMARY: "/dashboard/summary",
   ADMIN: {
     USERS: "/admin/users",
     CHECKLIST_ITEMS: "/admin/checklist-items",
+    ELIGIBILITY_RULES: "/admin/eligibility-rules",
     ANALYTICS: "/admin/analytics",
   },
 }
@@ -68,6 +71,7 @@ export const QUERY_KEYS = {
   ADMIN: {
     USERS: ["admin", "users"] as const,
     ANALYTICS: ["admin", "analytics"] as const,
+    ELIGIBILITY_RULES: ["admin", "eligibility-rules"] as const,
   },
 }
 

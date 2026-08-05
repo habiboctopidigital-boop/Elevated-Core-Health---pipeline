@@ -18,13 +18,33 @@ export interface User {
   createdAt?: string
 }
 
+export type ChecklistStatus = "required" | "optional"
+
+export type EligibilityStatus = "not_checked" | "eligible" | "not_eligible"
+
 export interface ChecklistItemDef {
   id: string
   label: string
   description?: string | null
+  status: ChecklistStatus
   isDefault: boolean
   sortOrder: number
   stage: PatientStage
+}
+
+export interface EligibilityRule {
+  id: string
+  label: string
+  field: string
+  operator: "is_not_empty" | "is_empty" | "equals" | "contains"
+  value?: string | null
+  isActive: boolean
+  createdAt: string
+}
+
+export interface EligibilityDetails {
+  vob?: Record<string, unknown>
+  evaluatedRules?: number
 }
 
 export interface Patient {
@@ -47,6 +67,13 @@ export interface Patient {
   source: string
   bookingPlatform?: string | null
   appointmentDatetime?: string | null
+  paymentMethod?: string | null
+  insuranceProvider?: string | null
+  paymentDetails?: Record<string, unknown> | null
+  eligibilityStatus: EligibilityStatus
+  eligibilityCheckedAt?: string | null
+  eligibilityDetails?: EligibilityDetails | null
+  eligibilityReason?: string | null
   updatedAt: string
   createdAt: string
   activityLogs?: ActivityLog[]

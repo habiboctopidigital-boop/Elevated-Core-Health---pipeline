@@ -8,6 +8,7 @@ import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import type {
 	AssignInput,
+	CheckEligibilityInput,
 	ChecklistToggleInput,
 	ClaimInput,
 	ClearFlagInput,
@@ -28,6 +29,77 @@ const STAGE_ORDER = [
 ] as const;
 
 type Stage = (typeof STAGE_ORDER)[number];
+
+/**
+ * Server-side simulated verification of benefits. In a later phase this will
+ * call a real payer/clearinghouse API; for now it synthesizes realistic values
+ * from the patient's stored payment data so the eligibility flow can be tested.
+ */
+function simulateVobSnapshot(
+	patient: { id: string; insuranceProvider: string | null },
+	input: Partial<{ insuranceProvider: string | null }> = {},
+) {
+	const payer = patient.insuranceProvider || input.insuranceProvider || "Blue Cross Blue Shield";
+	const idTail = patient.id.replace(/-/g, "").slice(0, 8).toUpperCase();
+	return {
+		coverage: "Active",
+		payer,
+		memberId: `ECH${idTail}`,
+		groupNumber: `G${idTail.slice(0, 6)}`,
+		copay: "$30",
+		coinsurance: "20%",
+		deductible: "$1,500",
+		deductibleMet: "$750",
+		outOfPocketMax: "$5,000",
+		authorizationRequired: false,
+		visitsCoveredPerYear: "Unlimited",
+		checkDate: new Date().toLocaleDateString("en-US", {
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+		}),
+	};
+}
+
+/** Resolve a rule's target field against the combined eligibility profile. */
+function resolveField(profile: Record<string, unknown>, field: string): string {
+	const key = field.trim().toLowerCase();
+	if (key in profile) {
+		const v = profile[key];
+		return v === null || v === undefined ? "" : String(v);
+	}
+	// Support dotted paths into nested objects (e.g. paymentDetails.coverage)
+	const parts = key.split(".");
+	let cur: unknown = profile;
+	for (const part of parts) {
+		if (cur && typeof cur === "object" && part in (cur as Record<string, unknown>)) {
+			cur = (cur as Record<string, unknown>)[part];
+		} else {
+			return "";
+		}
+	}
+	return cur === null || cur === undefined ? "" : String(cur);
+}
+
+function evaluateRule(
+	rule: { label: string; field: string; operator: string; value: string | null },
+	profile: Record<string, unknown>,
+): boolean {
+	const actual = resolveField(profile, rule.field).trim();
+	const expected = (rule.value ?? "").trim();
+	switch (rule.operator) {
+		case "is_not_empty":
+			return actual.length > 0;
+		case "equals":
+			return actual.toLowerCase() === expected.toLowerCase();
+		case "contains":
+			return expected.length > 0 && actual.toLowerCase().includes(expected.toLowerCase());
+		case "is_empty":
+			return actual.length === 0;
+		default:
+			return true;
+	}
+}
 
 async function logActivity(patientId: string, author: string, message: string, type: "auto" | "manual") {
 	try {
@@ -70,7 +142,11 @@ export const patientsService = {
 
 	async moveStage(id: string, input: StageMoveInput, user: AuthenticatedUser) {
 		if (user.role === "admin") {
-			return ServiceResponse.failure("Admin cannot move stages. Assign a VA to move the patient.", null, StatusCodes.FORBIDDEN);
+			return ServiceResponse.failure(
+				"Admin cannot move stages. Assign a VA to move the patient.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
 		}
 
 		const patient = await prisma.patient.findUnique({ where: { id } });
@@ -290,9 +366,92 @@ export const patientsService = {
 	async listChecklistItems() {
 		const items = await prisma.checklistItem.findMany({
 			orderBy: [{ stage: "asc" as never }, { sortOrder: "asc" }],
-			select: { id: true, stage: true, label: true, description: true, isDefault: true, sortOrder: true },
+			select: { id: true, stage: true, label: true, description: true, status: true, isDefault: true, sortOrder: true },
 		});
 		return ServiceResponse.success("Checklist items retrieved.", items);
+	},
+
+	async checkEligibility(id: string, input: CheckEligibilityInput, user: AuthenticatedUser) {
+		const patient = await prisma.patient.findUnique({ where: { id } });
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const body = input ?? {};
+
+		// 1. Persist any payment info supplied during the check (e.g. from a VA
+		//    reading the card / insurance details). Webhook intake data is also
+		//    stored on the patient, so rules see everything.
+		const paymentData: Record<string, unknown> = {};
+		if (body.paymentMethod !== undefined) paymentData.paymentMethod = body.paymentMethod;
+		if (body.insuranceProvider !== undefined) paymentData.insuranceProvider = body.insuranceProvider;
+		if (body.paymentDetails !== undefined) paymentData.paymentDetails = body.paymentDetails;
+
+		let latest = patient;
+		if (Object.keys(paymentData).length > 0) {
+			latest = await prisma.patient.update({
+				where: { id },
+				data: { ...paymentData, updatedAt: new Date(), updatedById: user.id },
+			});
+		}
+
+		// 2. Build the profile used to evaluate the rules: stored payment fields +
+		//    the simulated VOB snapshot.
+		const vob = simulateVobSnapshot(patient, { insuranceProvider: latest.insuranceProvider });
+		const storedDetails = (latest.paymentDetails ?? {}) as Record<string, unknown>;
+		const profile: Record<string, unknown> = {
+			paymentMethod: latest.paymentMethod ?? "",
+			insuranceProvider: latest.insuranceProvider ?? "",
+			paymentDetails: storedDetails,
+			...vob,
+		};
+
+		// 3. Evaluate every active rule against the profile.
+		const rules = await prisma.eligibilityRule.findMany({
+			where: { isActive: true },
+			orderBy: { createdAt: "asc" },
+		});
+
+		const failed: string[] = [];
+		for (const rule of rules) {
+			if (!evaluateRule(rule, profile)) {
+				failed.push(rule.label);
+			}
+		}
+
+		const isEligible = rules.length === 0 ? true : failed.length === 0;
+		const status = isEligible ? "eligible" : "not_eligible";
+		const reason = failed.length > 0 ? `Failed: ${failed.join("; ")}` : null;
+
+		// 4. Persist the result.
+		const updated = await prisma.patient.update({
+			where: { id },
+			data: {
+				eligibilityStatus: status,
+				eligibilityCheckedAt: new Date(),
+				eligibilityDetails: { vob, evaluatedRules: rules.length },
+				eligibilityReason: reason,
+				updatedAt: new Date(),
+				updatedById: user.id,
+			},
+			include: {
+				assignedUser: { select: { id: true, name: true } },
+				flaggedByUser: { select: { id: true, name: true } },
+				flagClearedByUser: { select: { id: true, name: true } },
+			},
+		});
+
+		await logActivity(
+			id,
+			user.name,
+			`Eligibility check completed — ${status === "eligible" ? "Eligible" : "Not Eligible"}${reason ? ` (${reason})` : ""}`,
+			"auto",
+		);
+
+		return ServiceResponse.success(
+			status === "eligible" ? "Patient is eligible." : "Patient is not eligible.",
+			updated,
+		);
 	},
 
 	async intake(input: IntakeInput) {
@@ -307,6 +466,9 @@ export const patientsService = {
 				appointmentDatetime,
 				bookingPlatform: input.bookingPlatform ?? null,
 				problemDescription: input.problemDescription ?? null,
+				paymentMethod: input.paymentMethod ?? null,
+				insuranceProvider: input.insuranceProvider ?? null,
+				paymentDetails: (input.paymentDetails as object) ?? null,
 				source: "webhook",
 				checklistState: {},
 				notes: null,
@@ -330,15 +492,10 @@ export const patientsService = {
 							minute: "2-digit",
 						})
 					: undefined;
-				await emailService.notifyNewPatient(
-					patient.name,
-					patient.id,
-					vaEmails,
-					{
-						appointment: appointmentStr,
-						platform: platformLabel,
-					},
-				);
+				await emailService.notifyNewPatient(patient.name, patient.id, vaEmails, {
+					appointment: appointmentStr,
+					platform: platformLabel,
+				});
 			}
 		} catch (err) {
 			logger.error({ err, patientId: patient.id }, "Failed to send new patient notification emails");

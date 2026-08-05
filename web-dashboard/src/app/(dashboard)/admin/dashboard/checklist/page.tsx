@@ -9,6 +9,7 @@ import {
 } from "@/hooks/query/useAdmin"
 import { STAGE_ORDER, STAGE_LABELS } from "@/types"
 import { Loader2, Plus, Trash2, Check, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useForm } from "react-hook-form"
@@ -21,12 +22,12 @@ export default function AdminChecklistPage() {
 
   const [modalOpen, setModalOpen] = useState(false)
 
-  const { register, handleSubmit, reset, watch } = useForm({
-    defaultValues: { stage: "onboarding", label: "", sortOrder: 0 },
+  const { register, handleSubmit, reset } = useForm({
+    defaultValues: { stage: "onboarding", label: "", status: "required", sortOrder: 0 },
   })
 
   const openCreate = () => {
-    reset({ stage: "onboarding", label: "", sortOrder: 0 })
+    reset({ stage: "onboarding", label: "", status: "required", sortOrder: 0 })
     setModalOpen(true)
   }
 
@@ -34,6 +35,7 @@ export default function AdminChecklistPage() {
     await createItem.mutateAsync({
       stage: data.stage,
       label: data.label,
+      status: data.status,
       sortOrder: data.sortOrder ? parseInt(data.sortOrder) : undefined,
     })
     setModalOpen(false)
@@ -88,7 +90,7 @@ export default function AdminChecklistPage() {
                     <ChecklistItemRow
                       key={item.id}
                       item={item}
-                      onUpdate={(id, label) => updateItem.mutate({ id, label })}
+                      onUpdate={(id, label, status) => updateItem.mutate({ id, label, status })}
                       onDelete={(id) => deleteItem.mutate(id)}
                       isUpdating={updateItem.isPending}
                     />
@@ -131,6 +133,19 @@ export default function AdminChecklistPage() {
               />
             </div>
             <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[#374151]">Status</label>
+              <select
+                {...register("status")}
+                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+              >
+                <option value="required">Required — must be completed to advance</option>
+                <option value="optional">Optional — informational only</option>
+              </select>
+              <p className="text-[11px] text-[#6B7280]">
+                Only Required items block a patient from moving to the next stage.
+              </p>
+            </div>
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-[#374151]">Sort Order</label>
               <input
                 type="number"
@@ -165,8 +180,8 @@ function ChecklistItemRow({
   onDelete,
   isUpdating,
 }: {
-  item: { id: string; label: string; isDefault: boolean }
-  onUpdate: (id: string, label: string) => void
+  item: { id: string; label: string; status: "required" | "optional"; isDefault: boolean }
+  onUpdate: (id: string, label: string, status: "required" | "optional") => void
   onDelete: (id: string) => void
   isUpdating: boolean
 }) {
@@ -176,9 +191,14 @@ function ChecklistItemRow({
   const handleSave = () => {
     const trimmed = editValue.trim()
     if (trimmed && trimmed !== item.label) {
-      onUpdate(item.id, trimmed)
+      onUpdate(item.id, trimmed, item.status)
     }
     setEditing(false)
+  }
+
+  const toggleStatus = () => {
+    const next = item.status === "required" ? "optional" : "required"
+    onUpdate(item.id, item.label, next)
   }
 
   const handleCancel = () => {
@@ -224,8 +244,20 @@ function ChecklistItemRow({
             {item.label}
           </span>
         )}
+        <button
+          onClick={toggleStatus}
+          title={item.status === "required" ? "Click to make Optional" : "Click to make Required"}
+          className={cn(
+            "text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all shrink-0 cursor-pointer",
+            item.status === "required"
+              ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+              : "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/40 hover:bg-[#dff4eb]",
+          )}
+        >
+          {item.status === "required" ? "Required" : "Optional"}
+        </button>
         {item.isDefault && (
-          <span className="text-[10px] bg-[#EBF7EC] text-[#036638] px-1.5 py-0.5 rounded font-medium shrink-0">
+          <span className="text-[10px] bg-[#F3F4F6] text-[#6B7280] px-1.5 py-0.5 rounded font-medium shrink-0">
             Default
           </span>
         )}

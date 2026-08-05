@@ -3,7 +3,14 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "@/middlewares/auth";
 import { validateRequest } from "@/utils/httpHandlers";
 import { adminController } from "./admin.controller";
-import { ChecklistItemSchema, CreateUserSchema, UpdateChecklistItemSchema, UpdateUserSchema } from "./admin.validation";
+import {
+	ChecklistItemSchema,
+	CreateEligibilityRuleSchema,
+	CreateUserSchema,
+	UpdateChecklistItemSchema,
+	UpdateEligibilityRuleSchema,
+	UpdateUserSchema,
+} from "./admin.validation";
 
 export const adminRouter: Router = Router();
 
@@ -24,6 +31,20 @@ adminRouter.patch(
 	adminController.updateChecklistItem,
 );
 adminRouter.delete("/checklist-items/:id", adminController.deleteChecklistItem);
+
+// Eligibility rules
+adminRouter.get("/eligibility-rules", adminController.listEligibilityRules);
+adminRouter.post(
+	"/eligibility-rules",
+	validateRequest(CreateEligibilityRuleSchema),
+	adminController.createEligibilityRule,
+);
+adminRouter.patch(
+	"/eligibility-rules/:id",
+	validateRequest(UpdateEligibilityRuleSchema),
+	adminController.updateEligibilityRule,
+);
+adminRouter.delete("/eligibility-rules/:id", adminController.deleteEligibilityRule);
 
 // Analytics
 adminRouter.get("/analytics", adminController.getAnalytics);

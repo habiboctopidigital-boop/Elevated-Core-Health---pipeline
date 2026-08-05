@@ -5,8 +5,10 @@ import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import type {
 	ChecklistItemSchema,
+	CreateEligibilityRuleSchema,
 	CreateUserSchema,
 	UpdateChecklistItemSchema,
+	UpdateEligibilityRuleSchema,
 	UpdateUserSchema,
 } from "./admin.validation";
 
@@ -14,16 +16,8 @@ type CreateUserInput = z.infer<typeof CreateUserSchema>["body"];
 type UpdateUserInput = z.infer<typeof UpdateUserSchema>["body"];
 type ChecklistItemInput = z.infer<typeof ChecklistItemSchema>["body"];
 type UpdateChecklistItemInput = z.infer<typeof UpdateChecklistItemSchema>["body"];
-
-const STAGE_ORDER = [
-	"onboarding",
-	"visit_complete",
-	"post_visit_docs",
-	"chart_signed",
-	"sent_to_billing",
-	"payment_posted",
-	"reconciled",
-] as const;
+type CreateEligibilityRuleInput = z.infer<typeof CreateEligibilityRuleSchema>["body"];
+type UpdateEligibilityRuleInput = z.infer<typeof UpdateEligibilityRuleSchema>["body"];
 
 export const adminService = {
 	// User management
@@ -96,6 +90,7 @@ export const adminService = {
 			data: {
 				stage: input.stage as never,
 				label: input.label,
+				status: input.status,
 				sortOrder: input.sortOrder,
 				isDefault: false,
 			},
@@ -130,10 +125,65 @@ export const adminService = {
 
 		const updated = await prisma.checklistItem.update({
 			where: { id },
-			data: { label: input.label, ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}) },
+			data: {
+				...(input.label !== undefined ? { label: input.label } : {}),
+				...(input.status !== undefined ? { status: input.status } : {}),
+				...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+			},
 		});
 
 		return ServiceResponse.success("Checklist item updated.", updated);
+	},
+
+	// Eligibility rule management
+	async listEligibilityRules() {
+		const rules = await prisma.eligibilityRule.findMany({
+			orderBy: { createdAt: "asc" },
+		});
+		return ServiceResponse.success("Eligibility rules retrieved.", rules);
+	},
+
+	async createEligibilityRule(input: CreateEligibilityRuleInput) {
+		const rule = await prisma.eligibilityRule.create({
+			data: {
+				label: input.label,
+				field: input.field,
+				operator: input.operator,
+				value: input.value ?? null,
+				isActive: input.isActive,
+			},
+		});
+		return ServiceResponse.success("Eligibility rule created.", rule, StatusCodes.CREATED);
+	},
+
+	async updateEligibilityRule(id: string, input: UpdateEligibilityRuleInput) {
+		const rule = await prisma.eligibilityRule.findUnique({ where: { id } });
+		if (!rule) {
+			return ServiceResponse.failure("Eligibility rule not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		const updated = await prisma.eligibilityRule.update({
+			where: { id },
+			data: {
+				...(input.label !== undefined ? { label: input.label } : {}),
+				...(input.field !== undefined ? { field: input.field } : {}),
+				...(input.operator !== undefined ? { operator: input.operator } : {}),
+				...(input.value !== undefined ? { value: input.value } : {}),
+				...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+			},
+		});
+
+		return ServiceResponse.success("Eligibility rule updated.", updated);
+	},
+
+	async deleteEligibilityRule(id: string) {
+		const rule = await prisma.eligibilityRule.findUnique({ where: { id } });
+		if (!rule) {
+			return ServiceResponse.failure("Eligibility rule not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		await prisma.eligibilityRule.delete({ where: { id } });
+		return ServiceResponse.success("Eligibility rule deleted.", null);
 	},
 
 	// Analytics

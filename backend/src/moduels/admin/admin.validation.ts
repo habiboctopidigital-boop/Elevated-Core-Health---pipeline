@@ -32,13 +32,35 @@ export const ChecklistItemSchema = z.object({
 			"reconciled",
 		]),
 		label: z.string().trim().min(1).max(200),
+		status: z.enum(["required", "optional"]).default("required"),
 		sortOrder: z.number().int().min(0).default(0),
 	}),
 });
 
 export const UpdateChecklistItemSchema = z.object({
 	body: z.object({
-		label: z.string().trim().min(1).max(200),
+		label: z.string().trim().min(1).max(200).optional(),
+		status: z.enum(["required", "optional"]).optional(),
 		sortOrder: z.number().int().min(0).optional(),
+	}),
+});
+
+export const CreateEligibilityRuleSchema = z.object({
+	body: z.object({
+		label: z.string().trim().min(1).max(200),
+		field: z.string().trim().min(1).max(100),
+		operator: z.string().trim().min(1).max(50),
+		value: z.string().trim().max(200).optional().nullable(),
+		isActive: z.boolean().default(true),
+	}),
+});
+
+export const UpdateEligibilityRuleSchema = z.object({
+	body: z.object({
+		label: z.string().trim().min(1).max(200).optional(),
+		field: z.string().trim().min(1).max(100).optional(),
+		operator: z.string().trim().min(1).max(50).optional(),
+		value: z.string().trim().max(200).optional().nullable(),
+		isActive: z.boolean().optional(),
 	}),
 });

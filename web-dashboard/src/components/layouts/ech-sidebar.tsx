@@ -12,6 +12,7 @@ import {
   Users,
   CheckSquare,
   ScrollText,
+  ShieldCheck,
   Upload,
   LogOut,
   User,
@@ -38,7 +39,8 @@ const ADMIN_NAV = [
   { href: ROUTES.ADMIN.IMPORT, icon: Upload, label: "Patients Import" },
   { href: ROUTES.ADMIN.LOG, icon: ClipboardList, label: "Activity Log" },
   { href: ROUTES.ADMIN.USERS, icon: Users, label: "Users" },
-  { href: ROUTES.ADMIN.CHECKLIST, icon: CheckSquare, label: "Satge Checklist" },
+  { href: ROUTES.ADMIN.CHECKLIST, icon: CheckSquare, label: "Stage Checklist" },
+  { href: ROUTES.ADMIN.ELIGIBILITY, icon: ShieldCheck, label: "Eligibility Rules" },
   { href: ROUTES.ADMIN.PROFILE, icon: User, label: "Profile"},
 ]
 
