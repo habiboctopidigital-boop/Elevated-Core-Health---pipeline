@@ -53,8 +53,9 @@ export function useAssignPatient() {
   return useMutation({
     mutationFn: ({ id, assignedTo }: { id: string; assignedTo: string | null }) =>
       PatientsService.assign(id, assignedTo),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       toast.success("Assignment updated")
     },
     onError: (err: any) => {
@@ -199,8 +200,9 @@ export function useClaimPatient() {
   return useMutation({
     mutationFn: ({ id, userId }: { id: string; userId: string }) =>
       PatientsService.claim(id, userId),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       toast.success("Patient claimed")
     },
     onError: (err: any) => {

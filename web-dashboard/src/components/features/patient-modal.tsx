@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import type { Patient, PatientStage } from "@/types"
 import { ROLES, STALE_HOURS } from "@/constants"
 import { useStageMeta } from "@/hooks/query/useStages"
@@ -9,10 +9,13 @@ import {
   Flag,
   Clock,
   Check,
+  CheckCheck,
   CheckCircle,
   XCircle,
   AlertTriangle,
   MessageSquare,
+  ListX,
+  Loader2,
   UserCheck,
   ChevronDown,
   Zap,
@@ -45,6 +48,7 @@ import {
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface PatientModalProps {
   patientId: string | null
@@ -271,6 +275,21 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [showCancelInput, setShowCancelInput] = useState(false)
   const checkEligibility = useCheckEligibility()
 
+  // Checklist & assignment pending states (prevent duplicate requests)
+  const [bulkPending, setBulkPending] = useState(false)
+  const [assigning, setAssigning] = useState(false)
+  const [assignFeedback, setAssignFeedback] = useState<{
+    type: "success" | "error"
+    message: string
+  } | null>(null)
+  const assignFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const checklistBusy = toggleChecklist.isPending || bulkPending
+
+  // Clear any lingering assignment feedback when the modal unmounts
+  useEffect(() => () => {
+    if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
+  }, [])
+
   useEffect(() => {
     if (patient?.notes) setNotesText(patient.notes)
     else setNotesText("")
@@ -295,18 +314,20 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setClearReason("")
     setShowCancelInput(false)
     setCancelReason("")
+    setAssigning(false)
+    setAssignFeedback(null)
   }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider])
 
-  // ESC key to close modal
+  // ESC key to close modal (blocked while an assignment is in-flight)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape" && open && !assigning) {
         onClose()
       }
     }
     window.addEventListener("keydown", handleEscape)
     return () => window.removeEventListener("keydown", handleEscape)
-  }, [open, onClose])
+  }, [open, onClose, assigning])
 
   const handleSaveNotes = async () => {
     if (!patient) return
@@ -379,6 +400,52 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setCancelReason("")
   }
 
+  const handleAssignTo = async (vaId: string) => {
+    if (!patient || !vaId) return
+    setAssigning(true)
+    setAssignFeedback(null)
+    try {
+      await assignPatient.mutateAsync({ id: patient.id, assignedTo: vaId })
+      const va = vaList?.find((v) => v.id === vaId)
+      setAssignFeedback({ type: "success", message: `Assigned to ${va?.name ?? "VA"}` })
+    } catch (err: unknown) {
+      const apiMessage = (
+        err as { response?: { data?: { message?: string } } }
+      )?.response?.data?.message
+      setAssignFeedback({
+        type: "error",
+        message: apiMessage || "Failed to assign this patient",
+      })
+    } finally {
+      setAssigning(false)
+      if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
+      assignFeedbackTimer.current = setTimeout(() => setAssignFeedback(null), 4000)
+    }
+  }
+
+  const handleBulkChecklist = async (checked: boolean) => {
+    if (!patient) return
+    const itemsToChange = currentStageItems.filter(
+      (item) => !!currentState[item.id] !== checked,
+    )
+    if (itemsToChange.length === 0) {
+      toast.info(checked ? "All items are already checked" : "No checklist items are checked")
+      return
+    }
+    setBulkPending(true)
+    try {
+      // Sequential updates so one failure stops the batch cleanly
+      for (const item of itemsToChange) {
+        await toggleChecklist.mutateAsync({ id: patient.id, itemId: item.id, checked })
+      }
+      toast.success(`Checklist updated (${itemsToChange.length} item${itemsToChange.length > 1 ? "s" : ""})`)
+    } catch {
+      // The toggle mutation's onError already surfaces a toast + rolls back optimistically
+    } finally {
+      setBulkPending(false)
+    }
+  }
+
   const canLock =
     !!patient && (isAdmin || patient.assignedTo === user?.id)
   const canUnlock =
@@ -395,15 +462,18 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto mx-4 animate-in fade-in zoom-in-95 duration-200 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={() => !assigning && onClose()}
+      />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden mx-4 animate-in fade-in zoom-in-95 duration-200">
         {isLoading || !patient ? (
-          <div className="p-8 text-center text-[#6B7280] text-sm">
+          <div className="flex-1 flex items-center justify-center p-8 text-center text-[#6B7280] text-sm">
             {isLoading ? "Loading..." : "Patient not found"}
           </div>
         ) : (
           <>
-            <div className="sticky top-0 bg-gradient-to-r from-[#036638] to-[#025030] border-b-0 px-8 py-6 flex items-start justify-between z-10 rounded-t-2xl shadow-sm">
+            <div className="flex-shrink-0 bg-gradient-to-r from-[#036638] to-[#025030] px-8 py-6 flex items-start justify-between rounded-t-2xl shadow-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-2xl font-bold text-white truncate">
@@ -462,8 +532,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </button>
             </div>
 
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
             <div className="p-8 space-y-7">
-              {/* Stage Navigation */}
+              {/* Stage Navigation (sticky so the pipeline is always visible while scrolling) */}
+              <div className="sticky top-0 z-10 bg-white -mx-8 px-8">
               <div className="bg-gradient-to-br from-[#F9FAFB] to-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
@@ -526,6 +598,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   })}
                 </div>
               </div>
+              </div>
 
               {/* Checklist */}
               <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
@@ -533,6 +606,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                     Checklist - {stageLabels[patient.stage]}
+                    {checklistBusy && <Loader2 className="w-3.5 h-3.5 text-[#036638] animate-spin" />}
                   </p>
                   {!allComplete && totalItems > 0 && !isAdmin && (
                     <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">
@@ -575,18 +649,52 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       </p>
                     )}
 
+                    {/* Check All / Uncheck All */}
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkChecklist(true)}
+                        disabled={checklistBusy}
+                        className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] hover:border-[#036638]/60"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Check All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkChecklist(false)}
+                        disabled={checklistBusy}
+                        className="text-xs gap-1.5 border-[#E5E7EB] text-[#6B7280] hover:bg-gray-50 hover:text-[#1A1B1E]"
+                      >
+                        <ListX className="w-3.5 h-3.5" />
+                        Uncheck All
+                      </Button>
+                      {bulkPending && (
+                        <span className="text-[10px] font-medium text-[#036638] flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Updating...
+                        </span>
+                      )}
+                    </div>
+
                     {/* Checklist Items */}
-                    <div className="space-y-2">
+                    <div className={cn("space-y-2 transition-opacity duration-200", checklistBusy && "opacity-50 pointer-events-none")}>
                       {currentStageItems.map((item) => {
                         const checked = !!currentState[item.id]
                         return (
                           <label
                             key={item.id}
-                            className="flex items-start gap-2.5 py-3 px-3 rounded-lg hover:bg-[#F9FAFB] cursor-pointer transition-all border border-transparent hover:border-[#E5E7EB] group"
+                            className={cn(
+                              "flex items-start gap-2.5 py-3 px-3 rounded-lg hover:bg-[#F9FAFB] cursor-pointer transition-all border border-transparent hover:border-[#E5E7EB] group",
+                              checklistBusy && "hover:bg-transparent",
+                            )}
                           >
                             <input
                               type="checkbox"
                               checked={checked}
+                              disabled={checklistBusy}
                               onChange={() =>
                                 toggleChecklist.mutate({
                                   id: patient.id,
@@ -594,7 +702,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                   checked: !checked,
                                 })
                               }
-                              className="mt-1 w-5 h-5 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638] cursor-pointer"
+                              className="mt-1 w-5 h-5 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638] cursor-pointer disabled:cursor-not-allowed"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -919,32 +1027,72 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
               )}
 
-              {/* Patient Status & Access (admin / assigned VA) */}
+              {/* Patient Status & Access */}
               <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                   Status & Access
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Lock / Unlock */}
-                  {patient.isPrivate ? (
-                    <>
-                      <span className="text-xs text-[#6B7280] mr-1">
-                        Locked{patient.privateLockedByUser ? ` by ${patient.privateLockedByUser.name}` : ""} — only they or an admin can edit.
-                      </span>
-                      {canUnlock && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => unlockPatient.mutate(patient.id)}
-                          disabled={unlockPatient.isPending}
-                          className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
-                        >
-                          <Unlock className="w-3.5 h-3.5" />
-                          Unlock
-                        </Button>
+
+                {/* Status pills */}
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
+                      patient.status === "active" && "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/40",
+                      patient.status === "completed" && "bg-[#65BD6C]/15 text-[#025030] border-[#65BD6C]/50",
+                      patient.status === "cancelled" && "bg-red-50 text-red-700 border-red-200",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        patient.status === "active" && "bg-[#3FA66E]",
+                        patient.status === "completed" && "bg-[#036638]",
+                        patient.status === "cancelled" && "bg-red-500",
                       )}
-                    </>
+                    />
+                    {patient.status === "active"
+                      ? "Active"
+                      : patient.status === "completed"
+                        ? "Completed"
+                        : "Cancelled"}
+                  </span>
+
+                  {patient.isPrivate ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800">
+                      <Lock className="w-3 h-3" />
+                      Locked{patient.privateLockedByUser ? ` by ${patient.privateLockedByUser.name}` : ""}
+                      {patient.privateLockedAt && ` • ${new Date(patient.privateLockedAt).toLocaleString()}`}
+                    </span>
+                  ) : patient.status === "active" ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-[#6B7280]">
+                      <Unlock className="w-3 h-3" />
+                      Open — any VA can work
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {patient.isPrivate ? (
+                    canUnlock ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => unlockPatient.mutate(patient.id)}
+                        disabled={unlockPatient.isPending}
+                        className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                        {unlockPatient.isPending ? "Unlocking..." : "Unlock"}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-[#6B7280] flex items-center gap-1.5 py-1.5">
+                        <Lock className="w-3.5 h-3.5" />
+                        Only {patient.privateLockedByUser?.name ?? "the locking VA"} or an admin can edit.
+                      </p>
+                    )
                   ) : canLock ? (
                     <Button
                       size="sm"
@@ -954,19 +1102,21 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
                     >
                       <Lock className="w-3.5 h-3.5" />
-                      Lock (restrict other VAs)
+                      {lockPatient.isPending ? "Locking..." : "Lock (restrict other VAs)"}
                     </Button>
                   ) : (
-                    <span className="text-xs text-[#6B7280]">Open — any VA can work this patient.</span>
+                    <p className="text-xs text-[#6B7280] flex items-center gap-1.5 py-1.5">
+                      <Lock className="w-3.5 h-3.5" />
+                      Only the assigned VA or an admin can lock this patient.
+                    </p>
                   )}
 
-                  {/* Cancel / Reactivate (admin) */}
                   {isAdmin && patient.status !== "cancelled" && !showCancelInput && (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setShowCancelInput(true)}
-                      className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-50 ml-2"
+                      className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
                     >
                       <Ban className="w-3.5 h-3.5" />
                       Mark Cancelled
@@ -978,10 +1128,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       variant="outline"
                       onClick={() => updateStatus.mutate({ id: patient.id, status: "active" })}
                       disabled={updateStatus.isPending}
-                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] ml-2"
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
-                      Reactivate
+                      {updateStatus.isPending ? "Reactivating..." : "Reactivate"}
                     </Button>
                   )}
                 </div>
@@ -1173,13 +1323,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       <select
                         onChange={(e) => {
                           const val = e.target.value
-                          if (val) {
-                            assignPatient.mutate({ id: patient.id, assignedTo: val })
-                          }
                           e.target.value = ""
+                          if (val) handleAssignTo(val)
                         }}
                         value=""
-                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
+                        disabled={assigning}
+                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Assign to VA...</option>
                         {vaList.filter((v) => v.id !== user?.id).map((va) => (
@@ -1191,6 +1340,23 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       <ChevronDown className="w-3 h-3 text-[#6B7280] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
                   </div>
+                  {assignFeedback && (
+                    <div
+                      className={cn(
+                        "mt-3 flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border",
+                        assignFeedback.type === "success"
+                          ? "bg-[#EBF7EC] border-[#65BD6C]/40 text-[#036638]"
+                          : "bg-red-50 border-red-200 text-red-700",
+                      )}
+                    >
+                      {assignFeedback.type === "success" ? (
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      ) : (
+                        <XCircle className="w-3.5 h-3.5" />
+                      )}
+                      {assignFeedback.message}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1272,7 +1438,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
               </div>
             </div>
+            </div>
           </>
+        )}
+        {assigning && (
+          <div className="absolute inset-0 z-50 bg-white/75 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-9 h-9 text-[#036638] animate-spin" />
+            <p className="text-sm font-semibold text-[#036638]">Updating assignment...</p>
+          </div>
         )}
       </div>
     </div>
