@@ -23,7 +23,7 @@ interface StatCardProps {
   className?: string
 }
 
-/** Shared stat tile — icon chip, label, big value, optional trend badge. */
+/** Shared stat tile - icon chip, label, big value, optional trend badge. */
 export function StatCard({ label, value, icon: Icon, accent = "brand", trend, className }: StatCardProps) {
   const styles = ACCENT_STYLES[accent]
   return (

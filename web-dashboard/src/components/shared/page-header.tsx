@@ -11,7 +11,7 @@ interface PageHeaderProps {
   className?: string
 }
 
-/** Shared page-title block — replaces every page's hand-rolled header markup. */
+/** Shared page-title block - replaces every page's hand-rolled header markup. */
 export function PageHeader({ title, subtitle, icon: Icon, actions, breadcrumb, className }: PageHeaderProps) {
   return (
     <div className={cn("flex items-start justify-between flex-wrap gap-3", className)}>

@@ -44,11 +44,11 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const { user: currentUser } = useAuth()
   const { data: vaList } = useListVas()
   const assignPatient = useAssignPatient()
-  // Phase 3 shared editing: board is open — any VA or admin can move any patient.
+  // Phase 3 shared editing: board is open - any VA or admin can move any patient.
   const isAdmin = currentUser?.role === "admin"
   const canMoveStage = true
 
-  // - Checklist progress for this stage (only REQUIRED items gate moves) —
+  // - Checklist progress for this stage (only REQUIRED items gate moves) -
   const stageDefs = checklistDefs?.filter((d) => d.stage === patient.stage) || []
   const stageState = patient.checklistState?.[patient.stage] || {}
   const requiredDefs = stageDefs.filter((d) => d.status === "required")

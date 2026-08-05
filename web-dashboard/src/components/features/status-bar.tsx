@@ -4,7 +4,7 @@ import { AlertTriangle, Flag, CheckCircle2 } from "lucide-react"
 import { useDashboard } from "@/hooks/query/useDashboard"
 import { cn } from "@/lib/utils"
 
-/** Compact status pill — lives in the Topbar. Rule: always-visible stale/flag summary. */
+/** Compact status pill - lives in the Topbar. Rule: always-visible stale/flag summary. */
 export function StatusBar() {
   const { data: summary, isLoading, error } = useDashboard()
 

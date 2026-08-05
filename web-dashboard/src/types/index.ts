@@ -1,6 +1,6 @@
 export type UserRole = "admin" | "va"
 
-// Stages are DB-driven now — a stage key is just a stable string slug
+// Stages are DB-driven now - a stage key is just a stable string slug
 // (e.g. "onboarding"). The API returns the full list via GET /stages.
 export type PatientStage = string
 
@@ -267,7 +267,7 @@ export interface ApiResponse<T> {
   statusCode: number
 }
 
-// Static fallback used while stages load from the API — never the source of truth.
+// Static fallback used while stages load from the API - never the source of truth.
 export const DEFAULT_STAGES: PipelineStage[] = [
   { id: "stage_onboarding", key: "onboarding", name: "Onboarding", hint: "Scheduled on calendar", sortOrder: 0, isFinal: false, isActive: true },
   { id: "stage_visit_complete", key: "visit_complete", name: "Visit Complete", hint: "Encounter finished", sortOrder: 1, isFinal: false, isActive: true },

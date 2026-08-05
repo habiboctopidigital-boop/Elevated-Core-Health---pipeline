@@ -419,7 +419,7 @@ function StageForm({
             className="w-4 h-4 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638] cursor-pointer"
           />
           <span className="text-sm text-[#374151]">
-            Final stage — cards here are exempt from the stale flag
+            Final stage - cards here are exempt from the stale flag
           </span>
         </label>
       )}
@@ -524,7 +524,7 @@ function StageChecklistManager({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-[#6B7280] italic">No checklist items — this stage can advance without checking anything.</p>
+        <p className="text-xs text-[#6B7280] italic">No checklist items - this stage can advance without checking anything.</p>
       )}
     </div>
   )

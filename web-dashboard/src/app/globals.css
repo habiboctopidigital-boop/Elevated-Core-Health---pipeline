@@ -26,7 +26,7 @@
   --radius: 0.75rem;
 
   /* Note: "amber" here is a legacy alias for the brand green (#65BD6C), not a
-     warning color — warnings use Tailwind's amber-* utilities directly. */
+     warning color - warnings use Tailwind's amber-* utilities directly. */
   --color-ech-dark: #036638;
   --color-ech-amber: #65BD6C;
   --color-ech-light: #EBF7EC;
@@ -35,7 +35,7 @@
   --color-ech-sidebar: #16181C;
   --color-ech-accent: #036638;
 
-  /* Elevation scale — premium, soft, low-contrast shadows (no hard black) */
+  /* Elevation scale - premium, soft, low-contrast shadows (no hard black) */
   --shadow-xs: 0 1px 2px 0 rgba(3, 20, 11, 0.04);
   --shadow-sm: 0 1px 3px 0 rgba(3, 20, 11, 0.06), 0 1px 2px -1px rgba(3, 20, 11, 0.04);
   --shadow-md: 0 4px 12px -2px rgba(3, 20, 11, 0.08), 0 2px 6px -3px rgba(3, 20, 11, 0.05);
@@ -201,7 +201,7 @@
     border-radius: 3px;
   }
 
-  /* Glass surfaces — light variant for content on the #F4F5F7 page bg */
+  /* Glass surfaces - light variant for content on the #F4F5F7 page bg */
   .glass {
     background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);

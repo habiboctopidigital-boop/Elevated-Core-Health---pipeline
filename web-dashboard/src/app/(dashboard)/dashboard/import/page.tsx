@@ -78,7 +78,7 @@ function DataPreviewTable({
   )
 }
 
-// ─── Upload Zone ───
+// --- Upload Zone ---
 function UploadZone({
   state,
   inputRef,
@@ -201,7 +201,7 @@ function UploadZone({
   )
 }
 
-// ─── Success Result ───
+// --- Success Result ---
 function SuccessResult({
   result,
   file,
@@ -315,7 +315,7 @@ function SuccessResult({
   )
 }
 
-// ─── History Row ───
+// --- History Row ---
 function HistoryRow({
   entry,
   isExpanded,
@@ -412,7 +412,7 @@ function HistoryRow({
   )
 }
 
-// ─── Page ───
+// --- Page ---
 export default function ImportPage() {
   const bulk = useBulkUpload()
   const { entries, clearHistory, removeEntry } = useImportHistory()

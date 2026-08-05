@@ -87,7 +87,7 @@ export default function AdminCrmPage() {
   }
 
   const loadFromCrm = () => {
-    // Phase 3 scope: mock only — real CRM integration lands in a later phase.
+    // Phase 3 scope: mock only - real CRM integration lands in a later phase.
     toast.info("CRM integration is coming in the next phase. Bulk import works today.")
   }
 
@@ -241,9 +241,9 @@ export default function AdminCrmPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-[#374151] whitespace-nowrap">{patient.phone || "—"}</td>
-                    <td className="px-4 py-3 text-xs text-[#374151] max-w-[200px] truncate">{patient.email || "—"}</td>
-                    <td className="px-4 py-3 text-xs text-[#374151]">{patient.location || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-[#374151] whitespace-nowrap">{patient.phone || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-[#374151] max-w-[200px] truncate">{patient.email || "-"}</td>
+                    <td className="px-4 py-3 text-xs text-[#374151]">{patient.location || "-"}</td>
                     <td className="px-4 py-3">
                       <span className="text-[11px] font-medium bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded-full">
                         {stageLabels[patient.stage] || patient.stage}
@@ -260,7 +260,7 @@ export default function AdminCrmPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-[#374151]">
-                      {patient.assignedUser?.name || "—"}
+                      {patient.assignedUser?.name || "-"}
                     </td>
                     <td className="px-4 py-3 text-xs text-[#6B7280] whitespace-nowrap">
                       {new Date(patient.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -308,8 +308,8 @@ export default function AdminCrmPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#374151] truncate">{batch.fileName}</p>
                   <p className="text-xs text-[#6B7280] mt-0.5">
-                    {batch.totalRows} rows · {batch.successCount} imported · {batch.duplicateCount} duplicates · {batch.failCount} failed
-                    {batch.importedByUser ? ` · by ${batch.importedByUser.name}` : ""}
+                    {batch.totalRows} rows | {batch.successCount} imported | {batch.duplicateCount} duplicates | {batch.failCount} failed
+                    {batch.importedByUser ? ` | by ${batch.importedByUser.name}` : ""}
                   </p>
                 </div>
                 <span

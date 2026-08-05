@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 
 interface FadeInProps {
   children: ReactNode
-  /** Stagger delay in seconds — pass `index * 0.05` when mapping a list. */
+  /** Stagger delay in seconds - pass `index * 0.05` when mapping a list. */
   delay?: number
   className?: string
   /** Starting vertical offset in px. */

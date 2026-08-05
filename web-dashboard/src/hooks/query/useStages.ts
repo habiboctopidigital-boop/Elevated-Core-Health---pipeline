@@ -38,7 +38,7 @@ function useInvalidateStages() {
   }
 }
 
-/** All stages incl. inactive — admin only. */
+/** All stages incl. inactive - admin only. */
 export function useAdminStages() {
   return useQuery({
     queryKey: QUERY_KEYS.ADMIN.STAGES,
