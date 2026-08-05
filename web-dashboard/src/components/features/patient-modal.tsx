@@ -1,22 +1,29 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import type { Patient, PatientStage } from "@/types"
-import { STAGE_ORDER, STAGE_LABELS, STAGE_HINTS } from "@/types"
 import { ROLES, STALE_HOURS } from "@/constants"
+import { useStageMeta } from "@/hooks/query/useStages"
 import {
   X,
   Flag,
   Clock,
   Check,
+  CheckCheck,
   CheckCircle,
   XCircle,
   AlertTriangle,
   MessageSquare,
+  ListX,
+  Loader2,
   UserCheck,
   ChevronDown,
   Zap,
   Shield,
+  Lock,
+  Unlock,
+  Ban,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -33,10 +40,15 @@ import {
   useChecklistItems,
   useListVas,
   useCheckEligibility,
+  useUpdatePatient,
+  useLockPatient,
+  useUnlockPatient,
+  useUpdatePatientStatus,
 } from "@/hooks/query/usePatients"
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface PatientModalProps {
   patientId: string | null
@@ -100,6 +112,29 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`
 }
 
+const PAYMENT_METHOD_OPTIONS = [
+  "Self-pay",
+  "Insurance",
+  "Sliding Scale",
+  "Employee Assistance Program (EAP)",
+  "Medicare",
+  "Medicaid",
+]
+
+const INSURANCE_PROVIDER_OPTIONS = [
+  "Blue Cross Blue Shield",
+  "Aetna",
+  "Cigna",
+  "United Healthcare",
+  "Humana",
+  "Kaiser Permanente",
+  "Tricare",
+  "Medicare",
+  "Medicaid",
+]
+
+const OTHER_OPTION = "Other"
+
 const VOB_LABELS: Array<[string, string]> = [
   ["coverage", "Coverage"],
   ["payer", "Payer"],
@@ -115,9 +150,68 @@ const VOB_LABELS: Array<[string, string]> = [
   ["checkDate", "Checked"],
 ]
 
+/**
+ * Dropdown of common presets with an "Other" option that reveals a free-text
+ * input. The parent owns `otherMode` so it can reset in lockstep with `value`
+ * whenever the selected patient changes.
+ */
+function SelectOrOther({
+  value,
+  onChange,
+  otherMode,
+  onOtherModeChange,
+  options,
+  placeholder,
+}: {
+  value: string
+  onChange: (value: string) => void
+  otherMode: boolean
+  onOtherModeChange: (other: boolean) => void
+  options: string[]
+  placeholder: string
+}) {
+  const selectValue = otherMode ? OTHER_OPTION : options.includes(value) ? value : ""
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={selectValue}
+        onChange={(e) => {
+          if (e.target.value === OTHER_OPTION) {
+            onOtherModeChange(true)
+            onChange("")
+          } else {
+            onOtherModeChange(false)
+            onChange(e.target.value)
+          }
+        }}
+        className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+        <option value={OTHER_OPTION}>Other (specify)</option>
+      </select>
+      {otherMode && (
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter name..."
+          autoFocus
+          className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+        />
+      )}
+    </div>
+  )
+}
+
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
   const isAdmin = user?.role === "admin"
+  const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
   const { data: patient, isLoading } = usePatient(patientId || "")
   const { data: logData } = useActivityLog(
     patientId ? { patientId, limit: 20 } : undefined,
@@ -130,6 +224,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const clearFlag = useClearFlag()
   const claimPatient = useClaimPatient()
   const assignPatient = useAssignPatient()
+  const updatePatient = useUpdatePatient()
+  const lockPatient = useLockPatient()
+  const unlockPatient = useUnlockPatient()
+  const updateStatus = useUpdatePatientStatus()
 
   const { data: checklistDefs } = useChecklistItems()
 
@@ -161,29 +259,75 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [savingNotes, setSavingNotes] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("")
   const [insuranceProvider, setInsuranceProvider] = useState("")
+  const [paymentMethodOther, setPaymentMethodOther] = useState(false)
+  const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
+  const [contactForm, setContactForm] = useState({
+    firstName: "",
+    lastName: "",
+    location: "",
+    phone: "",
+    email: "",
+    copayAmount: "",
+    amountPaid: "",
+  })
+  const [savingContact, setSavingContact] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [showCancelInput, setShowCancelInput] = useState(false)
   const checkEligibility = useCheckEligibility()
+
+  // Checklist & assignment pending states (prevent duplicate requests)
+  const [bulkPending, setBulkPending] = useState(false)
+  const [assigning, setAssigning] = useState(false)
+  const [assignFeedback, setAssignFeedback] = useState<{
+    type: "success" | "error"
+    message: string
+  } | null>(null)
+  const assignFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const checklistBusy = toggleChecklist.isPending || bulkPending
+
+  // Clear any lingering assignment feedback when the modal unmounts
+  useEffect(() => () => {
+    if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
+  }, [])
 
   useEffect(() => {
     if (patient?.notes) setNotesText(patient.notes)
     else setNotesText("")
-    setPaymentMethod(patient?.paymentMethod ?? "")
-    setInsuranceProvider(patient?.insuranceProvider ?? "")
+    const pm = patient?.paymentMethod ?? ""
+    const ip = patient?.insuranceProvider ?? ""
+    setPaymentMethod(pm)
+    setInsuranceProvider(ip)
+    setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
+    setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
+    setContactForm({
+      firstName: patient?.firstName ?? "",
+      lastName: patient?.lastName ?? "",
+      location: patient?.location ?? "",
+      phone: patient?.phone ?? "",
+      email: patient?.email ?? "",
+      copayAmount: patient?.copayAmount ?? "",
+      amountPaid: patient?.amountPaid ?? "",
+    })
     setShowFlagInput(false)
     setFlagReason("")
     setShowClearInput(false)
     setClearReason("")
+    setShowCancelInput(false)
+    setCancelReason("")
+    setAssigning(false)
+    setAssignFeedback(null)
   }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider])
 
-  // ESC key to close modal
+  // ESC key to close modal (blocked while an assignment is in-flight)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape" && open && !assigning) {
         onClose()
       }
     }
     window.addEventListener("keydown", handleEscape)
     return () => window.removeEventListener("keydown", handleEscape)
-  }, [open, onClose])
+  }, [open, onClose, assigning])
 
   const handleSaveNotes = async () => {
     if (!patient) return
@@ -208,11 +352,11 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const handleMoveStage = async (target: PatientStage) => {
     if (!patient) return
-    const currentIdx = STAGE_ORDER.indexOf(patient.stage)
-    const targetIdx = STAGE_ORDER.indexOf(target)
+    const currentIdx = stageOrder.indexOf(patient.stage)
+    const targetIdx = stageOrder.indexOf(target)
 
-    // For VAs: check if moving forward requires complete checklist
-    if (!isAdmin && targetIdx > currentIdx && !allComplete) {
+    // Phase 3: checklist gate applies to EVERYONE (admin included) — server enforces too.
+    if (targetIdx > currentIdx && !allComplete) {
       return // Prevent progression if checklist incomplete
     }
 
@@ -233,9 +377,84 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     })
   }
 
+  const handleSaveContact = async () => {
+    if (!patient) return
+    setSavingContact(true)
+    await updatePatient.mutateAsync({
+      id: patient.id,
+      firstName: contactForm.firstName.trim() || null,
+      lastName: contactForm.lastName.trim() || null,
+      location: contactForm.location.trim() || null,
+      phone: contactForm.phone.trim() || null,
+      email: contactForm.email.trim() || null,
+      copayAmount: contactForm.copayAmount.trim() || null,
+      amountPaid: contactForm.amountPaid.trim() || null,
+    })
+    setSavingContact(false)
+  }
+
+  const handleCancelPatient = async () => {
+    if (!patient) return
+    await updateStatus.mutateAsync({ id: patient.id, status: "cancelled", reason: cancelReason.trim() || null })
+    setShowCancelInput(false)
+    setCancelReason("")
+  }
+
+  const handleAssignTo = async (vaId: string) => {
+    if (!patient || !vaId) return
+    setAssigning(true)
+    setAssignFeedback(null)
+    try {
+      await assignPatient.mutateAsync({ id: patient.id, assignedTo: vaId })
+      const va = vaList?.find((v) => v.id === vaId)
+      setAssignFeedback({ type: "success", message: `Assigned to ${va?.name ?? "VA"}` })
+    } catch (err: unknown) {
+      const apiMessage = (
+        err as { response?: { data?: { message?: string } } }
+      )?.response?.data?.message
+      setAssignFeedback({
+        type: "error",
+        message: apiMessage || "Failed to assign this patient",
+      })
+    } finally {
+      setAssigning(false)
+      if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
+      assignFeedbackTimer.current = setTimeout(() => setAssignFeedback(null), 4000)
+    }
+  }
+
+  const handleBulkChecklist = async (checked: boolean) => {
+    if (!patient) return
+    const itemsToChange = currentStageItems.filter(
+      (item) => !!currentState[item.id] !== checked,
+    )
+    if (itemsToChange.length === 0) {
+      toast.info(checked ? "All items are already checked" : "No checklist items are checked")
+      return
+    }
+    setBulkPending(true)
+    try {
+      // Sequential updates so one failure stops the batch cleanly
+      for (const item of itemsToChange) {
+        await toggleChecklist.mutateAsync({ id: patient.id, itemId: item.id, checked })
+      }
+      toast.success(`Checklist updated (${itemsToChange.length} item${itemsToChange.length > 1 ? "s" : ""})`)
+    } catch {
+      // The toggle mutation's onError already surfaces a toast + rolls back optimistically
+    } finally {
+      setBulkPending(false)
+    }
+  }
+
+  const canLock =
+    !!patient && (isAdmin || patient.assignedTo === user?.id)
+  const canUnlock =
+    !!patient &&
+    (isAdmin || patient.assignedTo === user?.id || patient.privateLockedByUser?.id === user?.id)
+
   const stale =
     patient &&
-    patient.stage !== "reconciled" &&
+    !(stageByKey.get(patient.stage)?.isFinal ?? false) &&
     (Date.now() - new Date(patient.updatedAt).getTime()) / (1000 * 60 * 60) >
       STALE_HOURS
 
@@ -243,15 +462,18 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto mx-4 animate-in fade-in zoom-in-95 duration-200 scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={() => !assigning && onClose()}
+      />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden mx-4 animate-in fade-in zoom-in-95 duration-200">
         {isLoading || !patient ? (
-          <div className="p-8 text-center text-[#6B7280] text-sm">
+          <div className="flex-1 flex items-center justify-center p-8 text-center text-[#6B7280] text-sm">
             {isLoading ? "Loading..." : "Patient not found"}
           </div>
         ) : (
           <>
-            <div className="sticky top-0 bg-gradient-to-r from-[#036638] to-[#025030] border-b-0 px-8 py-6 flex items-start justify-between z-10 rounded-t-2xl shadow-sm">
+            <div className="flex-shrink-0 bg-gradient-to-r from-[#036638] to-[#025030] px-8 py-6 flex items-start justify-between rounded-t-2xl shadow-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-2xl font-bold text-white truncate">
@@ -278,8 +500,24 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
-                    {STAGE_LABELS[patient.stage]}
+                    {stageLabels[patient.stage]}
                   </span>
+                  {patient.status !== "active" && (
+                    <span
+                      className={cn(
+                        "px-3 py-1 text-xs font-semibold rounded-full",
+                        patient.status === "completed" ? "bg-[#65BD6C] text-white" : "bg-red-500 text-white",
+                      )}
+                    >
+                      {patient.status === "completed" ? "Completed" : "Cancelled"}
+                    </span>
+                  )}
+                  {patient.isPrivate && (
+                    <span className="px-3 py-1 bg-amber-400/90 text-amber-950 text-xs font-semibold rounded-full flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Locked
+                    </span>
+                  )}
                   <p className="text-sm text-white/80">
                     Created {new Date(patient.createdAt).toLocaleDateString()}
                   </p>
@@ -294,17 +532,19 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </button>
             </div>
 
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
             <div className="p-8 space-y-7">
-              {/* Stage Navigation */}
+              {/* Stage Navigation (sticky so the pipeline is always visible while scrolling) */}
+              <div className="sticky top-0 z-10 bg-white -mx-8 px-8">
               <div className="bg-gradient-to-br from-[#F9FAFB] to-white border border-[#E5E7EB] rounded-xl p-5 shadow-sm">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                   Pipeline Stage
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {STAGE_ORDER.map((stage) => {
-                    const idx = STAGE_ORDER.indexOf(stage)
-                    const currentIdx = STAGE_ORDER.indexOf(patient.stage)
+                  {stageOrder.map((stage) => {
+                    const idx = stageOrder.indexOf(stage)
+                    const currentIdx = stageOrder.indexOf(patient.stage)
                     const isComplete = idx < currentIdx
                     const isCurrent = stage === patient.stage
                     const isNext = idx === currentIdx + 1
@@ -331,7 +571,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         key={stage}
                         onClick={() => isClickable && handleMoveStage(stage)}
                         disabled={moveStage.isPending || !isClickable}
-                        title={isDisabledReason || STAGE_LABELS[stage]}
+                        title={isDisabledReason || stageLabels[stage]}
                         className={cn(
                           "flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all border",
                           // Current stage (dark green)
@@ -352,11 +592,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         )}
                       >
                         {isComplete && <Check className="w-3.5 h-3.5" />}
-                        {STAGE_LABELS[stage]}
+                        {stageLabels[stage]}
                       </button>
                     )
                   })}
                 </div>
+              </div>
               </div>
 
               {/* Checklist */}
@@ -364,7 +605,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
-                    Checklist - {STAGE_LABELS[patient.stage]}
+                    Checklist - {stageLabels[patient.stage]}
+                    {checklistBusy && <Loader2 className="w-3.5 h-3.5 text-[#036638] animate-spin" />}
                   </p>
                   {!allComplete && totalItems > 0 && !isAdmin && (
                     <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">
@@ -407,18 +649,52 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       </p>
                     )}
 
+                    {/* Check All / Uncheck All */}
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkChecklist(true)}
+                        disabled={checklistBusy}
+                        className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] hover:border-[#036638]/60"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Check All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleBulkChecklist(false)}
+                        disabled={checklistBusy}
+                        className="text-xs gap-1.5 border-[#E5E7EB] text-[#6B7280] hover:bg-gray-50 hover:text-[#1A1B1E]"
+                      >
+                        <ListX className="w-3.5 h-3.5" />
+                        Uncheck All
+                      </Button>
+                      {bulkPending && (
+                        <span className="text-[10px] font-medium text-[#036638] flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Updating...
+                        </span>
+                      )}
+                    </div>
+
                     {/* Checklist Items */}
-                    <div className="space-y-2">
+                    <div className={cn("space-y-2 transition-opacity duration-200", checklistBusy && "opacity-50 pointer-events-none")}>
                       {currentStageItems.map((item) => {
                         const checked = !!currentState[item.id]
                         return (
                           <label
                             key={item.id}
-                            className="flex items-start gap-2.5 py-3 px-3 rounded-lg hover:bg-[#F9FAFB] cursor-pointer transition-all border border-transparent hover:border-[#E5E7EB] group"
+                            className={cn(
+                              "flex items-start gap-2.5 py-3 px-3 rounded-lg hover:bg-[#F9FAFB] cursor-pointer transition-all border border-transparent hover:border-[#E5E7EB] group",
+                              checklistBusy && "hover:bg-transparent",
+                            )}
                           >
                             <input
                               type="checkbox"
                               checked={checked}
+                              disabled={checklistBusy}
                               onChange={() =>
                                 toggleChecklist.mutate({
                                   id: patient.id,
@@ -426,7 +702,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                   checked: !checked,
                                 })
                               }
-                              className="mt-1 w-5 h-5 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638] cursor-pointer"
+                              className="mt-1 w-5 h-5 rounded border-[#E5E7EB] text-[#036638] focus:ring-[#036638] accent-[#036638] cursor-pointer disabled:cursor-not-allowed"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -518,36 +794,56 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
-                      Payment Method
+                      Payment Type
                     </label>
-                    <input
+                    <SelectOrOther
                       value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      placeholder="e.g. Self-pay, Insurance"
-                      className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                      onChange={setPaymentMethod}
+                      otherMode={paymentMethodOther}
+                      onOtherModeChange={setPaymentMethodOther}
+                      options={PAYMENT_METHOD_OPTIONS}
+                      placeholder="Select payment type..."
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
-                      Insurance Provider
+                      Insurance Company
                     </label>
-                    <input
+                    <SelectOrOther
                       value={insuranceProvider}
-                      onChange={(e) => setInsuranceProvider(e.target.value)}
-                      placeholder="e.g. Blue Cross Blue Shield"
-                      className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                      onChange={setInsuranceProvider}
+                      otherMode={insuranceProviderOther}
+                      onOtherModeChange={setInsuranceProviderOther}
+                      options={INSURANCE_PROVIDER_OPTIONS}
+                      placeholder="Select insurance company..."
                     />
                   </div>
                 </div>
 
                 {patient.eligibilityStatus === "eligible" && (
-                  <div className="bg-white rounded-lg p-3 border border-[#65BD6C]/40 mb-3 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                    <p className="text-sm font-semibold text-emerald-700">Eligible</p>
-                    {patient.eligibilityCheckedAt && (
-                      <span className="text-[10px] text-[#6B7280] ml-auto">
-                        Checked {new Date(patient.eligibilityCheckedAt).toLocaleString()}
-                      </span>
+                  <div className="bg-white rounded-lg p-3 border border-[#65BD6C]/40 mb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      <p className="text-sm font-semibold text-emerald-700">Eligible</p>
+                      {patient.eligibilityCheckedAt && (
+                        <span className="text-[10px] text-[#6B7280] ml-auto">
+                          Checked {new Date(patient.eligibilityCheckedAt).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {(patient.paymentMethod || patient.insuranceProvider) && (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        {patient.paymentMethod && (
+                          <span className="text-[10px] font-medium bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded-full">
+                            {patient.paymentMethod}
+                          </span>
+                        )}
+                        {patient.insuranceProvider && (
+                          <span className="text-[10px] font-medium bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded-full">
+                            {patient.insuranceProvider}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -563,6 +859,20 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         </span>
                       )}
                     </div>
+                    {(patient.paymentMethod || patient.insuranceProvider) && (
+                      <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                        {patient.paymentMethod && (
+                          <span className="text-[10px] font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                            {patient.paymentMethod}
+                          </span>
+                        )}
+                        {patient.insuranceProvider && (
+                          <span className="text-[10px] font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                            {patient.insuranceProvider}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {patient.eligibilityReason && (
                       <p className="text-xs text-red-700/80 mt-1.5">{patient.eligibilityReason}</p>
                     )}
@@ -717,6 +1027,194 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
               )}
 
+              {/* Patient Status & Access */}
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
+                  Status & Access
+                </p>
+
+                {/* Status pills */}
+                <div className="flex flex-wrap items-center gap-2 mb-5">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
+                      patient.status === "active" && "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/40",
+                      patient.status === "completed" && "bg-[#65BD6C]/15 text-[#025030] border-[#65BD6C]/50",
+                      patient.status === "cancelled" && "bg-red-50 text-red-700 border-red-200",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        patient.status === "active" && "bg-[#3FA66E]",
+                        patient.status === "completed" && "bg-[#036638]",
+                        patient.status === "cancelled" && "bg-red-500",
+                      )}
+                    />
+                    {patient.status === "active"
+                      ? "Active"
+                      : patient.status === "completed"
+                        ? "Completed"
+                        : "Cancelled"}
+                  </span>
+
+                  {patient.isPrivate ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800">
+                      <Lock className="w-3 h-3" />
+                      Locked{patient.privateLockedByUser ? ` by ${patient.privateLockedByUser.name}` : ""}
+                      {patient.privateLockedAt && ` • ${new Date(patient.privateLockedAt).toLocaleString()}`}
+                    </span>
+                  ) : patient.status === "active" ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-[#6B7280]">
+                      <Unlock className="w-3 h-3" />
+                      Open — any VA can work
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {patient.isPrivate ? (
+                    canUnlock ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => unlockPatient.mutate(patient.id)}
+                        disabled={unlockPatient.isPending}
+                        className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                        {unlockPatient.isPending ? "Unlocking..." : "Unlock"}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-[#6B7280] flex items-center gap-1.5 py-1.5">
+                        <Lock className="w-3.5 h-3.5" />
+                        Only {patient.privateLockedByUser?.name ?? "the locking VA"} or an admin can edit.
+                      </p>
+                    )
+                  ) : canLock ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => lockPatient.mutate(patient.id)}
+                      disabled={lockPatient.isPending}
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      {lockPatient.isPending ? "Locking..." : "Lock (restrict other VAs)"}
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-[#6B7280] flex items-center gap-1.5 py-1.5">
+                      <Lock className="w-3.5 h-3.5" />
+                      Only the assigned VA or an admin can lock this patient.
+                    </p>
+                  )}
+
+                  {isAdmin && patient.status !== "cancelled" && !showCancelInput && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowCancelInput(true)}
+                      className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      Mark Cancelled
+                    </Button>
+                  )}
+                  {isAdmin && patient.status === "cancelled" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateStatus.mutate({ id: patient.id, status: "active" })}
+                      disabled={updateStatus.isPending}
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      {updateStatus.isPending ? "Reactivating..." : "Reactivate"}
+                    </Button>
+                  )}
+                </div>
+
+                {isAdmin && showCancelInput && (
+                  <div className="space-y-2 mt-3">
+                    <Textarea
+                      placeholder="Reason for cancelling (optional)..."
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      className="text-sm min-h-[60px]"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleCancelPatient}
+                        disabled={updateStatus.isPending}
+                        className="bg-red-600 hover:bg-red-700 text-white text-xs"
+                      >
+                        {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowCancelInput(false)}
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {patient.status === "cancelled" && patient.cancelledReason && (
+                  <p className="text-xs text-[#6B7280] mt-2 bg-red-50 border border-red-100 rounded-lg p-2.5">
+                    <span className="font-semibold text-red-700">Reason:</span> {patient.cancelledReason}
+                  </p>
+                )}
+              </div>
+
+              {/* Contact & Payment Info */}
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
+                    Contact & Payment Info
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={handleSaveContact}
+                    disabled={savingContact || updatePatient.isPending}
+                    className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
+                  >
+                    {savingContact || updatePatient.isPending ? "Saving..." : "Save Details"}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {(
+                    [
+                      ["firstName", "First Name"],
+                      ["lastName", "Last Name"],
+                      ["location", "Location"],
+                      ["phone", "Phone"],
+                      ["email", "Email"],
+                      ["copayAmount", "Copay Amount"],
+                      ["amountPaid", "Total Paid"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <div key={key} className="space-y-1">
+                      <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                        {label}
+                      </label>
+                      <input
+                        value={contactForm[key]}
+                        onChange={(e) =>
+                          setContactForm((f) => ({ ...f, [key]: e.target.value }))
+                        }
+                        className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Flag Controls */}
               {!isAdmin && !patient.isFlagged ? (
                 <div>
@@ -825,13 +1323,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       <select
                         onChange={(e) => {
                           const val = e.target.value
-                          if (val) {
-                            assignPatient.mutate({ id: patient.id, assignedTo: val })
-                          }
                           e.target.value = ""
+                          if (val) handleAssignTo(val)
                         }}
                         value=""
-                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
+                        disabled={assigning}
+                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Assign to VA...</option>
                         {vaList.filter((v) => v.id !== user?.id).map((va) => (
@@ -843,6 +1340,23 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       <ChevronDown className="w-3 h-3 text-[#6B7280] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
                   </div>
+                  {assignFeedback && (
+                    <div
+                      className={cn(
+                        "mt-3 flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border",
+                        assignFeedback.type === "success"
+                          ? "bg-[#EBF7EC] border-[#65BD6C]/40 text-[#036638]"
+                          : "bg-red-50 border-red-200 text-red-700",
+                      )}
+                    >
+                      {assignFeedback.type === "success" ? (
+                        <CheckCircle className="w-3.5 h-3.5" />
+                      ) : (
+                        <XCircle className="w-3.5 h-3.5" />
+                      )}
+                      {assignFeedback.message}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -924,7 +1438,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
               </div>
             </div>
+            </div>
           </>
+        )}
+        {assigning && (
+          <div className="absolute inset-0 z-50 bg-white/75 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-9 h-9 text-[#036638] animate-spin" />
+            <p className="text-sm font-semibold text-[#036638]">Updating assignment...</p>
+          </div>
         )}
       </div>
     </div>

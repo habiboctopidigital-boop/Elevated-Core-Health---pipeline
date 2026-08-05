@@ -6,3 +6,4 @@ import { usersController } from "./users.controller";
 export const usersRouter: Router = Router();
 
 usersRouter.get("/vas", requireAuth, usersController.listVas);
+usersRouter.get("/", requireAuth, usersController.list);

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ImportService, type ParsedRow } from "@/services/import.service"
+import { useApplyImport } from "@/hooks/query/useCrm"
 import {
   Upload,
   FileSpreadsheet,
@@ -243,20 +244,20 @@ export function ImportDialog() {
           )}
         </div>
 
-        <div className="px-5 py-3 bg-[#F9FAFB] border-t border-[#E5E7EB] flex items-center gap-4 text-[10px] text-[#6B7280]">
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-green-500" />
-            Max 10 MB
-          </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-green-500" />
-            No DB write yet
-          </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-green-500" />
-            Preview first
-          </span>
-        </div>
+      <div className="px-5 py-3 bg-[#F9FAFB] border-t border-[#E5E7EB] flex items-center gap-4 text-[10px] text-[#6B7280]">
+        <span className="flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3 text-green-500" />
+          Max 10 MB
+        </span>
+        <span className="flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3 text-green-500" />
+          Preview first
+        </span>
+        <span className="flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3 text-green-500" />
+          Imports create patients
+        </span>
+      </div>
       </DialogContent>
     </Dialog>
   )
@@ -271,6 +272,8 @@ function SuccessView({
   file: File
   onReset: () => void
 }) {
+  const applyImport = useApplyImport()
+  const [importing, setImporting] = useState(false)
   const previewRows = result.data.slice(0, 5)
   const columns = result.data.length > 0 ? Object.keys(result.data[0]) : []
 
@@ -358,14 +361,40 @@ function SuccessView({
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
         <Button
           size="sm"
+          variant="outline"
           onClick={onReset}
-          className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
+          className="text-xs"
         >
           Import Another
         </Button>
+        {result.totalRows > 0 && (
+          <Button
+            size="sm"
+            onClick={async () => {
+              setImporting(true)
+              try {
+                await applyImport.mutateAsync({
+                  rows: result.data,
+                  fileName: file.name,
+                  fileType: (file.name.split(".").pop() || "csv").toLowerCase() as "csv" | "xlsx" | "xls",
+                })
+                onReset()
+              } finally {
+                setImporting(false)
+              }
+            }}
+            disabled={importing || applyImport.isPending}
+            className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
+          >
+            <Loader2 className={cn("w-3.5 h-3.5", (importing || applyImport.isPending) && "animate-spin")} />
+            {importing || applyImport.isPending
+              ? "Importing..."
+              : `Import ${result.totalRows} Contact${result.totalRows === 1 ? "" : "s"}`}
+          </Button>
+        )}
       </div>
     </div>
   )

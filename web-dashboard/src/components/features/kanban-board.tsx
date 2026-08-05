@@ -4,17 +4,16 @@ import { useState, useCallback, useRef } from "react"
 import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
-import { STAGE_ORDER, STAGE_LABELS, STAGE_HINTS } from "@/types"
+import { useStageMeta } from "@/hooks/query/useStages"
 import type { Patient, PatientStage } from "@/types"
 import { Loader2, GripVertical } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/hooks/auth/useAuth"
 
 export function KanbanBoard({ initialPatientId }: { initialPatientId?: string }) {
   const { data: patients, isLoading, error } = usePatients()
   const moveStage = useMoveStage()
-  const { user: currentUser } = useAuth()
+  const { order: stageOrder, labels: stageLabels, hints: stageHints, byKey: stageByKey } = useStageMeta()
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(initialPatientId ?? null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
@@ -30,30 +29,11 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
       {} as Record<string, Patient[]>,
     ) || {}
 
-  // - Assignment gating check —
-  const canUserMovePatient = useCallback(
-    (patient: Patient): boolean => {
-      if (!currentUser) return false
-      if (currentUser.role === "admin") return true
-      return !!patient.assignedTo && patient.assignedTo === currentUser.id
-    },
-    [currentUser],
-  )
-
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, patientId: string) => {
-      const patient = patients?.find((p) => p.id === patientId)
-      if (!patient || !canUserMovePatient(patient)) {
-        e.preventDefault()
-        toast.error("You can only move patients assigned to you")
-        return
-      }
-      setDraggingId(patientId)
-      e.dataTransfer.effectAllowed = "move"
-      e.dataTransfer.setData("text/plain", patientId)
-    },
-    [patients, canUserMovePatient],
-  )
+  const handleDragStart = useCallback((e: React.DragEvent, patientId: string) => {
+    setDraggingId(patientId)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", patientId)
+  }, [])
 
   const handleDragEnd = useCallback(() => {
     setDraggingId(null)
@@ -86,14 +66,8 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
       const patient = patients?.find((p) => p.id === patientId)
       if (!patient) return
 
-      // - Assignment gate on drop too —
-      if (!canUserMovePatient(patient)) {
-        toast.error("You can only move patients assigned to you")
-        return
-      }
-
-      const curIdx = STAGE_ORDER.indexOf(patient.stage)
-      const tgtIdx = STAGE_ORDER.indexOf(targetStage as PatientStage)
+      const curIdx = stageOrder.indexOf(patient.stage)
+      const tgtIdx = stageOrder.indexOf(targetStage as PatientStage)
       if (curIdx === tgtIdx) return
 
       if (tgtIdx > curIdx + 1) {
@@ -104,12 +78,12 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
       if (tgtIdx > curIdx) {
         const stageState = patient.checklistState?.[patient.stage] ?? {}
         const defs = await fetchChecklistDefs(patient.stage)
-        if (defs.length > 0) {
-          const allComplete = defs.every((item: any) => stageState[item.id] === true)
-          if (!allComplete) {
-            toast.error("Please complete all checklist items before moving to the next stage.")
-            return
-          }
+        // Only REQUIRED items gate forward moves (matches the server)
+        const requiredDefs = defs.filter((item: any) => item.status === "required")
+        const allComplete = requiredDefs.every((item: any) => stageState[item.id] === true)
+        if (!allComplete) {
+          toast.error("Please complete all required checklist items before moving to the next stage.")
+          return
         }
       }
 
@@ -120,7 +94,7 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
         pendingMoves.current.delete(patientId)
       }
     },
-    [patients, moveStage, canUserMovePatient],
+    [patients, moveStage, stageOrder],
   )
 
   const handleMoveStage = useCallback(
@@ -155,10 +129,10 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
     <>
       <div className="h-[calc(100vh-12rem)] -mx-6 -mb-6 overflow-x-auto">
         <div className="inline-flex h-full gap-3 p-6 min-w-max">
-          {STAGE_ORDER.map((stage) => {
+          {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
-            const isDisabled = stage === "reconciled"
+            const isDisabled = stageByKey.get(stage)?.isFinal ?? false
             return (
               <div
                 key={stage}
@@ -176,10 +150,10 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-[#036638] truncate">
-                        {STAGE_LABELS[stage]}
+                        {stageLabels[stage]}
                       </h3>
                       <p className="text-[10px] text-[#6B7280] mt-0.5">
-                        {STAGE_HINTS[stage]}
+                        {stageHints[stage]}
                       </p>
                     </div>
                     <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center shrink-0 border border-[#E5E7EB]">

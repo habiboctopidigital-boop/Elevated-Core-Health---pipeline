@@ -1,16 +1,13 @@
 "use client"
 
-import {
-  STAGE_ORDER,
-  STAGE_LABELS,
-  STAGE_HINTS,
-} from "@/types"
 import { ScrollText, CheckCircle, AlertTriangle, Flag, Loader2 } from "lucide-react"
 import { useChecklistItems } from "@/hooks/query/usePatients"
+import { useStageMeta } from "@/hooks/query/useStages"
 import { cn } from "@/lib/utils"
 
 export default function SOPPage() {
   const { data: items, isLoading } = useChecklistItems()
+  const { order: stageOrder, labels: stageLabels, hints: stageHints } = useStageMeta()
 
   const itemsByStage =
     items?.reduce(
@@ -73,15 +70,15 @@ export default function SOPPage() {
       </div>
 
       {/* Stage Checklists */}
-      {STAGE_ORDER.map((stage) => {
+      {stageOrder.map((stage) => {
         const stageItems = itemsByStage[stage] || []
         return (
           <div key={stage} className="bg-white rounded-xl border border-[#E5E7EB] p-5">
             <div className="mb-3">
               <h3 className="text-sm font-bold text-[#036638]">
-                {STAGE_LABELS[stage]}
+                {stageLabels[stage]}
               </h3>
-              <p className="text-xs text-[#6B7280]">{STAGE_HINTS[stage]}</p>
+              <p className="text-xs text-[#6B7280]">{stageHints[stage]}</p>
             </div>
             {isLoading ? (
               <div className="flex items-center gap-2 text-xs text-[#6B7280]">

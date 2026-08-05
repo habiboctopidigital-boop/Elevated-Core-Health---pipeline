@@ -1,13 +1,20 @@
 export type UserRole = "admin" | "va"
 
-export type PatientStage =
-  | "onboarding"
-  | "visit_complete"
-  | "post_visit_docs"
-  | "chart_signed"
-  | "sent_to_billing"
-  | "payment_posted"
-  | "reconciled"
+// Stages are DB-driven now — a stage key is just a stable string slug
+// (e.g. "onboarding"). The API returns the full list via GET /stages.
+export type PatientStage = string
+
+export interface PipelineStage {
+  id: string
+  key: string
+  name: string
+  hint: string | null
+  sortOrder: number
+  isFinal: boolean
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
 
 export interface User {
   id: string
@@ -21,6 +28,8 @@ export interface User {
 export type ChecklistStatus = "required" | "optional"
 
 export type EligibilityStatus = "not_checked" | "eligible" | "not_eligible"
+
+export type PatientStatus = "active" | "completed" | "cancelled"
 
 export interface ChecklistItemDef {
   id: string
@@ -50,9 +59,13 @@ export interface EligibilityDetails {
 export interface Patient {
   id: string
   name: string
+  firstName?: string | null
+  lastName?: string | null
+  location?: string | null
   email?: string | null
   phone?: string | null
   stage: PatientStage
+  status: PatientStatus
   assignedTo?: string | null
   assignedUser?: Pick<User, "id" | "name"> | null
   notes?: string | null
@@ -64,16 +77,25 @@ export interface Patient {
   flagClearedReason?: string | null
   flagClearedByUser?: Pick<User, "id" | "name"> | null
   flagClearedAt?: string | null
+  completedAt?: string | null
+  cancelledAt?: string | null
+  cancelledReason?: string | null
+  cancelledByUser?: Pick<User, "id" | "name"> | null
   source: string
   bookingPlatform?: string | null
   appointmentDatetime?: string | null
   paymentMethod?: string | null
   insuranceProvider?: string | null
   paymentDetails?: Record<string, unknown> | null
+  copayAmount?: string | null
+  amountPaid?: string | null
   eligibilityStatus: EligibilityStatus
   eligibilityCheckedAt?: string | null
   eligibilityDetails?: EligibilityDetails | null
   eligibilityReason?: string | null
+  isPrivate: boolean
+  privateLockedByUser?: Pick<User, "id" | "name"> | null
+  privateLockedAt?: string | null
   updatedAt: string
   createdAt: string
   activityLogs?: ActivityLog[]
@@ -85,8 +107,39 @@ export interface ActivityLog {
   author: string
   message: string
   type: "auto" | "manual"
+  actorId?: string | null
+  actor?: Pick<User, "id" | "name" | "role"> | null
+  action?: string | null
+  entityType?: string | null
+  entityId?: string | null
+  prevValue?: Record<string, unknown> | null
+  newValue?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
   createdAt: string
   patient?: Pick<Patient, "id" | "name">
+}
+
+export interface ImportBatch {
+  id: string
+  fileName: string
+  fileType: string
+  totalRows: number
+  successCount: number
+  failCount: number
+  duplicateCount: number
+  status: "processing" | "completed" | "completed_with_errors" | "failed"
+  errorDetails?: Array<{ row: number; message: string }> | null
+  importedByUser?: Pick<User, "id" | "name"> | null
+  createdAt: string
+  completedAt?: string | null
+}
+
+export interface CrmContactsResponse {
+  contacts: Patient[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
 }
 
 export interface AuthTokens {
@@ -130,6 +183,83 @@ export interface AdminAnalytics {
   reconciledThisWeek: number
 }
 
+export interface ReportTotals {
+  total: number
+  active: number
+  completed: number
+  cancelled: number
+}
+
+export interface StageCount {
+  stage: string
+  label: string
+  count: number
+}
+
+export interface WorkflowMetrics {
+  reconciledThisWeek: number
+  staleCount: number
+  flaggedCount: number
+  avgCompletionDays: number
+  completionRate: number
+}
+
+export interface VaComparisonRow {
+  id: string
+  name: string
+  assigned: number
+  active: number
+  completed: number
+  cancelled: number
+  handledCases: number
+  actions: number
+  avgCompletionDays: number
+  stageCompletionRate: number
+}
+
+export interface AdminReport {
+  totals: ReportTotals
+  byStage: StageCount[]
+  workflow: WorkflowMetrics
+  vaComparison: VaComparisonRow[]
+}
+
+export interface VaActions {
+  today: number
+  thisWeek: number
+  thisMonth: number
+}
+
+export interface VaReportPerformance {
+  handledCases: number
+  actions: VaActions
+  avgCompletionDays: number
+  stageCompletionRate: number
+}
+
+export interface ReportSeries {
+  label: string
+  count: number
+}
+
+export interface VaReport {
+  va: Pick<User, "id" | "name" | "email">
+  totals: {
+    assigned: number
+    active: number
+    completed: number
+    cancelled: number
+  }
+  workload: number
+  stageDistribution: StageCount[]
+  performance: VaReportPerformance
+  series: {
+    daily: ReportSeries[]
+    weekly: ReportSeries[]
+    monthly: ReportSeries[]
+  }
+}
+
 export interface ApiResponse<T> {
   success: boolean
   message: string
@@ -137,32 +267,23 @@ export interface ApiResponse<T> {
   statusCode: number
 }
 
-export const STAGE_LABELS: Record<PatientStage, string> = {
-  onboarding: "Onboarding",
-  visit_complete: "Visit Complete",
-  post_visit_docs: "Post-Visit Docs",
-  chart_signed: "Chart Signed",
-  sent_to_billing: "Sent to Billing",
-  payment_posted: "Payment Posted",
-  reconciled: "Reconciled",
-}
-
-export const STAGE_HINTS: Record<PatientStage, string> = {
-  onboarding: "Scheduled on calendar",
-  visit_complete: "Encounter finished",
-  post_visit_docs: "Letter + labs sent",
-  chart_signed: "Optimantra finalized",
-  sent_to_billing: "Claim submitted",
-  payment_posted: "Payment received",
-  reconciled: "Closed out",
-}
-
-export const STAGE_ORDER: PatientStage[] = [
-  "onboarding",
-  "visit_complete",
-  "post_visit_docs",
-  "chart_signed",
-  "sent_to_billing",
-  "payment_posted",
-  "reconciled",
+// Static fallback used while stages load from the API — never the source of truth.
+export const DEFAULT_STAGES: PipelineStage[] = [
+  { id: "stage_onboarding", key: "onboarding", name: "Onboarding", hint: "Scheduled on calendar", sortOrder: 0, isFinal: false, isActive: true },
+  { id: "stage_visit_complete", key: "visit_complete", name: "Visit Complete", hint: "Encounter finished", sortOrder: 1, isFinal: false, isActive: true },
+  { id: "stage_post_visit_docs", key: "post_visit_docs", name: "Post-Visit Docs", hint: "Letter + labs sent", sortOrder: 2, isFinal: false, isActive: true },
+  { id: "stage_chart_signed", key: "chart_signed", name: "Chart Signed", hint: "Optimantra finalized", sortOrder: 3, isFinal: false, isActive: true },
+  { id: "stage_sent_to_billing", key: "sent_to_billing", name: "Sent to Billing", hint: "Claim submitted", sortOrder: 4, isFinal: false, isActive: true },
+  { id: "stage_payment_posted", key: "payment_posted", name: "Payment Posted", hint: "Payment received", sortOrder: 5, isFinal: false, isActive: true },
+  { id: "stage_reconciled", key: "reconciled", name: "Reconciled", hint: "Closed out", sortOrder: 6, isFinal: true, isActive: true },
 ]
+
+export const STAGE_LABELS: Record<string, string> = Object.fromEntries(
+  DEFAULT_STAGES.map((s) => [s.key, s.name]),
+)
+
+export const STAGE_HINTS: Record<string, string> = Object.fromEntries(
+  DEFAULT_STAGES.map((s) => [s.key, s.hint ?? ""]),
+)
+
+export const STAGE_ORDER: string[] = DEFAULT_STAGES.map((s) => s.key)

@@ -1,19 +1,24 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-xl border bg-card text-card-foreground shadow",
-      className,
-    )}
-    {...props}
-  />
-))
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** "glass" adds a translucent blurred surface for premium hero/overlay contexts. */
+  variant?: "default" | "glass"
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant = "default", ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-xl border text-card-foreground shadow-[var(--shadow-card)] transition-shadow duration-200 hover:shadow-[var(--shadow-card-hover)]",
+        variant === "glass" ? "glass-card" : "bg-card",
+        className,
+      )}
+      {...props}
+    />
+  ),
+)
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<

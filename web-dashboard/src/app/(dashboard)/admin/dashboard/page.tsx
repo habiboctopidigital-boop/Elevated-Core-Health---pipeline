@@ -8,11 +8,11 @@ import { usePatients } from "@/hooks/query/usePatients"
 import { useAdminAnalytics } from "@/hooks/query/useAdmin"
 import { useClearFlag } from "@/hooks/query/usePatients"
 import { ROUTES } from "@/constants"
-import { STAGE_ORDER, STAGE_LABELS } from "@/types"
+import { useStageMeta } from "@/hooks/query/useStages"
 import {
   Columns3,
   Users,
-  CheckSquare,
+  Settings,
   AlertTriangle,
   Flag,
   Activity,
@@ -33,6 +33,7 @@ export default function AdminDashboardPage() {
   const { data: patients } = usePatients()
   const { data: analytics } = useAdminAnalytics()
   const clearFlagMutation = useClearFlag()
+  const { order: stageOrder, labels: stageLabels } = useStageMeta()
 
   const [clearingPatientId, setClearingPatientId] = useState<string | null>(null)
   const [clearReasonInput, setClearReasonInput] = useState("")
@@ -57,7 +58,7 @@ export default function AdminDashboardPage() {
   const quickActions = [
     { label: "Board", icon: Columns3, href: ROUTES.ADMIN.BOARD, desc: "Full pipeline view" },
     { label: "Users", icon: Users, href: ROUTES.ADMIN.USERS, desc: "Manage team accounts" },
-    { label: "Checklist", icon: CheckSquare, href: ROUTES.ADMIN.CHECKLIST, desc: "Configure checklist items" },
+    { label: "Stage Settings", icon: Settings, href: ROUTES.ADMIN.STAGES, desc: "Manage stages & checklists" },
     { label: "Profile", icon: User, href: ROUTES.ADMIN.PROFILE, desc: "Update your profile" },
   ]
 
@@ -227,14 +228,14 @@ export default function AdminDashboardPage() {
         <div className="bg-white rounded-xl border border-[#E5E7EB] p-5">
           <h2 className="text-sm font-bold text-[#036638] mb-4">Pipeline Overview</h2>
           <div className="space-y-3">
-            {STAGE_ORDER.map((stage) => {
+            {stageOrder.map((stage) => {
               const count = patientsByStage[stage] || 0
               const maxCount = Math.max(...Object.values(patientsByStage), 1)
               const barWidth = (count / maxCount) * 100
               return (
                 <div key={stage} className="flex items-center gap-3">
                   <span className="text-xs text-[#6B7280] w-28 truncate shrink-0">
-                    {STAGE_LABELS[stage]}
+                    {stageLabels[stage]}
                   </span>
                   <div className="flex-1 h-5 bg-[#EBF7EC] rounded-full overflow-hidden">
                     {count > 0 && (
@@ -305,6 +306,7 @@ function FlaggedPatientRow({
   onClearFlag: (id: string) => void
   isClearing: boolean
 }) {
+  const { labels: stageLabels } = useStageMeta()
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="w-8 h-8 rounded-lg bg-[#FEF2F2] flex items-center justify-center shrink-0">
@@ -318,7 +320,7 @@ function FlaggedPatientRow({
         </p>
       </div>
       <span className="text-[10px] bg-[#EBF7EC] text-[#036638] px-2 py-0.5 rounded font-medium capitalize shrink-0">
-        {STAGE_LABELS[patient.stage] || patient.stage}
+        {stageLabels[patient.stage] || patient.stage}
       </span>
       <Button
         variant="outline"

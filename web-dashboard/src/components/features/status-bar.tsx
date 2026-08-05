@@ -4,24 +4,21 @@ import { AlertTriangle, Flag, CheckCircle2 } from "lucide-react"
 import { useDashboard } from "@/hooks/query/useDashboard"
 import { cn } from "@/lib/utils"
 
+/** Compact status pill — lives in the Topbar. Rule: always-visible stale/flag summary. */
 export function StatusBar() {
   const { data: summary, isLoading, error } = useDashboard()
 
   if (isLoading) {
     return (
-      <div className="h-9 bg-[#EBF7EC] border-b border-[#65BD6C]/20 flex items-center px-6 gap-3">
-        <div className="h-2 w-20 bg-[#65BD6C]/20 rounded animate-pulse" />
-      </div>
+      <div className="h-8 w-40 rounded-full bg-gray-100 animate-pulse" />
     )
   }
 
   if (error || !summary) {
     return (
-      <div className="h-9 bg-[#FEF2F2] border-b border-red-200 flex items-center px-6">
-        <AlertTriangle className="w-3.5 h-3.5 text-red-500 mr-2" />
-        <span className="text-[11px] text-red-600 font-medium">
-          Could not load status
-        </span>
+      <div className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-red-50 border border-red-100">
+        <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+        <span className="text-[11px] text-red-600 font-semibold">Status unavailable</span>
       </div>
     )
   }
@@ -31,10 +28,8 @@ export function StatusBar() {
   return (
     <div
       className={cn(
-        "h-9 border-b flex items-center px-6 gap-4 text-[11px] font-medium",
-        hasIssues
-          ? "bg-[#FEFCE8] border-[#FBE7B2]"
-          : "bg-[#EBF7EC] border-[#65BD6C]/20",
+        "flex items-center h-8 px-3 rounded-full gap-3 text-[11px] font-semibold border transition-colors",
+        hasIssues ? "bg-amber-50 border-amber-200" : "bg-[#EBF7EC] border-[#65BD6C]/20",
       )}
     >
       {hasIssues ? (
@@ -42,13 +37,13 @@ export function StatusBar() {
           {summary.staleCount > 0 && (
             <span className="flex items-center gap-1.5 text-amber-700">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-              {summary.staleCount} stale card{summary.staleCount !== 1 ? "s" : ""}
+              {summary.staleCount} stale
             </span>
           )}
           {summary.flaggedCount > 0 && (
             <span className="flex items-center gap-1.5 text-amber-700">
               <Flag className="w-3.5 h-3.5 text-amber-500" />
-              {summary.flaggedCount} flagged card{summary.flaggedCount !== 1 ? "s" : ""}
+              {summary.flaggedCount} flagged
             </span>
           )}
         </>

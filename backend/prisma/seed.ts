@@ -7,6 +7,58 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+const STAGE_SEEDS = [
+	{
+		key: "onboarding",
+		name: "Onboarding",
+		hint: "Scheduled on calendar",
+		sortOrder: 1,
+		isFinal: false,
+	},
+	{
+		key: "visit_complete",
+		name: "Visit Complete",
+		hint: "Encounter finished",
+		sortOrder: 2,
+		isFinal: false,
+	},
+	{
+		key: "post_visit_docs",
+		name: "Post-Visit Docs",
+		hint: "Letter + labs sent",
+		sortOrder: 3,
+		isFinal: false,
+	},
+	{
+		key: "chart_signed",
+		name: "Chart Signed",
+		hint: "Optimantra finalized",
+		sortOrder: 4,
+		isFinal: false,
+	},
+	{
+		key: "sent_to_billing",
+		name: "Sent to Billing",
+		hint: "Claim submitted",
+		sortOrder: 5,
+		isFinal: false,
+	},
+	{
+		key: "payment_posted",
+		name: "Payment Posted",
+		hint: "Payment received",
+		sortOrder: 6,
+		isFinal: false,
+	},
+	{
+		key: "reconciled",
+		name: "Reconciled",
+		hint: "Closed out",
+		sortOrder: 7,
+		isFinal: true,
+	},
+];
+
 const CHECKLIST_SEEDS = [
 	// Onboarding — required items (gate advancement)
 	{
@@ -145,6 +197,26 @@ async function main() {
 	]);
 
 	console.log(`Created ${users.length} users`);
+
+	// Non-destructive: existing stages (and any admin edits) are left untouched.
+	const stages = await Promise.all(
+		STAGE_SEEDS.map((stage) =>
+			prisma.stage.upsert({
+				where: { key: stage.key },
+				update: {},
+				create: {
+					key: stage.key,
+					name: stage.name,
+					hint: stage.hint,
+					sortOrder: stage.sortOrder,
+					isFinal: stage.isFinal,
+					isActive: true,
+				},
+			}),
+		),
+	);
+
+	console.log(`Created ${stages.length} stages`);
 
 	const checklistItems = await Promise.all(
 		CHECKLIST_SEEDS.map((item) =>

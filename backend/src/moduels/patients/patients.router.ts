@@ -15,6 +15,8 @@ import {
 	IntakeSchema,
 	NotesSchema,
 	StageMoveSchema,
+	UpdatePatientSchema,
+	UpdateStatusSchema,
 } from "./patients.validation";
 
 export const patientsRouter: Router = Router();
@@ -43,6 +45,15 @@ patientsRouter.get("/checklist-items", patientsController.listChecklistItems);
 patientsRouter.get("/:id", patientsController.getById);
 patientsRouter.patch("/:id/stage", validateRequest(StageMoveSchema), patientsController.moveStage);
 patientsRouter.patch("/:id/assign", validateRequest(AssignSchema), patientsController.assign);
+patientsRouter.patch("/:id", validateRequest(UpdatePatientSchema), patientsController.updatePatient);
+patientsRouter.post("/:id/lock", patientsController.lockPatient);
+patientsRouter.post("/:id/unlock", patientsController.unlockPatient);
+patientsRouter.patch(
+	"/:id/status",
+	requireRole("admin"),
+	validateRequest(UpdateStatusSchema),
+	patientsController.updateStatus,
+);
 patientsRouter.patch("/:id/checklist", validateRequest(ChecklistToggleSchema), patientsController.toggleChecklist);
 patientsRouter.post("/:id/notes", validateRequest(NotesSchema), patientsController.updateNotes);
 patientsRouter.post("/:id/flag", validateRequest(FlagSchema), patientsController.flag);

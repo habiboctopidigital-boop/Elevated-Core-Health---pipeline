@@ -5,6 +5,8 @@ export const ActivityLogQuerySchema = z.object({
 		patientId: z.string().optional(),
 		type: z.enum(["auto", "manual"]).optional(),
 		author: z.string().optional(),
+		actorId: z.string().uuid().optional(),
+		action: z.string().optional(),
 		startDate: z.string().optional(),
 		endDate: z.string().optional(),
 		page: z.coerce.number().int().positive().default(1),
