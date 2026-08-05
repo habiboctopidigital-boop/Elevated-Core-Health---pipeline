@@ -601,15 +601,19 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Checklist */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
-                    Checklist - {stageLabels[patient.stage]}
-                    {checklistBusy && <Loader2 className="w-3.5 h-3.5 text-[#036638] animate-spin" />}
-                  </p>
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-[#EBF7EC] rounded-lg border border-[#65BD6C]/20">
+                      <CheckCheck className="w-4 h-4 text-[#036638]" />
+                    </div>
+                    <h3 className="text-sm font-bold text-[#1A1B1E] uppercase tracking-wide">
+                      Checklist - {stageLabels[patient.stage]}
+                    </h3>
+                    {checklistBusy && <Loader2 className="w-3.5 h-3.5 text-[#036638] animate-spin ml-1" />}
+                  </div>
                   {!allComplete && totalItems > 0 && !isAdmin && (
-                    <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 shadow-sm">
                       {totalItems - completedItems} remaining
                     </span>
                   )}
@@ -650,13 +654,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     )}
 
                     {/* Check All / Uncheck All */}
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <div className="flex flex-wrap items-center gap-2 mb-5 mt-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleBulkChecklist(true)}
                         disabled={checklistBusy}
-                        className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] hover:border-[#036638]/60"
+                        className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:text-[#025030] bg-[#F0F9F5] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-all shadow-sm font-semibold"
                       >
                         <CheckCheck className="w-3.5 h-3.5" />
                         Check All
@@ -666,14 +670,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         variant="outline"
                         onClick={() => handleBulkChecklist(false)}
                         disabled={checklistBusy}
-                        className="text-xs gap-1.5 border-[#E5E7EB] text-[#6B7280] hover:bg-gray-50 hover:text-[#1A1B1E]"
+                        className="text-xs gap-1.5 border-[#E5E7EB] text-[#4B5563] hover:text-[#1A1B1E] bg-white hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm font-medium"
                       >
                         <ListX className="w-3.5 h-3.5" />
                         Uncheck All
                       </Button>
                       {bulkPending && (
-                        <span className="text-[10px] font-medium text-[#036638] flex items-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
+                        <span className="text-[10px] font-medium text-[#036638] flex items-center gap-1.5 ml-2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           Updating...
                         </span>
                       )}
@@ -1028,147 +1032,197 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               )}
 
               {/* Patient Status & Access */}
-              <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 shadow-sm">
-                <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
-                  Status & Access
-                </p>
-
-                {/* Status pills */}
-                <div className="flex flex-wrap items-center gap-2 mb-5">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
-                      patient.status === "active" && "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/40",
-                      patient.status === "completed" && "bg-[#65BD6C]/15 text-[#025030] border-[#65BD6C]/50",
-                      patient.status === "cancelled" && "bg-red-50 text-red-700 border-red-200",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        patient.status === "active" && "bg-[#3FA66E]",
-                        patient.status === "completed" && "bg-[#036638]",
-                        patient.status === "cancelled" && "bg-red-500",
-                      )}
-                    />
-                    {patient.status === "active"
-                      ? "Active"
-                      : patient.status === "completed"
-                        ? "Completed"
-                        : "Cancelled"}
-                  </span>
-
-                  {patient.isPrivate ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-300 bg-amber-50 text-amber-800">
-                      <Lock className="w-3 h-3" />
-                      Locked{patient.privateLockedByUser ? ` by ${patient.privateLockedByUser.name}` : ""}
-                      {patient.privateLockedAt && ` • ${new Date(patient.privateLockedAt).toLocaleString()}`}
-                    </span>
-                  ) : patient.status === "active" ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-[#6B7280]">
-                      <Unlock className="w-3 h-3" />
-                      Open — any VA can work
-                    </span>
-                  ) : null}
+              <div className="bg-gradient-to-br from-white to-[#F9FAFB] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                {/* Decorative background element */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#EBF7EC]/50 to-transparent rounded-bl-full pointer-events-none" />
+                
+                <div className="flex items-center gap-2 mb-5 relative z-10">
+                  <div className="p-1.5 bg-[#EBF7EC] rounded-lg border border-[#65BD6C]/20">
+                    <Shield className="w-4 h-4 text-[#036638]" />
+                  </div>
+                  <h3 className="text-sm font-bold text-[#1A1B1E] uppercase tracking-wide">
+                    Status & Access
+                  </h3>
                 </div>
 
-                {/* Actions */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {patient.isPrivate ? (
-                    canUnlock ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => unlockPatient.mutate(patient.id)}
-                        disabled={unlockPatient.isPending}
-                        className="text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
-                      >
-                        <Unlock className="w-3.5 h-3.5" />
-                        {unlockPatient.isPending ? "Unlocking..." : "Unlock"}
-                      </Button>
-                    ) : (
-                      <p className="text-xs text-[#6B7280] flex items-center gap-1.5 py-1.5">
-                        <Lock className="w-3.5 h-3.5" />
-                        Only {patient.privateLockedByUser?.name ?? "the locking VA"} or an admin can edit.
-                      </p>
-                    )
-                  ) : canLock ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => lockPatient.mutate(patient.id)}
-                      disabled={lockPatient.isPending}
-                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      {lockPatient.isPending ? "Locking..." : "Lock (restrict other VAs)"}
-                    </Button>
-                  ) : (
-                    <p className="text-xs text-[#6B7280] flex items-center gap-1.5 py-1.5">
-                      <Lock className="w-3.5 h-3.5" />
-                      Only the assigned VA or an admin can lock this patient.
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                  {/* Status Side */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
+                      Current Status
                     </p>
-                  )}
-
-                  {isAdmin && patient.status !== "cancelled" && !showCancelInput && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowCancelInput(true)}
-                      className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
-                    >
-                      <Ban className="w-3.5 h-3.5" />
-                      Mark Cancelled
-                    </Button>
-                  )}
-                  {isAdmin && patient.status === "cancelled" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateStatus.mutate({ id: patient.id, status: "active" })}
-                      disabled={updateStatus.isPending}
-                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC]"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      {updateStatus.isPending ? "Reactivating..." : "Reactivate"}
-                    </Button>
-                  )}
-                </div>
-
-                {isAdmin && showCancelInput && (
-                  <div className="space-y-2 mt-3">
-                    <Textarea
-                      placeholder="Reason for cancelling (optional)..."
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                      className="text-sm min-h-[60px]"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleCancelPatient}
-                        disabled={updateStatus.isPending}
-                        className="bg-red-600 hover:bg-red-700 text-white text-xs"
+                    <div className="flex flex-col items-start gap-2.5">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-sm transition-all",
+                          patient.status === "active" && "bg-white text-[#036638] border-[#65BD6C]/40 ring-1 ring-[#65BD6C]/10",
+                          patient.status === "completed" && "bg-[#65BD6C]/10 text-[#025030] border-[#65BD6C]/40",
+                          patient.status === "cancelled" && "bg-white text-red-700 border-red-200 ring-1 ring-red-100",
+                        )}
                       >
-                        {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowCancelInput(false)}
-                        className="text-xs"
-                      >
-                        Cancel
-                      </Button>
+                        <span
+                          className={cn(
+                            "w-2 h-2 rounded-full shadow-inner",
+                            patient.status === "active" && "bg-[#3FA66E] shadow-[#025030]/40",
+                            patient.status === "completed" && "bg-[#036638]",
+                            patient.status === "cancelled" && "bg-red-500",
+                          )}
+                        />
+                        {patient.status === "active"
+                          ? "Active"
+                          : patient.status === "completed"
+                            ? "Completed"
+                            : "Cancelled"}
+                      </span>
+
+                      {patient.isPrivate ? (
+                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border border-amber-300 bg-amber-50 text-amber-800 shadow-sm">
+                          <Lock className="w-3.5 h-3.5" />
+                          <div className="flex flex-col">
+                            <span>Locked{patient.privateLockedByUser ? ` by ${patient.privateLockedByUser.name}` : ""}</span>
+                            {patient.privateLockedAt && (
+                              <span className="text-[9px] font-medium opacity-80 -mt-0.5">
+                                {new Date(patient.privateLockedAt).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : patient.status === "active" ? (
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium border border-gray-200 bg-white text-[#6B7280] shadow-sm">
+                          <Unlock className="w-3.5 h-3.5" />
+                          Open — any VA can work
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                )}
-                {patient.status === "cancelled" && patient.cancelledReason && (
-                  <p className="text-xs text-[#6B7280] mt-2 bg-red-50 border border-red-100 rounded-lg p-2.5">
-                    <span className="font-semibold text-red-700">Reason:</span> {patient.cancelledReason}
-                  </p>
-                )}
+
+                  {/* Actions Side */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
+                      Access Controls
+                    </p>
+                    <div className="flex flex-col gap-2.5">
+                      {patient.isPrivate ? (
+                        canUnlock ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => unlockPatient.mutate(patient.id)}
+                            disabled={unlockPatient.isPending}
+                            className="w-full text-xs gap-2 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-900 transition-all shadow-sm font-semibold justify-start"
+                          >
+                            <Unlock className="w-3.5 h-3.5" />
+                            {unlockPatient.isPending ? "Unlocking..." : "Unlock Access"}
+                          </Button>
+                        ) : (
+                          <div className="text-xs text-amber-700/80 flex items-start gap-2 py-2 px-3 bg-amber-50/50 rounded-lg border border-amber-100">
+                            <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                            <p>Only <span className="font-semibold">{patient.privateLockedByUser?.name ?? "the locking VA"}</span> or an admin can edit.</p>
+                          </div>
+                        )
+                      ) : canLock ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => lockPatient.mutate(patient.id)}
+                          disabled={lockPatient.isPending}
+                          className="w-full text-xs gap-2 border-[#036638]/30 text-[#036638] hover:text-[#025030] bg-[#F0F9F5] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-all shadow-sm font-semibold justify-start"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          {lockPatient.isPending ? "Locking..." : "Lock (restrict other VAs)"}
+                        </Button>
+                      ) : (
+                        <div className="text-xs text-[#6B7280] flex items-start gap-2 py-2 px-3 bg-gray-50 rounded-lg border border-gray-100">
+                          <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                          <p>Only the assigned VA or an admin can lock this patient.</p>
+                        </div>
+                      )}
+
+                      {isAdmin && patient.status !== "cancelled" && !showCancelInput && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowCancelInput(true)}
+                          className="w-full text-xs gap-2 border-red-200 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-800 hover:border-red-300 transition-all shadow-sm font-semibold justify-start"
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                          Mark Cancelled
+                        </Button>
+                      )}
+                      {isAdmin && patient.status === "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateStatus.mutate({ id: patient.id, status: "active" })}
+                          disabled={updateStatus.isPending}
+                          className="w-full text-xs gap-2 border-[#036638]/30 text-[#036638] hover:text-[#025030] hover:bg-[#EBF7EC] transition-all shadow-sm font-semibold justify-start"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          {updateStatus.isPending ? "Reactivating..." : "Reactivate Patient"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cancel Input Area */}
+                <div className={cn(
+                  "grid transition-all duration-300 ease-in-out",
+                  (isAdmin && showCancelInput) || (patient.status === "cancelled" && patient.cancelledReason)
+                    ? "grid-rows-[1fr] mt-5 opacity-100" 
+                    : "grid-rows-[0fr] opacity-0"
+                )}>
+                  <div className="overflow-hidden">
+                    <div className="pt-4 border-t border-gray-100">
+                      {isAdmin && showCancelInput && (
+                        <div className="space-y-3 bg-red-50/50 p-4 rounded-xl border border-red-100">
+                          <p className="text-[11px] font-bold text-red-800 uppercase tracking-widest flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Cancellation Reason
+                          </p>
+                          <Textarea
+                            placeholder="Optional reason for cancelling..."
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            className="text-sm min-h-[80px] bg-white border-red-200 focus:border-red-400 focus:ring-red-400"
+                          />
+                          <div className="flex gap-2.5">
+                            <Button
+                              size="sm"
+                              onClick={handleCancelPatient}
+                              disabled={updateStatus.isPending}
+                              className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm"
+                            >
+                              {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowCancelInput(false)}
+                              className="text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {patient.status === "cancelled" && patient.cancelledReason && (
+                        <div className="bg-red-50/80 border border-red-100 rounded-xl p-4 flex gap-3">
+                          <div className="mt-0.5">
+                            <Ban className="w-4 h-4 text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-red-800 mb-1">Cancellation Reason</p>
+                            <p className="text-sm text-red-900/80 leading-relaxed">
+                              {patient.cancelledReason}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Contact & Payment Info */}
@@ -1250,7 +1304,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFlagInput(true)}
-                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-colors"
+                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:text-[#025030] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-colors shadow-sm font-medium"
                     >
                       <Flag className="w-3.5 h-3.5" />
                       Flag for Donna
