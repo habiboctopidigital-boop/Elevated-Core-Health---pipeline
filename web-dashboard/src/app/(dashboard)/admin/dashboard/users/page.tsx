@@ -6,6 +6,7 @@ import { Loader2, Plus, Pencil, Trash2, Shield, User as UserIcon } from "lucide-
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { SettingsNav } from "@/components/features/settings-nav"
 import type { User } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -81,11 +82,15 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="space-y-4  max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-[#1A1B1E]">User Management</h1>
-          <p className="text-sm text-[#6B7280] mt-0.5">
+    <>
+      {/* Settings Navigation - Top */}
+      <SettingsNav currentPage="users" />
+
+      <div className="space-y-4  max-w-[1600px] mx-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-[#1A1B1E]">User Management</h1>
+            <p className="text-sm text-[#6B7280] mt-0.5">
             Manage the three portal accounts
           </p>
         </div>
@@ -255,6 +260,7 @@ export default function AdminUsersPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   )
 }

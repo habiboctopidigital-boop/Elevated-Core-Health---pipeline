@@ -17,6 +17,7 @@ import {
 	StageMoveSchema,
 	UpdatePatientSchema,
 	UpdateStatusSchema,
+	UpdateAppointmentSchema,
 } from "./patients.validation";
 
 export const patientsRouter: Router = Router();
@@ -56,6 +57,7 @@ patientsRouter.patch(
 );
 patientsRouter.patch("/:id/checklist", validateRequest(ChecklistToggleSchema), patientsController.toggleChecklist);
 patientsRouter.post("/:id/notes", validateRequest(NotesSchema), patientsController.updateNotes);
+patientsRouter.patch("/:id/appointment", validateRequest(UpdateAppointmentSchema), patientsController.updateAppointment);
 patientsRouter.post("/:id/flag", validateRequest(FlagSchema), patientsController.flag);
 patientsRouter.post(
 	"/:id/check-eligibility",

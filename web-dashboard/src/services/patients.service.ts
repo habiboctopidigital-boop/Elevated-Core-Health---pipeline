@@ -167,4 +167,27 @@ export const PatientsService = {
     )
     return data.data
   },
+
+  async addPatient(input: {
+    name: string
+    email?: string | null
+    phone?: string | null
+    appointmentDatetime?: string | null
+    bookingPlatform?: string | null
+    assignedTo?: string | null
+  }): Promise<Patient> {
+    const { data } = await axiosInstance.post<ApiResponse<Patient>>(
+      API_ENDPOINTS.PATIENTS_INTAKE_TEST,
+      input,
+    )
+    return data.data
+  },
+
+  async updateAppointment(id: string, appointmentDatetime: string): Promise<Patient> {
+    const { data } = await axiosInstance.patch<ApiResponse<Patient>>(
+      `${API_ENDPOINTS.PATIENTS}/${id}/appointment`,
+      { appointmentDatetime },
+    )
+    return data.data
+  },
 }

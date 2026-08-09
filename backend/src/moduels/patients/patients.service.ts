@@ -20,6 +20,7 @@ import type {
 	StageMoveInput,
 	UpdatePatientInput,
 	UpdateStatusInput,
+	UpdateAppointmentInput,
 } from "./patients.validation";
 
 /**
@@ -779,6 +780,37 @@ export const patientsService = {
 		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
 		const firstStage = await getFirstStageKey();
 
+		// Auto-assign VA: prioritize vaName from webhook, then fall back to appointment time
+		let assignedTo: string | null = null;
+		let assignmentMethod = "none";
+
+		// Get all VAs
+		const vas = await prisma.user.findMany({
+			where: { role: "va" },
+			select: { id: true, name: true },
+		});
+
+		// 1. If vaName provided in webhook, try to find and assign to that VA
+		if (input.vaName && input.vaName.trim()) {
+			const namedVa = vas.find((va) => va.name?.toLowerCase().includes(input.vaName!.toLowerCase()));
+			if (namedVa) {
+				assignedTo = namedVa.id;
+				assignmentMethod = `webhook_va_name (${input.vaName})`;
+			}
+		}
+
+		// 2. If not assigned yet and appointment time provided, use time-based assignment
+		if (!assignedTo && appointmentDatetime) {
+			const appointmentHour = appointmentDatetime.getHours();
+			const jude = vas.find((va) => va.name?.toLowerCase().includes("jude"));
+			const amanda = vas.find((va) => va.name?.toLowerCase().includes("amanda"));
+
+			assignedTo = appointmentHour < 12 ? jude?.id ?? null : amanda?.id ?? null;
+			if (assignedTo) {
+				assignmentMethod = "appointment_time";
+			}
+		}
+
 		const patient = await prisma.patient.create({
 			data: {
 				name: input.name,
@@ -794,18 +826,22 @@ export const patientsService = {
 				source: "webhook",
 				checklistState: {},
 				notes: null,
+				assignedTo,
 			},
 		});
 
 		const platformLabel = input.bookingPlatform ?? "email";
+		const assignmentNote = assignedTo
+			? ` — Auto-assigned via ${assignmentMethod}`
+			: "";
 		await audit({
 			patientId: patient.id,
 			user: null,
 			action: "patient.create",
 			entityType: "patient",
 			entityId: patient.id,
-			newValue: { source: "webhook", platform: platformLabel },
-			message: `New patient auto-created from booking email (${platformLabel})`,
+			newValue: { source: "webhook", platform: platformLabel, assignedTo, assignmentMethod },
+			message: `New patient auto-created from booking email (${platformLabel})${assignmentNote}`,
 			type: "auto",
 		});
 
@@ -833,5 +869,91 @@ export const patientsService = {
 		}
 
 		return ServiceResponse.success("Patient created from webhook intake.", patient, StatusCodes.CREATED);
+	},
+
+	async updateAppointment(id: string, input: UpdateAppointmentInput, user: AuthenticatedUser) {
+		const patient = await prisma.patient.findUnique({
+			where: { id },
+			include: {
+				assignedUser: { select: { id: true, name: true, email: true } },
+			},
+		});
+
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
+		const newDateTime = new Date(input.appointmentDatetime);
+		const oldDateTime = patient.appointmentDatetime;
+
+		// Auto-assign VA based on appointment time if patient not already assigned
+		let newAssignedTo = patient.assignedTo;
+		if (!patient.assignedTo && newDateTime) {
+			const appointmentHour = newDateTime.getHours();
+			const vas = await prisma.user.findMany({
+				where: { role: "va" },
+				select: { id: true, name: true },
+			});
+
+			// Find Jude (morning shifts, < 12pm) and Amanda (evening shifts, >= 12pm)
+			const jude = vas.find((va) => va.name?.toLowerCase().includes("jude"));
+			const amanda = vas.find((va) => va.name?.toLowerCase().includes("amanda"));
+
+			newAssignedTo = appointmentHour < 12 ? jude?.id ?? null : amanda?.id ?? null;
+		}
+
+		const updated = await prisma.patient.update({
+			where: { id },
+			data: {
+				appointmentDatetime: newDateTime,
+				assignedTo: newAssignedTo,
+				updatedAt: new Date(),
+				updatedById: user.id,
+			},
+			include: {
+				assignedUser: { select: { id: true, name: true, email: true } },
+			},
+		});
+
+		const autoAssignmentNote = newAssignedTo && !patient.assignedTo
+			? ` — Auto-assigned based on appointment time`
+			: "";
+		await audit({
+			patientId: id,
+			user,
+			action: "appointment.update",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { appointmentDatetime: oldDateTime, assignedTo: patient.assignedTo },
+			newValue: { appointmentDatetime: newDateTime, assignedTo: newAssignedTo },
+			message: `Appointment rescheduled to ${newDateTime.toLocaleDateString("en-US")} at ${newDateTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}${autoAssignmentNote}`,
+		});
+
+		// Send notification emails
+		try {
+			const admin = await prisma.user.findFirst({ where: { role: "admin" }, select: { email: true } });
+			if (admin?.email && patient.email) {
+				await emailService.notifyAppointmentChanged(
+					patient.name,
+					patient.email,
+					newDateTime,
+					user.name,
+					admin.email,
+				);
+			}
+		} catch (err) {
+			logger.error({ err, patientId: id }, "Failed to send appointment change notification emails");
+			// Don't fail the update if email fails - still return success
+		}
+
+		return ServiceResponse.success("Appointment updated and notifications sent.", updated);
 	},
 };

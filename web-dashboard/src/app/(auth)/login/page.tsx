@@ -7,6 +7,7 @@ import { loginSchema, type LoginFormData } from "@/schemas/auth.schema"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { ROUTES } from "@/constants"
 
@@ -37,8 +38,15 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md rounded-md bg-white p-10">
           <div className="mb-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#036638] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#036638]/20">
-              <span className="text-white text-2xl font-bold tracking-tight">ECH</span>
+            <div className="flex justify-center mb-6">
+              <Image
+                src="/logo.png"
+                alt="Elevated Core Health Logo"
+                width={100}
+                height={100}
+                priority
+                className="h-24 w-auto"
+              />
             </div>
             <h1 className="text-xl font-bold text-[#1A1B1E]">Welcome back</h1>
             <p className="text-sm text-[#6B7280] mt-1">

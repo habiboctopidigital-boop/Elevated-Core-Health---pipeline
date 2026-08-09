@@ -78,25 +78,23 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className={cn(
-        "flex items-center h-16 border-b border-white/5 px-5 relative",
-        isCollapsed ? "justify-center" : "gap-3"
+        "flex items-center justify-center h-20 border-b border-white/5 px-4 relative",
+        isCollapsed ? "w-20" : "w-64"
       )}>
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#036638] to-[#024a28] flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(3,102,56,0.4)] border border-white/20">
-          <span className="text-white text-xs font-bold font-space tracking-wide">ECH</span>
+        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
+          <Image
+            src="/logo.png"
+            alt="Elevated Core Health"
+            width={48}
+            height={48}
+            priority
+            className="w-12 h-12 object-contain"
+          />
         </div>
-        {!isCollapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="text-white text-sm font-semibold truncate leading-tight">
-              Elevated Core
-            </p>
-            <p className="text-[#65BD6C] text-[10px] font-medium uppercase tracking-wider">
-              Pipeline Portal
-            </p>
-          </div>
-        )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#2D3139] border border-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#3E434D] transition-colors z-40"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#2D3139] border border-white/10 rounded-full items-center justify-center text-gray-400 hover:text-white hover:bg-[#3E434D] transition-colors z-40 hidden lg:flex"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
         </button>

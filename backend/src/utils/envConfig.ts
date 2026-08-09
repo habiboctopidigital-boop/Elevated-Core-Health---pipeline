@@ -29,6 +29,9 @@ const envSchema = z.object({
 
 	RESEND_API_KEY: emptyToUndefined(z.string().optional()),
 	FROM_EMAIL: z.string().default("notifications@elevatedcorehealth.com"),
+
+	GMAIL_USER: emptyToUndefined(z.string().email().optional()),
+	GMAIL_APP_PASSWORD: emptyToUndefined(z.string().optional()),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { AuthService } from "@/services/auth.service"
 import { User, Shield, Save, Key, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SettingsNav } from "./settings-nav"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +15,14 @@ export function ProfilePage() {
   const [name, setName] = useState(user?.name || "")
   const [email, setEmail] = useState(user?.email || "")
   const [saving, setSaving] = useState(false)
+
+  // Sync fields when user data arrives
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? "")
+      setEmail(user.email ?? "")
+    }
+  }, [user])
 
   const [showPasswordForm, setShowPasswordForm] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
@@ -58,13 +67,17 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-xl font-bold text-[#1A1B1E]">Profile</h1>
-        <p className="text-sm text-[#6B7280] mt-0.5">
-          Manage your account details and security
-        </p>
-      </div>
+    <>
+      {/* Settings Navigation - Top */}
+      <SettingsNav currentPage="profile" />
+
+      <div className="space-y-6 max-w-4xl">
+        <div>
+          <h1 className="text-xl font-bold text-[#1A1B1E]">Profile</h1>
+          <p className="text-sm text-[#6B7280] mt-0.5">
+            Manage your account details and security
+          </p>
+        </div>
 
       {/* Account Info */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 space-y-4">
@@ -107,8 +120,8 @@ export function ProfilePage() {
             <Button
               size="sm"
               onClick={handleSaveProfile}
-              disabled={saving}
-              className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
+              disabled={saving || !name.trim() || !email.trim()}
+              className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -199,5 +212,6 @@ export function ProfilePage() {
         )}
       </div>
     </div>
+    </>
   )
 }

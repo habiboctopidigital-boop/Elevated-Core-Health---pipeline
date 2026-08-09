@@ -68,7 +68,6 @@ export function useBulkUpload() {
 
     try {
       const result = await ImportService.uploadFile(file)
-      console.log("=== PARSED IMPORT DATA ===", { fileName: file.name, totalRows: result.totalRows, data: result.data })
       setState({ status: "success", file, result })
 
       const previewRows = result.data.slice(0, 20)

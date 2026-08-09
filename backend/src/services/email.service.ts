@@ -1,10 +1,24 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { env } from "@/utils/envConfig";
 import { logger } from "@/utils/logger";
 
 const APP_URL = env.CORS_ORIGIN || "http://localhost:3000";
 const FROM_NAME = "Elevated Core Health";
 const FROM_EMAIL = env.FROM_EMAIL;
+
+// Initialize Nodemailer transporter for Gmail
+let gmailTransporter: nodemailer.Transporter | null = null;
+
+if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) {
+	gmailTransporter = nodemailer.createTransport({
+		service: "gmail",
+		auth: {
+			user: env.GMAIL_USER,
+			pass: env.GMAIL_APP_PASSWORD,
+		},
+	});
+}
 
 function brandedWrapper(htmlBody: string): string {
 	return `<!DOCTYPE html>
@@ -84,7 +98,7 @@ async function sendResend(params: SendEmailParams): Promise<void> {
 	try {
 		const resend = new Resend(env.RESEND_API_KEY);
 		const { data, error } = await resend.emails.send({
-			from: `My App <onboarding@resend.dev>`,
+			from: `${FROM_NAME} <${FROM_EMAIL}>`,
 			to: Array.isArray(params.to) ? params.to : [params.to],
 			subject: params.subject,
 			html: params.html,
@@ -253,5 +267,105 @@ ${buttonHtml(`${APP_URL}/admin/dashboard`, "Review in Admin Dashboard")}
 			subject: `FLAG: ${patientName} needs your review`,
 			html,
 		});
+	},
+
+	/**
+	 * Notify patient and admin when appointment date/time is changed
+	 */
+	async notifyAppointmentChanged(
+		patientName: string,
+		patientEmail: string,
+		newDateTime: Date,
+		changedBy: string,
+		adminEmail: string,
+	) {
+		const formattedDate = newDateTime.toLocaleDateString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		});
+		const formattedTime = newDateTime.toLocaleTimeString("en-US", {
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: true,
+		});
+
+		// Patient email
+		const patientHtml = brandedWrapper(`
+<h2 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#1A1B1E;">📅 Your Appointment Has Been Rescheduled</h2>
+<p style="margin:0 0 16px 0;font-size:14px;color:#6B7280;line-height:1.6;">
+  Your upcoming appointment with Elevated Core Health has been rescheduled.
+</p>
+<div style="background-color:#EBF7EC;border-left:4px solid #036638;border-radius:6px;padding:16px;margin-bottom:16px;">
+  <p style="margin:0 0 12px 0;font-size:14px;color:#6B7280;">
+    <strong>New Appointment Date & Time:</strong>
+  </p>
+  <p style="margin:0;font-size:16px;font-weight:600;color:#036638;">
+    ${formattedDate} at ${formattedTime}
+  </p>
+</div>
+<p style="margin:0 0 4px 0;font-size:14px;color:#374151;">
+  Please update your calendar and let us know if you have any questions.
+</p>
+${buttonHtml(`${APP_URL}/dashboard/board`, "View Your Schedule")}
+`);
+
+		// Admin email
+		const adminHtml = brandedWrapper(`
+<h2 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#1A1B1E;">📅 Appointment Rescheduled</h2>
+<div style="background-color:#EBF7EC;border-left:4px solid #036638;border-radius:6px;padding:16px;margin-bottom:16px;">
+  <p style="margin:0;font-size:16px;font-weight:600;color:#036638;">${patientName}</p>
+  <p style="margin:6px 0 0 0;font-size:14px;color:#4B5563;">
+    <strong>New Date & Time:</strong> ${formattedDate} at ${formattedTime}
+  </p>
+  <p style="margin:4px 0 0 0;font-size:14px;color:#4B5563;">
+    <strong>Changed by:</strong> ${changedBy}
+  </p>
+</div>
+${buttonHtml(`${APP_URL}/admin/dashboard`, "View in Dashboard")}
+`);
+
+		// Send using Nodemailer if Gmail is configured, otherwise fall back to Resend
+		if (gmailTransporter) {
+			try {
+				// Send to patient
+				if (patientEmail) {
+					await gmailTransporter.sendMail({
+						from: env.GMAIL_USER,
+						to: patientEmail,
+						subject: `Appointment Rescheduled - ${formattedDate}`,
+						html: patientHtml,
+					});
+					logger.info({ patientEmail, patientName }, "Appointment change email sent to patient via Gmail");
+				}
+
+				// Send to admin
+				await gmailTransporter.sendMail({
+					from: env.GMAIL_USER,
+					to: adminEmail,
+					subject: `Appointment Rescheduled - ${patientName}`,
+					html: adminHtml,
+				});
+				logger.info({ adminEmail, patientName }, "Appointment change email sent to admin via Gmail");
+			} catch (err) {
+				logger.error({ err, patientEmail, adminEmail }, "Failed to send appointment change emails via Gmail");
+				throw err;
+			}
+		} else {
+			// Fallback to Resend
+			if (patientEmail) {
+				await sendResend({
+					to: patientEmail,
+					subject: `Appointment Rescheduled - ${formattedDate}`,
+					html: patientHtml,
+				});
+			}
+			await sendResend({
+				to: adminEmail,
+				subject: `Appointment Rescheduled - ${patientName}`,
+				html: adminHtml,
+			});
+		}
 	},
 };

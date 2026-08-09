@@ -143,4 +143,13 @@ export const patientsController = {
 		const serviceResponse = await patientsService.intake(req.body);
 		handleServiceResponse(serviceResponse, res);
 	},
+
+	async updateAppointment(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.updateAppointment(paramId(req), req.body, req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
 };

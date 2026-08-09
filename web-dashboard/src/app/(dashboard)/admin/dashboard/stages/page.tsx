@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SettingsNav } from "@/components/features/settings-nav"
 import { useForm } from "react-hook-form"
 import type { PipelineStage, ChecklistItemDef } from "@/types"
 
@@ -95,20 +96,24 @@ export default function AdminStageSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center">
-            <Settings className="w-5 h-5 text-[#036638]" />
+    <>
+      {/* Settings Navigation - Top */}
+      <SettingsNav currentPage="stages" />
+
+      <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center">
+              <Settings className="w-5 h-5 text-[#036638]" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-[#1A1B1E]">Stage Settings</h1>
+              <p className="text-sm text-[#6B7280] mt-0.5">
+                Manage pipeline stages and the checklist that gates each one
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-[#1A1B1E]">Stage Settings</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">
-              Manage pipeline stages and the checklist that gates each one
-            </p>
-          </div>
-        </div>
         <Button
           onClick={() => setCreateOpen(true)}
           className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
@@ -352,7 +357,8 @@ export default function AdminStageSettingsPage() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

@@ -29,6 +29,7 @@ export const ROUTES = {
     STAGES: "/admin/dashboard/stages",
     CRM: "/admin/dashboard/crm",
     ELIGIBILITY: "/admin/dashboard/eligibility",
+    WEBHOOKS: "/admin/dashboard/webhooks",
     PROFILE: "/admin/dashboard/profile",
   },
 }

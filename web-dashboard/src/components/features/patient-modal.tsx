@@ -44,6 +44,7 @@ import {
   useLockPatient,
   useUnlockPatient,
   useUpdatePatientStatus,
+  useUpdateAppointment,
 } from "@/hooks/query/usePatients"
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
@@ -273,7 +274,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [savingContact, setSavingContact] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
   const [showCancelInput, setShowCancelInput] = useState(false)
+  const [editingAppointment, setEditingAppointment] = useState(false)
+  const [newAppointmentDatetime, setNewAppointmentDatetime] = useState("")
   const checkEligibility = useCheckEligibility()
+  const updateAppointment = useUpdateAppointment()
 
   // Checklist & assignment pending states (prevent duplicate requests)
   const [bulkPending, setBulkPending] = useState(false)
@@ -314,9 +318,18 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setClearReason("")
     setShowCancelInput(false)
     setCancelReason("")
+    setEditingAppointment(false)
+    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+    if (patient?.appointmentDatetime) {
+      const dt = new Date(patient.appointmentDatetime)
+      const localStr = dt.toISOString().slice(0, 16) // Gets YYYY-MM-DDTHH:mm
+      setNewAppointmentDatetime(localStr)
+    } else {
+      setNewAppointmentDatetime("")
+    }
     setAssigning(false)
     setAssignFeedback(null)
-  }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider])
+  }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider, patient?.appointmentDatetime])
 
   // ESC key to close modal (blocked while an assignment is in-flight)
   useEffect(() => {
@@ -398,6 +411,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     await updateStatus.mutateAsync({ id: patient.id, status: "cancelled", reason: cancelReason.trim() || null })
     setShowCancelInput(false)
     setCancelReason("")
+  }
+
+  const handleUpdateAppointment = async () => {
+    if (!patient || !newAppointmentDatetime.trim()) return
+    // Convert datetime-local format (2026-08-09T10:30) to ISO 8601 (2026-08-09T10:30:00Z)
+    const isoDatetime = new Date(newAppointmentDatetime).toISOString()
+    await updateAppointment.mutateAsync({ id: patient.id, appointmentDatetime: isoDatetime })
+    setEditingAppointment(false)
   }
 
   const handleAssignTo = async (vaId: string) => {
@@ -503,6 +524,17 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
                     {stageLabels[patient.stage]}
                   </span>
+                  {patient.assignedTo && vaList ? (
+                    <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" />
+                      {vaList.find((v) => v.id === patient.assignedTo)?.name || "Unknown"}
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-red-500/80 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                      <Flag className="w-3 h-3" fill="currentColor" />
+                      Unassigned
+                    </span>
+                  )}
                   {patient.status !== "active" && (
                     <span
                       className={cn(
@@ -913,11 +945,110 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Details */}
               <div className="grid grid-cols-2 gap-4">
-                {patient.appointmentDatetime && (
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
-                    <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
-                      Appointment
-                    </p>
+                {/* Appointment - Always Show */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
+                        Appointment
+                      </p>
+                      {patient.appointmentDatetime ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-semibold border border-green-200">
+                          <Check className="w-3 h-3" />
+                          Scheduled
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-50 text-red-700 text-[10px] font-semibold border border-red-200">
+                          <AlertTriangle className="w-3 h-3" />
+                          Not Set
+                        </span>
+                      )}
+                    </div>
+                    {!editingAppointment && (
+                      <button
+                        onClick={() => setEditingAppointment(true)}
+                        className="text-xs font-medium text-[#036638] hover:underline"
+                      >
+                        {patient.appointmentDatetime ? "Edit" : "Set Appointment"}
+                      </button>
+                    )}
+                  </div>
+                  {editingAppointment ? (
+                    <div className="space-y-3 mt-3">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-[#1A1B1E]">
+                          {patient.appointmentDatetime ? "New Date & Time" : "Set Appointment Date & Time"}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="datetime-local"
+                            value={newAppointmentDatetime}
+                            onChange={(e) => setNewAppointmentDatetime(e.target.value)}
+                            className="w-full px-4 py-2.5 text-sm border border-[#E5E7EB] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#036638] focus:border-transparent transition-all shadow-sm hover:border-[#D1D5DB]"
+                          />
+                        </div>
+                        <p className="text-[10px] text-[#6B7280]">
+                          {newAppointmentDatetime
+                            ? `Scheduled for: ${new Date(newAppointmentDatetime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+                            : "Select a new appointment date and time"
+                          }
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleUpdateAppointment}
+                          disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()}
+                          className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-[#036638] text-white hover:bg-[#025030] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm"
+                        >
+                          {updateAppointment.isPending ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              {patient.appointmentDatetime ? "Updating..." : "Setting..."}
+                            </>
+                          ) : (
+                            <>
+                              <CheckCheck className="w-4 h-4" />
+                              {patient.appointmentDatetime ? "Update" : "Set"}
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingAppointment(false)
+                            if (patient?.appointmentDatetime) {
+                              const dt = new Date(patient.appointmentDatetime)
+                              const localStr = dt.toISOString().slice(0, 16)
+                              setNewAppointmentDatetime(localStr)
+                            } else {
+                              setNewAppointmentDatetime("")
+                            }
+                          }}
+                          disabled={updateAppointment.isPending}
+                          className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F3F4F6] hover:border-[#D1D5DB] disabled:opacity-50 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      {updateAppointment.isPending && (
+                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                          <p className="text-xs font-medium text-blue-700">
+                            Saving appointment & notifying patient...
+                          </p>
+                        </div>
+                      )}
+                      {updateAppointment.isSuccess && (
+                        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                          <CheckCheck className="w-4 h-4 text-green-600" />
+                          <p className="text-xs font-medium text-green-700">
+                            ✓ Appointment saved! Patient notified via email
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : patient.appointmentDatetime ? (
                     <p className="text-sm text-[#1A1B1E] flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-[#65BD6C]" />
                       {new Date(patient.appointmentDatetime).toLocaleString("en-US", {
@@ -928,8 +1059,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         minute: "2-digit",
                       })}
                     </p>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-[#9CA3AF] italic">
+                      No appointment set yet. Click "Set Appointment" to schedule.
+                    </p>
+                  )}
+                </div>
                 {patient.assignedUser && (
                   <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">

@@ -9,8 +9,17 @@ import type { Patient, PatientStage } from "@/types"
 import { Loader2, GripVertical } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useMemo } from "react"
 
-export function KanbanBoard({ initialPatientId }: { initialPatientId?: string }) {
+export function KanbanBoard({
+  initialPatientId,
+  searchQuery = "",
+  stageFilter = null,
+}: {
+  initialPatientId?: string
+  searchQuery?: string
+  stageFilter?: string | null
+}) {
   const { data: patients, isLoading, error } = usePatients()
   const moveStage = useMoveStage()
   const { order: stageOrder, labels: stageLabels, hints: stageHints, byKey: stageByKey } = useStageMeta()
@@ -19,8 +28,20 @@ export function KanbanBoard({ initialPatientId }: { initialPatientId?: string })
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const pendingMoves = useRef<Set<string>>(new Set())
 
+  // Filter patients by search query and stage
+  const filteredPatients = useMemo(() => {
+    if (!patients) return []
+
+    return patients.filter((p) => {
+      const matchesSearch = searchQuery === "" || p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStage = stageFilter === null || p.stage === stageFilter
+
+      return matchesSearch && matchesStage
+    })
+  }, [patients, searchQuery, stageFilter])
+
   const groupedPatients =
-    patients?.reduce(
+    filteredPatients.reduce(
       (acc, p) => {
         if (!acc[p.stage]) acc[p.stage] = []
         acc[p.stage].push(p)

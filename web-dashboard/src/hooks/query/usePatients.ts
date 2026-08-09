@@ -14,6 +14,8 @@ export function usePatients(stage?: string) {
   return useQuery({
     queryKey: [...QUERY_KEYS.PATIENTS.ALL, stage],
     queryFn: () => PatientsService.list(stage),
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 }
 
@@ -30,8 +32,9 @@ export function useMoveStage() {
   return useMutation({
     mutationFn: ({ id, targetStage }: { id: string; targetStage: PatientStage }) =>
       PatientsService.moveStage(id, targetStage),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.SUMMARY })
       toast.success("Stage updated")
     },
@@ -320,6 +323,22 @@ export function useUpdatePatientStatus() {
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to update status")
+    },
+  })
+}
+
+export function useUpdateAppointment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, appointmentDatetime }: { id: string; appointmentDatetime: string }) =>
+      PatientsService.updateAppointment(id, appointmentDatetime),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      toast.success("Appointment updated and emails sent to patient and admin")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update appointment")
     },
   })
 }

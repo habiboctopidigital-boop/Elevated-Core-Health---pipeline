@@ -40,11 +40,15 @@ export const ClearFlagSchema = z.object({
 
 export const IntakeSchema = z.object({
 	body: z.object({
-		name: z.string().trim().min(1, "Patient name is required"),
+		name: z.string().trim().min(1, "Patient name is required").refine(
+			(name) => name.trim().length > 0,
+			"Patient name cannot be empty"
+		),
 		email: z.string().email().optional().nullable(),
 		phone: z.string().optional().nullable(),
 		appointmentDatetime: z.string().datetime().optional().nullable(),
-		bookingPlatform: z.enum(["klarity", "zocdoc"]).optional().nullable(),
+		vaName: z.string().trim().max(100).optional().nullable(),
+		bookingPlatform: z.enum(["klarity", "zocdoc", "headway", "grow_therapy", "google", "phone", "walk_in"]).optional().nullable(),
 		problemDescription: z.string().max(2000).optional().nullable(),
 		paymentMethod: z.string().max(100).optional().nullable(),
 		insuranceProvider: z.string().max(200).optional().nullable(),
@@ -93,6 +97,12 @@ export const ClaimSchema = z.object({
 	}),
 });
 
+export const UpdateAppointmentSchema = z.object({
+	body: z.object({
+		appointmentDatetime: z.string().datetime("Appointment datetime must be a valid ISO 8601 datetime"),
+	}),
+});
+
 export type StageMoveInput = z.infer<typeof StageMoveSchema>["body"];
 export type AssignInput = z.infer<typeof AssignSchema>["body"];
 export type ChecklistToggleInput = z.infer<typeof ChecklistToggleSchema>["body"];
@@ -104,3 +114,4 @@ export type ClaimInput = z.infer<typeof ClaimSchema>["body"];
 export type CheckEligibilityInput = z.infer<typeof CheckEligibilitySchema>["body"];
 export type UpdatePatientInput = z.infer<typeof UpdatePatientSchema>["body"];
 export type UpdateStatusInput = z.infer<typeof UpdateStatusSchema>["body"];
+export type UpdateAppointmentInput = z.infer<typeof UpdateAppointmentSchema>["body"];

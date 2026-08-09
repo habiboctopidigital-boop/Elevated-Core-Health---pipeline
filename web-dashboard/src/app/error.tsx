@@ -11,7 +11,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error(error)
+    // Error logged for debugging
   }, [error])
 
   return (
