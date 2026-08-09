@@ -496,6 +496,21 @@ export const patientsService = {
 			prev.amountPaid = patient.amountPaid?.toString() ?? null;
 			next.amountPaid = data.amountPaid;
 		}
+		if (input.paymentMethod !== undefined) {
+			data.paymentMethod = input.paymentMethod;
+			prev.paymentMethod = patient.paymentMethod;
+			next.paymentMethod = input.paymentMethod;
+		}
+		if (input.insuranceProvider !== undefined) {
+			data.insuranceProvider = input.insuranceProvider;
+			prev.insuranceProvider = patient.insuranceProvider;
+			next.insuranceProvider = input.insuranceProvider;
+		}
+		if (input.visitStatus !== undefined) {
+			data.visitStatus = input.visitStatus;
+			prev.visitStatus = patient.visitStatus;
+			next.visitStatus = input.visitStatus;
+		}
 
 		data.updatedAt = new Date();
 		data.updatedById = user.id;
@@ -780,7 +795,7 @@ export const patientsService = {
 		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
 		const firstStage = await getFirstStageKey();
 
-		// Auto-assign VA: prioritize vaName from webhook, then fall back to appointment time
+		// Auto-assign VA: explicit selection wins, then vaName from webhook, then appointment time
 		let assignedTo: string | null = null;
 		let assignmentMethod = "none";
 
@@ -790,8 +805,17 @@ export const patientsService = {
 			select: { id: true, name: true },
 		});
 
+		// 0. Explicit assignment (e.g. picked from a dropdown in the Add Patient form)
+		if (input.assignedTo) {
+			const explicitVa = vas.find((va) => va.id === input.assignedTo);
+			if (explicitVa) {
+				assignedTo = explicitVa.id;
+				assignmentMethod = "explicit_selection";
+			}
+		}
+
 		// 1. If vaName provided in webhook, try to find and assign to that VA
-		if (input.vaName && input.vaName.trim()) {
+		if (!assignedTo && input.vaName && input.vaName.trim()) {
 			const namedVa = vas.find((va) => va.name?.toLowerCase().includes(input.vaName!.toLowerCase()));
 			if (namedVa) {
 				assignedTo = namedVa.id;
@@ -816,6 +840,7 @@ export const patientsService = {
 				name: input.name,
 				email: input.email ?? null,
 				phone: input.phone ?? null,
+				location: input.location ?? null,
 				stage: firstStage,
 				appointmentDatetime,
 				bookingPlatform: input.bookingPlatform ?? null,
@@ -823,6 +848,7 @@ export const patientsService = {
 				paymentMethod: input.paymentMethod ?? null,
 				insuranceProvider: input.insuranceProvider ?? null,
 				paymentDetails: (input.paymentDetails as object) ?? null,
+				visitStatus: input.visitStatus ?? undefined,
 				source: "webhook",
 				checklistState: {},
 				notes: null,
@@ -881,6 +907,15 @@ export const patientsService = {
 
 		if (!patient) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		// Only VAs can reschedule appointments — admin is intentionally excluded.
+		if (user.role === "admin") {
+			return ServiceResponse.failure(
+				"Only VAs can update the appointment date and time.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
 		}
 
 		if (!canEditPatient(patient, user)) {

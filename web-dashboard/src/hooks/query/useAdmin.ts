@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query"
 import { AdminService } from "@/services/admin.service"
 import { QUERY_KEYS } from "@/constants"
-import type { User, ChecklistItemDef, EligibilityRule } from "@/types"
+import type { User, ChecklistItemDef, EligibilityRule, CrmProvider, CrmPermission } from "@/types"
 import { toast } from "sonner"
 
 export function useAdminUsers() {
@@ -189,6 +189,56 @@ export function useDeleteEligibilityRule() {
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to delete rule")
+    },
+  })
+}
+
+export function useCrmIntegration() {
+  return useQuery({
+    queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION,
+    queryFn: () => AdminService.getCrmIntegration(),
+  })
+}
+
+export function useConnectCrm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { provider: CrmProvider; apiKey: string; permission: CrmPermission }) =>
+      AdminService.connectCrm(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION })
+      toast.success("CRM connected")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to connect CRM")
+    },
+  })
+}
+
+export function useDisconnectCrm() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => AdminService.disconnectCrm(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION })
+      toast.success("CRM disconnected")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to disconnect CRM")
+    },
+  })
+}
+
+export function useUpdateCrmPermission() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (permission: CrmPermission) => AdminService.updateCrmPermission(permission),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION })
+      toast.success("Permission updated")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to update permission")
     },
   })
 }

@@ -48,6 +48,8 @@ import {
 } from "@/hooks/query/usePatients"
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
+import { SelectOrOther } from "@/components/shared/select-or-other"
+import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -113,29 +115,6 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`
 }
 
-const PAYMENT_METHOD_OPTIONS = [
-  "Self-pay",
-  "Insurance",
-  "Sliding Scale",
-  "Employee Assistance Program (EAP)",
-  "Medicare",
-  "Medicaid",
-]
-
-const INSURANCE_PROVIDER_OPTIONS = [
-  "Blue Cross Blue Shield",
-  "Aetna",
-  "Cigna",
-  "United Healthcare",
-  "Humana",
-  "Kaiser Permanente",
-  "Tricare",
-  "Medicare",
-  "Medicaid",
-]
-
-const OTHER_OPTION = "Other"
-
 const VOB_LABELS: Array<[string, string]> = [
   ["coverage", "Coverage"],
   ["payer", "Payer"],
@@ -150,64 +129,6 @@ const VOB_LABELS: Array<[string, string]> = [
   ["visitsCoveredPerYear", "Visits / Year"],
   ["checkDate", "Checked"],
 ]
-
-/**
- * Dropdown of common presets with an "Other" option that reveals a free-text
- * input. The parent owns `otherMode` so it can reset in lockstep with `value`
- * whenever the selected patient changes.
- */
-function SelectOrOther({
-  value,
-  onChange,
-  otherMode,
-  onOtherModeChange,
-  options,
-  placeholder,
-}: {
-  value: string
-  onChange: (value: string) => void
-  otherMode: boolean
-  onOtherModeChange: (other: boolean) => void
-  options: string[]
-  placeholder: string
-}) {
-  const selectValue = otherMode ? OTHER_OPTION : options.includes(value) ? value : ""
-
-  return (
-    <div className="space-y-1.5">
-      <select
-        value={selectValue}
-        onChange={(e) => {
-          if (e.target.value === OTHER_OPTION) {
-            onOtherModeChange(true)
-            onChange("")
-          } else {
-            onOtherModeChange(false)
-            onChange(e.target.value)
-          }
-        }}
-        className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-        <option value={OTHER_OPTION}>Other (specify)</option>
-      </select>
-      {otherMode && (
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Enter name..."
-          autoFocus
-          className="w-full h-8 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
-        />
-      )}
-    </div>
-  )
-}
 
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
@@ -262,6 +183,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [insuranceProvider, setInsuranceProvider] = useState("")
   const [paymentMethodOther, setPaymentMethodOther] = useState(false)
   const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
+  const [visitStatus, setVisitStatus] = useState("not_visited")
   const [contactForm, setContactForm] = useState({
     firstName: "",
     lastName: "",
@@ -303,6 +225,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setInsuranceProvider(ip)
     setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
     setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
+    setVisitStatus(patient?.visitStatus ?? "not_visited")
     setContactForm({
       firstName: patient?.firstName ?? "",
       lastName: patient?.lastName ?? "",
@@ -402,6 +325,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       email: contactForm.email.trim() || null,
       copayAmount: contactForm.copayAmount.trim() || null,
       amountPaid: contactForm.amountPaid.trim() || null,
+      paymentMethod: paymentMethod.trim() || null,
+      insuranceProvider: insuranceProvider.trim() || null,
+      visitStatus,
     })
     setSavingContact(false)
   }
@@ -964,13 +890,16 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         </span>
                       )}
                     </div>
-                    {!editingAppointment && (
+                    {!editingAppointment && user?.role === "va" && (
                       <button
                         onClick={() => setEditingAppointment(true)}
                         className="text-xs font-medium text-[#036638] hover:underline"
                       >
                         {patient.appointmentDatetime ? "Edit" : "Set Appointment"}
                       </button>
+                    )}
+                    {isAdmin && (
+                      <span className="text-[10px] text-[#9CA3AF] italic">Only VAs can edit</span>
                     )}
                   </div>
                   {editingAppointment ? (
@@ -1400,6 +1329,48 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       />
                     </div>
                   ))}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                      Payment Type
+                    </label>
+                    <SelectOrOther
+                      value={paymentMethod}
+                      onChange={setPaymentMethod}
+                      otherMode={paymentMethodOther}
+                      onOtherModeChange={setPaymentMethodOther}
+                      options={PAYMENT_METHOD_OPTIONS}
+                      placeholder="Select payment type..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                      Insurance Company
+                    </label>
+                    <SelectOrOther
+                      value={insuranceProvider}
+                      onChange={setInsuranceProvider}
+                      otherMode={insuranceProviderOther}
+                      onOtherModeChange={setInsuranceProviderOther}
+                      options={INSURANCE_PROVIDER_OPTIONS}
+                      placeholder="Select insurance company..."
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
+                      Visit Status
+                    </label>
+                    <select
+                      value={visitStatus}
+                      onChange={(e) => setVisitStatus(e.target.value)}
+                      className="w-full h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
+                    >
+                      {VISIT_STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 

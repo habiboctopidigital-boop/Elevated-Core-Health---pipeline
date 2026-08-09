@@ -1,12 +1,12 @@
 "use client"
 
-import { Settings, Users, Lock, Zap } from "lucide-react"
+import { Settings, Users, Lock, Zap, Plug } from "lucide-react"
 import Link from "next/link"
 import { ROUTES } from "@/constants"
 import { cn } from "@/lib/utils"
 
 interface SettingsNavProps {
-  currentPage: "profile" | "webhooks" | "users" | "stages"
+  currentPage: "profile" | "webhooks" | "users" | "stages" | "config-crm"
   className?: string
 }
 
@@ -24,6 +24,13 @@ const settingsPages = [
     icon: Zap,
     href: ROUTES.ADMIN.WEBHOOKS,
     desc: "Automations",
+  },
+  {
+    id: "config-crm" as const,
+    label: "CRM Connect",
+    icon: Plug,
+    href: ROUTES.ADMIN.CONFIG_CRM,
+    desc: "External CRM integration",
   },
 ]
 

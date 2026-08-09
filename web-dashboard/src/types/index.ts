@@ -31,6 +31,8 @@ export type EligibilityStatus = "not_checked" | "eligible" | "not_eligible"
 
 export type PatientStatus = "active" | "completed" | "cancelled"
 
+export type VisitStatus = "not_visited" | "arrived" | "no_show" | "rescheduled"
+
 export interface ChecklistItemDef {
   id: string
   label: string
@@ -66,6 +68,7 @@ export interface Patient {
   phone?: string | null
   stage: PatientStage
   status: PatientStatus
+  visitStatus: VisitStatus
   assignedTo?: string | null
   assignedUser?: Pick<User, "id" | "name"> | null
   notes?: string | null
@@ -181,6 +184,23 @@ export interface AdminAnalytics {
   patientsPerStage: Record<string, number>
   vaLoad: Array<{ id: string; name: string; patientCount: number }>
   reconciledThisWeek: number
+}
+
+export type CrmProvider = "private_crm" | "gohighlevel"
+export type CrmPermission = "read" | "write" | "both"
+export type CrmConnectionStatus = "connected" | "disconnected"
+
+export interface CrmIntegration {
+  id: string
+  provider: CrmProvider
+  apiKeyLast4: string | null
+  permission: CrmPermission
+  status: CrmConnectionStatus
+  connectedById: string | null
+  connectedByUser?: Pick<User, "id" | "name"> | null
+  connectedAt: string | null
+  updatedAt: string
+  createdAt: string
 }
 
 export interface ReportTotals {

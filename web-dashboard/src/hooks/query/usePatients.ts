@@ -265,6 +265,9 @@ export function useUpdatePatient() {
       phone: string | null
       copayAmount: string | null
       amountPaid: string | null
+      paymentMethod: string | null
+      insuranceProvider: string | null
+      visitStatus: string
     }>) => PatientsService.updatePatient(id, input),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })

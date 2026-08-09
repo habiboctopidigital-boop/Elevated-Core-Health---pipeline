@@ -83,3 +83,17 @@ export const UpdateEligibilityRuleSchema = z.object({
 		isActive: z.boolean().optional(),
 	}),
 });
+
+export const CrmConnectSchema = z.object({
+	body: z.object({
+		provider: z.enum(["private_crm", "gohighlevel"]),
+		apiKey: z.string().trim().min(8, "API key looks too short").max(500),
+		permission: z.enum(["read", "write", "both"]).default("read"),
+	}),
+});
+
+export const CrmUpdatePermissionSchema = z.object({
+	body: z.object({
+		permission: z.enum(["read", "write", "both"]),
+	}),
+});

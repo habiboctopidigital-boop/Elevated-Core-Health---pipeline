@@ -78,18 +78,26 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className={cn(
-        "flex items-center justify-center h-20 border-b border-white/5 px-4 relative",
-        isCollapsed ? "w-20" : "w-64"
+        "flex items-center justify-center border-b border-white/5 px-4 relative transition-all duration-300",
+        isCollapsed ? "h-20 w-20" : "h-24 w-64"
       )}>
-        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
-          <Image
-            src="/logo.png"
-            alt="Elevated Core Health"
-            width={48}
-            height={48}
-            priority
-            className="w-12 h-12 object-contain"
-          />
+        <div className="flex flex-col items-center justify-center gap-1">
+          <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="Elevated Core Health"
+              width={40}
+              height={40}
+              priority
+              className="w-10 h-10 object-contain"
+            />
+          </div>
+          {!isCollapsed && (
+            <div className="text-center leading-tight">
+              <p className="text-white text-[13px] font-bold tracking-tight">Elevated Core</p>
+              <p className="text-[#65BD6C] text-[9px] font-semibold uppercase tracking-widest">Pipeline Portal</p>
+            </div>
+          )}
         </div>
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}

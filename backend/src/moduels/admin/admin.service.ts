@@ -1,12 +1,15 @@
 import { StatusCodes } from "http-status-codes";
 import type { z } from "zod";
 import { hashPassword } from "@/lib/auth";
+import type { AuthenticatedUser } from "@/lib/types";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import type {
 	ChecklistItemSchema,
 	CreateEligibilityRuleSchema,
 	CreateUserSchema,
+	CrmConnectSchema,
+	CrmUpdatePermissionSchema,
 	StageCreateSchema,
 	StageReorderSchema,
 	StageUpdateSchema,
@@ -24,6 +27,8 @@ type UpdateEligibilityRuleInput = z.infer<typeof UpdateEligibilityRuleSchema>["b
 type CreateStageInput = z.infer<typeof StageCreateSchema>["body"];
 type UpdateStageInput = z.infer<typeof StageUpdateSchema>["body"];
 type StageReorderInput = z.infer<typeof StageReorderSchema>["body"];
+type CrmConnectInput = z.infer<typeof CrmConnectSchema>["body"];
+type CrmUpdatePermissionInput = z.infer<typeof CrmUpdatePermissionSchema>["body"];
 
 /** Turn a stage display name into a stable, immutable key slug. */
 function slugify(input: string): string {
@@ -381,5 +386,75 @@ export const adminService = {
 			vaLoad,
 			reconciledThisWeek,
 		});
+	},
+
+	// CRM Connect settings (config-crm page). "Connect" simulates a successful
+	// handshake — no real Optimantra/GoHighLevel API call is made. Only a
+	// masked preview of the key is ever persisted, never the raw value.
+	async getCrmIntegration() {
+		const integration = await prisma.crmIntegration.findFirst({
+			orderBy: { updatedAt: "desc" },
+			include: { connectedByUser: { select: { id: true, name: true } } },
+		});
+		return ServiceResponse.success("CRM integration retrieved.", integration);
+	},
+
+	async connectCrm(input: CrmConnectInput, user: AuthenticatedUser) {
+		const apiKeyLast4 = input.apiKey.trim().slice(-4);
+
+		// Simulated handshake — a real integration would call the provider's API here.
+		await new Promise((resolve) => setTimeout(resolve, 600));
+
+		const existing = await prisma.crmIntegration.findFirst({ orderBy: { updatedAt: "desc" } });
+		const integration = existing
+			? await prisma.crmIntegration.update({
+					where: { id: existing.id },
+					data: {
+						provider: input.provider,
+						apiKeyLast4,
+						permission: input.permission,
+						status: "connected",
+						connectedById: user.id,
+						connectedAt: new Date(),
+					},
+					include: { connectedByUser: { select: { id: true, name: true } } },
+				})
+			: await prisma.crmIntegration.create({
+					data: {
+						provider: input.provider,
+						apiKeyLast4,
+						permission: input.permission,
+						status: "connected",
+						connectedById: user.id,
+						connectedAt: new Date(),
+					},
+					include: { connectedByUser: { select: { id: true, name: true } } },
+				});
+
+		return ServiceResponse.success("CRM connected.", integration);
+	},
+
+	async disconnectCrm() {
+		const existing = await prisma.crmIntegration.findFirst({ orderBy: { updatedAt: "desc" } });
+		if (!existing) {
+			return ServiceResponse.failure("No CRM integration found.", null, StatusCodes.NOT_FOUND);
+		}
+		const integration = await prisma.crmIntegration.update({
+			where: { id: existing.id },
+			data: { status: "disconnected", connectedById: null, connectedAt: null },
+		});
+		return ServiceResponse.success("CRM disconnected.", integration);
+	},
+
+	async updateCrmPermission(input: CrmUpdatePermissionInput) {
+		const existing = await prisma.crmIntegration.findFirst({ orderBy: { updatedAt: "desc" } });
+		if (!existing) {
+			return ServiceResponse.failure("No CRM integration found.", null, StatusCodes.NOT_FOUND);
+		}
+		const integration = await prisma.crmIntegration.update({
+			where: { id: existing.id },
+			data: { permission: input.permission },
+		});
+		return ServiceResponse.success("Permission updated.", integration);
 	},
 };

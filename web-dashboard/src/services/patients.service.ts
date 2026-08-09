@@ -77,6 +77,9 @@ export const PatientsService = {
       phone: string | null
       copayAmount: string | null
       amountPaid: string | null
+      paymentMethod: string | null
+      insuranceProvider: string | null
+      visitStatus: string
     }>,
   ): Promise<Patient> {
     const { data } = await axiosInstance.patch<ApiResponse<Patient>>(
@@ -172,9 +175,14 @@ export const PatientsService = {
     name: string
     email?: string | null
     phone?: string | null
+    location?: string | null
     appointmentDatetime?: string | null
     bookingPlatform?: string | null
     assignedTo?: string | null
+    paymentMethod?: string | null
+    insuranceProvider?: string | null
+    visitStatus?: string | null
+    problemDescription?: string | null
   }): Promise<Patient> {
     const { data } = await axiosInstance.post<ApiResponse<Patient>>(
       API_ENDPOINTS.PATIENTS_INTAKE_TEST,

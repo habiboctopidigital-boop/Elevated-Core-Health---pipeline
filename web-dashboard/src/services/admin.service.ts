@@ -1,6 +1,6 @@
 import axiosInstance from "@/lib/axios"
 import { API_ENDPOINTS } from "@/constants"
-import type { ApiResponse, User, ChecklistItemDef, AdminAnalytics, EligibilityRule, PipelineStage } from "@/types"
+import type { ApiResponse, User, ChecklistItemDef, AdminAnalytics, EligibilityRule, PipelineStage, CrmIntegration, CrmProvider, CrmPermission } from "@/types"
 
 export const AdminService = {
   async listUsers(): Promise<User[]> {
@@ -161,6 +161,36 @@ export const AdminService = {
   async getAnalytics(): Promise<AdminAnalytics> {
     const { data } = await axiosInstance.get<ApiResponse<AdminAnalytics>>(
       API_ENDPOINTS.ADMIN.ANALYTICS,
+    )
+    return data.data
+  },
+
+  async getCrmIntegration(): Promise<CrmIntegration | null> {
+    const { data } = await axiosInstance.get<ApiResponse<CrmIntegration | null>>(
+      API_ENDPOINTS.ADMIN.CRM_INTEGRATION,
+    )
+    return data.data
+  },
+
+  async connectCrm(input: { provider: CrmProvider; apiKey: string; permission: CrmPermission }): Promise<CrmIntegration> {
+    const { data } = await axiosInstance.post<ApiResponse<CrmIntegration>>(
+      API_ENDPOINTS.ADMIN.CRM_INTEGRATION_CONNECT,
+      input,
+    )
+    return data.data
+  },
+
+  async disconnectCrm(): Promise<CrmIntegration> {
+    const { data } = await axiosInstance.post<ApiResponse<CrmIntegration>>(
+      API_ENDPOINTS.ADMIN.CRM_INTEGRATION_DISCONNECT,
+    )
+    return data.data
+  },
+
+  async updateCrmPermission(permission: CrmPermission): Promise<CrmIntegration> {
+    const { data } = await axiosInstance.patch<ApiResponse<CrmIntegration>>(
+      API_ENDPOINTS.ADMIN.CRM_INTEGRATION_PERMISSION,
+      { permission },
     )
     return data.data
   },

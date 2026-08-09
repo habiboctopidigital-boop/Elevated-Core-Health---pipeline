@@ -10,12 +10,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { Plus, Loader2 } from "lucide-react"
-import { useAuth } from "@/hooks/auth/useAuth"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
+import { useListVas } from "@/hooks/query/usePatients"
+import { SelectOrOther } from "@/components/shared/select-or-other"
+import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 
 const BOOKING_PLATFORMS = [
   { value: "zocdoc", label: "ZocDoc" },
@@ -32,24 +34,38 @@ interface AddPatientFormData {
   lastName: string
   email: string
   phone: string
+  location: string
   appointmentDatetime: string
   bookingPlatform: string
   assignedTo: string
+  paymentMethod: string
+  insuranceProvider: string
+  visitStatus: string
+  problemDescription: string
+}
+
+const EMPTY_FORM: AddPatientFormData = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  location: "",
+  appointmentDatetime: "",
+  bookingPlatform: "phone",
+  assignedTo: "",
+  paymentMethod: "",
+  insuranceProvider: "",
+  visitStatus: "not_visited",
+  problemDescription: "",
 }
 
 export function AddPatientDialog() {
-  const { user } = useAuth()
   const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState<AddPatientFormData>({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    appointmentDatetime: "",
-    bookingPlatform: "phone",
-    assignedTo: "",
-  })
+  const [formData, setFormData] = useState<AddPatientFormData>(EMPTY_FORM)
+  const [paymentMethodOther, setPaymentMethodOther] = useState(false)
+  const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
 
+  const { data: vaList } = useListVas()
   const queryClient = useQueryClient()
 
   const addPatientMutation = useMutation({
@@ -59,24 +75,25 @@ export function AddPatientDialog() {
         name,
         email: data.email || undefined,
         phone: data.phone || undefined,
-        appointmentDatetime: data.appointmentDatetime || undefined,
+        location: data.location || undefined,
+        appointmentDatetime: data.appointmentDatetime
+          ? new Date(data.appointmentDatetime).toISOString()
+          : undefined,
         bookingPlatform: data.bookingPlatform as any,
         assignedTo: data.assignedTo || undefined,
+        paymentMethod: data.paymentMethod || undefined,
+        insuranceProvider: data.insuranceProvider || undefined,
+        visitStatus: data.visitStatus as any,
+        problemDescription: data.problemDescription || undefined,
       })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] })
       toast.success("Patient added successfully")
       setOpen(false)
-      setFormData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        appointmentDatetime: "",
-        bookingPlatform: "phone",
-        assignedTo: "",
-      })
+      setFormData(EMPTY_FORM)
+      setPaymentMethodOther(false)
+      setInsuranceProviderOther(false)
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || "Failed to add patient")
@@ -85,8 +102,10 @@ export function AddPatientDialog() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.appointmentDatetime) {
-      toast.error("First name, last name, and appointment date are required")
+    // Appointment date/time is intentionally optional — a patient can be added
+    // before a slot is scheduled.
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      toast.error("First name and last name are required")
       return
     }
     addPatientMutation.mutate(formData)
@@ -94,24 +113,28 @@ export function AddPatientDialog() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) {
+          setFormData(EMPTY_FORM)
+          setPaymentMethodOther(false)
+          setInsuranceProviderOther(false)
+        }
+      }}
+    >
       <DialogTrigger asChild>
-        <Button
-          className="bg-[#036638] hover:bg-[#025030] text-white gap-2"
-          size="sm"
-        >
+        <Button className="bg-[#036638] hover:bg-[#025030] text-white gap-2" size="sm">
           <Plus className="w-4 h-4" />
           Add Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Patient</DialogTitle>
           <DialogDescription>
@@ -120,108 +143,167 @@ export function AddPatientDialog() {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* First Name */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">
-              First Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              placeholder="John"
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              required
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">
+                First Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                placeholder="John"
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">
+                Last Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder="Doe"
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+                required
+              />
+            </div>
 
-          {/* Last Name */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">
-              Last Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              placeholder="Doe"
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              required
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="john@example.com"
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="(555) 123-4567"
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+              />
+            </div>
 
-          {/* Email */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder="john@example.com"
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Location</label>
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                placeholder="City, State"
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">
+                Appointment Date & Time
+                <span className="text-[#9CA3AF] font-normal ml-1">(optional)</span>
+              </label>
+              <input
+                type="datetime-local"
+                name="appointmentDatetime"
+                value={formData.appointmentDatetime}
+                onChange={handleInputChange}
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+              />
+            </div>
 
-          {/* Phone */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">Phone</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="(555) 123-4567"
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Where They Came From</label>
+              <select
+                name="bookingPlatform"
+                value={formData.bookingPlatform}
+                onChange={handleInputChange}
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+              >
+                {BOOKING_PLATFORMS.map((platform) => (
+                  <option key={platform.value} value={platform.value}>
+                    {platform.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Assign VA</label>
+              <select
+                name="assignedTo"
+                value={formData.assignedTo}
+                onChange={handleInputChange}
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+              >
+                <option value="">Auto-assign (by appointment time)</option>
+                {vaList?.map((va) => (
+                  <option key={va.id} value={va.id}>
+                    {va.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Appointment Date/Time */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">
-              Appointment Date & Time <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              name="appointmentDatetime"
-              value={formData.appointmentDatetime}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              required
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Payment Type</label>
+              <SelectOrOther
+                value={formData.paymentMethod}
+                onChange={(v) => setFormData((f) => ({ ...f, paymentMethod: v }))}
+                otherMode={paymentMethodOther}
+                onOtherModeChange={setPaymentMethodOther}
+                options={PAYMENT_METHOD_OPTIONS}
+                placeholder="Select payment type..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Insurance Company</label>
+              <SelectOrOther
+                value={formData.insuranceProvider}
+                onChange={(v) => setFormData((f) => ({ ...f, insuranceProvider: v }))}
+                otherMode={insuranceProviderOther}
+                onOtherModeChange={setInsuranceProviderOther}
+                options={INSURANCE_PROVIDER_OPTIONS}
+                placeholder="Select insurance company..."
+              />
+            </div>
 
-          {/* Booking Platform */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">Where They Came From</label>
-            <select
-              name="bookingPlatform"
-              value={formData.bookingPlatform}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-            >
-              {BOOKING_PLATFORMS.map((platform) => (
-                <option key={platform.value} value={platform.value}>
-                  {platform.label}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-sm font-semibold text-[#1A1B1E]">Visit Status</label>
+              <select
+                name="visitStatus"
+                value={formData.visitStatus}
+                onChange={handleInputChange}
+                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+              >
+                {VISIT_STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Assign To (optional) */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#1A1B1E]">Assign To (Optional)</label>
-            <select
-              name="assignedTo"
-              value={formData.assignedTo}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-            >
-              <option value="">-- Unassigned --</option>
-              {/* VAs will be loaded dynamically if needed */}
-            </select>
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-sm font-semibold text-[#1A1B1E]">
+                Reason for Visit <span className="text-[#9CA3AF] font-normal">(optional, operational notes only)</span>
+              </label>
+              <Textarea
+                name="problemDescription"
+                value={formData.problemDescription}
+                onChange={(e) => setFormData((f) => ({ ...f, problemDescription: e.target.value }))}
+                placeholder="e.g. Follow-up visit, medication review..."
+                className="text-sm min-h-[60px]"
+              />
+            </div>
           </div>
 
           {/* Buttons */}
@@ -236,12 +318,7 @@ export function AddPatientDialog() {
             </Button>
             <Button
               type="submit"
-              disabled={
-                addPatientMutation.isPending ||
-                !formData.firstName.trim() ||
-                !formData.lastName.trim() ||
-                !formData.appointmentDatetime
-              }
+              disabled={addPatientMutation.isPending || !formData.firstName.trim() || !formData.lastName.trim()}
               className="bg-[#036638] hover:bg-[#025030] text-white"
             >
               {addPatientMutation.isPending ? (

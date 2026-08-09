@@ -30,6 +30,7 @@ export const ROUTES = {
     CRM: "/admin/dashboard/crm",
     ELIGIBILITY: "/admin/dashboard/eligibility",
     WEBHOOKS: "/admin/dashboard/webhooks",
+    CONFIG_CRM: "/admin/dashboard/config-crm",
     PROFILE: "/admin/dashboard/profile",
   },
 }
@@ -72,6 +73,10 @@ export const API_ENDPOINTS = {
     CHECKLIST_ITEMS: "/admin/checklist-items",
     ELIGIBILITY_RULES: "/admin/eligibility-rules",
     ANALYTICS: "/admin/analytics",
+    CRM_INTEGRATION: "/admin/crm-integration",
+    CRM_INTEGRATION_CONNECT: "/admin/crm-integration/connect",
+    CRM_INTEGRATION_DISCONNECT: "/admin/crm-integration/disconnect",
+    CRM_INTEGRATION_PERMISSION: "/admin/crm-integration/permission",
   },
 }
 
@@ -111,6 +116,7 @@ export const QUERY_KEYS = {
     STAGES: ["admin", "stages"] as const,
     ANALYTICS: ["admin", "analytics"] as const,
     ELIGIBILITY_RULES: ["admin", "eligibility-rules"] as const,
+    CRM_INTEGRATION: ["admin", "crm-integration"] as const,
   },
 }
 

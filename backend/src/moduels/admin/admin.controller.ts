@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import { handleServiceResponse } from "@/utils/httpHandlers";
+import { ServiceResponse } from "@/utils/serviceResponse";
 import { adminService } from "./admin.service";
 
 function paramId(req: Request): string {
@@ -106,6 +107,31 @@ export const adminController = {
 	// Analytics
 	async getAnalytics(_req: Request, res: Response): Promise<void> {
 		const serviceResponse = await adminService.getAnalytics();
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	// CRM Connect settings
+	async getCrmIntegration(_req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.getCrmIntegration();
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async connectCrm(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await adminService.connectCrm(req.body, req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async disconnectCrm(_req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.disconnectCrm();
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async updateCrmPermission(req: Request, res: Response): Promise<void> {
+		const serviceResponse = await adminService.updateCrmPermission(req.body);
 		handleServiceResponse(serviceResponse, res);
 	},
 };

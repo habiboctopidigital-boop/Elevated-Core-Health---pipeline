@@ -46,13 +46,18 @@ export const IntakeSchema = z.object({
 		),
 		email: z.string().email().optional().nullable(),
 		phone: z.string().optional().nullable(),
+		location: z.string().trim().max(200).optional().nullable(),
 		appointmentDatetime: z.string().datetime().optional().nullable(),
 		vaName: z.string().trim().max(100).optional().nullable(),
+		// Explicit VA selection (e.g. from the Add Patient form's assign dropdown) —
+		// takes priority over vaName matching and time-based auto-assignment.
+		assignedTo: z.string().uuid().optional().nullable(),
 		bookingPlatform: z.enum(["klarity", "zocdoc", "headway", "grow_therapy", "google", "phone", "walk_in"]).optional().nullable(),
 		problemDescription: z.string().max(2000).optional().nullable(),
 		paymentMethod: z.string().max(100).optional().nullable(),
 		insuranceProvider: z.string().max(200).optional().nullable(),
 		paymentDetails: z.record(z.string(), z.unknown()).optional().nullable(),
+		visitStatus: z.enum(["not_visited", "arrived", "no_show", "rescheduled"]).optional(),
 	}),
 });
 
@@ -81,6 +86,9 @@ export const UpdatePatientSchema = z.object({
 		phone: z.string().trim().max(50).optional().nullable(),
 		copayAmount: moneyValue.optional().nullable(),
 		amountPaid: moneyValue.optional().nullable(),
+		paymentMethod: z.string().trim().max(100).optional().nullable(),
+		insuranceProvider: z.string().trim().max(200).optional().nullable(),
+		visitStatus: z.enum(["not_visited", "arrived", "no_show", "rescheduled"]).optional(),
 	}),
 });
 

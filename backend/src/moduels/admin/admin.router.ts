@@ -7,6 +7,8 @@ import {
 	ChecklistItemSchema,
 	CreateEligibilityRuleSchema,
 	CreateUserSchema,
+	CrmConnectSchema,
+	CrmUpdatePermissionSchema,
 	StageCreateSchema,
 	StageReorderSchema,
 	StageUpdateSchema,
@@ -58,3 +60,13 @@ adminRouter.delete("/eligibility-rules/:id", adminController.deleteEligibilityRu
 
 // Analytics
 adminRouter.get("/analytics", adminController.getAnalytics);
+
+// CRM Connect settings
+adminRouter.get("/crm-integration", adminController.getCrmIntegration);
+adminRouter.post("/crm-integration/connect", validateRequest(CrmConnectSchema), adminController.connectCrm);
+adminRouter.post("/crm-integration/disconnect", adminController.disconnectCrm);
+adminRouter.patch(
+	"/crm-integration/permission",
+	validateRequest(CrmUpdatePermissionSchema),
+	adminController.updateCrmPermission,
+);
