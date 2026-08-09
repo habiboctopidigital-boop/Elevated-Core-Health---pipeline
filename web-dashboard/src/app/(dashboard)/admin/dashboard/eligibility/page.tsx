@@ -108,7 +108,7 @@ export default function AdminEligibilityPage() {
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#1A1B1E]">Eligibility Rules</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">

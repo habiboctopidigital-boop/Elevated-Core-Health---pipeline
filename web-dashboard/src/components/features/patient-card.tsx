@@ -247,7 +247,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         <span className="text-[10px] text-[#6B7280]">{timeAgo(patient.updatedAt)}</span>
 
         {canMoveStage ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 sm:gap-1">
             {canRetreat && (
               <button
                 draggable={false}
@@ -255,8 +255,8 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   e.stopPropagation()
                   onMoveStage(patient.id, stageOrder[currentIdx - 1])
                 }}
-                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium
-                  text-[#6B7280] hover:bg-gray-100 hover:text-[#1A1B1E] transition-colors"
+                className="flex items-center gap-0.5 px-2 py-1.5 sm:px-1.5 sm:py-0.5 min-h-[36px] sm:min-h-0 rounded text-[10px] font-medium
+                  text-[#6B7280] hover:bg-gray-100 hover:text-[#1A1B1E] active:bg-gray-200 transition-colors"
                 title={`Move back to ${stageLabels[stageOrder[currentIdx - 1]]}`}
               >
                 <ArrowLeft className="w-3 h-3" />
@@ -272,9 +272,9 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   onMoveStage(patient.id, stageOrder[currentIdx + 1])
                 }}
                 className={cn(
-                  "flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-medium transition-colors",
+                  "flex items-center gap-0.5 px-2.5 py-1.5 sm:px-2 sm:py-0.5 min-h-[36px] sm:min-h-0 rounded text-[10px] font-medium transition-colors",
                   allComplete
-                    ? "bg-[#036638] text-white hover:bg-[#025030]"
+                    ? "bg-[#036638] text-white hover:bg-[#025030] active:bg-[#014a29]"
                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                 )}
                 title={
@@ -298,7 +298,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                 e.target.value = ""
               }}
               value=""
-              className="appearance-none w-full text-[10px] border border-[#E5E7EB] rounded px-2 py-0.5 pr-6 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
+              className="appearance-none w-full text-[10px] border border-[#E5E7EB] rounded px-2 py-1.5 sm:py-0.5 min-h-[36px] sm:min-h-0 pr-6 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638]"
               title="Assign VA"
             >
               <option value="">{patient.assignedTo ? "Reassign..." : "Assign VA..."}</option>

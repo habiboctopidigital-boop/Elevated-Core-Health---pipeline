@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, useCallback } from "react"
+import { useMemo, useRef, useState, useCallback, useEffect } from "react"
 import FullCalendar from "@fullcalendar/react"
 import dayGridPlugin from "@fullcalendar/daygrid"
 import timeGridPlugin from "@fullcalendar/timegrid"
@@ -159,6 +159,18 @@ export function WorkloadCalendar() {
     syncTitle()
   }
 
+  // A month grid is unreadable at phone width — default to the agenda list
+  // view there instead. Desktop/tablet keep the month view as before.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      changeView("listWeek")
+    }
+    // Only run once on mount — a user actively picking a view afterward
+    // (e.g. rotating to landscape) shouldn't get overridden.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const handleEventClick = (arg: EventClickArg) => {
     setSelectedPatientId(arg.event.id)
   }
@@ -277,16 +289,16 @@ export function WorkloadCalendar() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-[#1A1B1E] flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold text-[#1A1B1E] flex items-center gap-2">
             Workload Calendar
             {isFetching && <Loader2 className="w-3.5 h-3.5 text-[#65BD6C] animate-spin" />}
           </h1>
-          <p className="text-sm text-[#6B7280] mt-0.5">
+          <p className="text-xs sm:text-sm text-[#6B7280] mt-0.5">
             {isAdmin ? "Central scheduling dashboard - every appointment across the pipeline" : "Your team's scheduled appointments"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white border border-[#E5E7EB] text-xs">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white border border-[#E5E7EB] text-xs flex-wrap">
             <span className="font-semibold text-[#036638]">{stats.total} shown</span>
             {stats.unassigned > 0 && (
               <span className="text-amber-600 font-medium">{stats.unassigned} unassigned</span>
@@ -299,36 +311,37 @@ export function WorkloadCalendar() {
             className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-xs font-medium text-[#1A1B1E] hover:border-[#65BD6C]/40 hover:bg-[#EBF7EC]/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download className="w-3.5 h-3.5" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] p-3 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 sm:p-3 flex items-center justify-between flex-wrap gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={goPrev}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#EBF7EC] hover:text-[#036638] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#EBF7EC] hover:text-[#036638] transition-colors shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={goNext}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#EBF7EC] hover:text-[#036638] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#EBF7EC] hover:text-[#036638] transition-colors shrink-0"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             onClick={goToday}
-            className="h-8 px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#1A1B1E] hover:bg-[#EBF7EC] hover:border-[#65BD6C]/40 transition-colors"
+            className="h-8 px-2.5 sm:px-3 rounded-lg border border-[#E5E7EB] text-xs font-medium text-[#1A1B1E] hover:bg-[#EBF7EC] hover:border-[#65BD6C]/40 transition-colors shrink-0"
           >
             Today
           </button>
-          <span className="text-sm font-bold text-[#1A1B1E] ml-1 min-w-[140px]">{titleText}</span>
+          <span className="text-xs sm:text-sm font-bold text-[#1A1B1E] ml-1 truncate">{titleText}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-[#F3F4F6] rounded-lg p-1">
+        <div className="flex items-center gap-1 sm:gap-1.5 bg-[#F3F4F6] rounded-lg p-1">
           {VIEW_OPTIONS.map((v) => {
             const Icon = v.icon
             const active = activeView === v.key
@@ -336,13 +349,14 @@ export function WorkloadCalendar() {
               <button
                 key={v.key}
                 onClick={() => changeView(v.key)}
+                title={v.label}
                 className={cn(
-                  "flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium transition-colors",
+                  "flex items-center gap-1.5 h-7 px-2 sm:px-2.5 rounded-md text-xs font-medium transition-colors",
                   active ? "bg-[#036638] text-white shadow-sm" : "text-[#6B7280] hover:text-[#1A1B1E]",
                 )}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {v.label}
+                <span className="hidden sm:inline">{v.label}</span>
               </button>
             )
           })}
@@ -351,7 +365,7 @@ export function WorkloadCalendar() {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 max-w-xs">
+        <div className="relative flex-1 min-w-[160px] sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
           <input
             type="text"
@@ -372,7 +386,7 @@ export function WorkloadCalendar() {
         <select
           value={vaFilter}
           onChange={(e) => setVaFilter(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer flex-1 sm:flex-none min-w-[110px]"
         >
           <option value="">All VAs</option>
           <option value="__unassigned__">Unassigned</option>
@@ -385,7 +399,7 @@ export function WorkloadCalendar() {
         <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer flex-1 sm:flex-none min-w-[110px]"
         >
           <option value="">All Stages</option>
           {stageOrder.map((s) => (
@@ -408,7 +422,7 @@ export function WorkloadCalendar() {
         )}
 
         {vaList && vaList.length > 0 && (
-          <div className="flex items-center gap-2.5 ml-auto pl-2">
+          <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto sm:ml-auto sm:pl-2">
             {vaList.map((va) => {
               const c = vaBadgeColor(va.id, vaList)
               return (
@@ -434,7 +448,7 @@ export function WorkloadCalendar() {
       </div>
 
       {/* Calendar */}
-      <div className="ech-calendar bg-white rounded-xl border border-[#E5E7EB] p-3">
+      <div className="ech-calendar bg-white rounded-xl border border-[#E5E7EB] p-2 sm:p-3 overflow-x-auto">
         {filtered.length === 0 && appointments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-2">
             <CalendarDays className="w-10 h-10 text-[#D1D5DB]" />

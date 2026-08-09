@@ -408,19 +408,20 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4">
       <div
         className="absolute inset-0 bg-[#0F1115]/60 backdrop-blur-sm"
         onClick={() => !assigning && onClose()}
       />
-      <div className="relative bg-[#FAFAFA]/95 backdrop-blur-3xl rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border border-white/20 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden mx-4 animate-in fade-in zoom-in-95 duration-300">
+      {/* Full-screen sheet on mobile (no rounding/margin); centered card from sm up. */}
+      <div className="relative bg-[#FAFAFA]/95 backdrop-blur-3xl rounded-none sm:rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border-0 sm:border border-white/20 w-full h-[100dvh] sm:h-auto max-w-full sm:max-w-4xl max-h-full sm:max-h-[92vh] flex flex-col overflow-hidden mx-0 sm:mx-4 animate-in fade-in zoom-in-95 duration-300">
         {isLoading || !patient ? (
           <div className="flex-1 flex items-center justify-center p-8 text-center text-[#6B7280] text-sm">
             {isLoading ? "Loading..." : "Patient not found"}
           </div>
         ) : (
           <>
-            <div className="flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-8 py-8 flex items-start justify-between border-b border-white/10 shadow-[0_4px_24px_rgba(3,102,56,0.3)]">
+            <div className="flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-5 py-6 sm:px-8 sm:py-8 flex items-start justify-between border-b border-white/10 shadow-[0_4px_24px_rgba(3,102,56,0.3)]">
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
               <div className="min-w-0 flex-1 relative z-10">
                 <div className="flex items-center gap-3 mb-2">
@@ -492,9 +493,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
-            <div className="p-8 space-y-7">
+            <div className="p-5 sm:p-8 space-y-7">
               {/* Stage Navigation (sticky so the pipeline is always visible while scrolling) */}
-              <div className="sticky top-0 z-20 bg-[#FAFAFA]/80 backdrop-blur-2xl border-b border-gray-200/50 -mx-8 px-8 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
+              <div className="sticky top-0 z-20 bg-[#FAFAFA]/80 backdrop-blur-2xl border-b border-gray-200/50 -mx-5 px-5 sm:-mx-8 sm:px-8 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-3 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full shadow-[0_0_8px_rgba(3,102,56,0.6)]"></span>
                   Pipeline Stage
@@ -752,7 +753,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
 
                 {/* Payment details used for the check (persisted to the patient record) */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
                       Payment Type
@@ -848,7 +849,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 )}
 
                 {patient.eligibilityDetails?.vob && (
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  // Kept at 2 columns even on mobile — these are short key/value
+                  // pairs (Coverage, Payer, Copay...), fine compact and avoids a
+                  // very long single-column scroll for ~10 items.
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 text-sm">
                     {VOB_LABELS.map(([key, label]) => {
                       const value = patient.eligibilityDetails?.vob?.[key]
                       if (value === undefined || value === null) return null
@@ -870,7 +874,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Details */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Appointment - Always Show */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow col-span-2">
                   <div className="flex items-center justify-between mb-2">
@@ -1304,7 +1308,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     {savingContact || updatePatient.isPending ? "Saving..." : "Save Details"}
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(
                     [
                       ["firstName", "First Name"],

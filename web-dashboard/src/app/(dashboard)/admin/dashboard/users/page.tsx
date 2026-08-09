@@ -87,7 +87,7 @@ export default function AdminUsersPage() {
       <SettingsNav currentPage="users" />
 
       <div className="space-y-4  max-w-[1600px] mx-auto">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-xl font-bold text-[#1A1B1E]">User Management</h1>
             <p className="text-sm text-[#6B7280] mt-0.5">

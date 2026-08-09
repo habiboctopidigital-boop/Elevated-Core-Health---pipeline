@@ -148,8 +148,8 @@ export function KanbanBoard({
 
   return (
     <>
-      <div className="h-[calc(100vh-12rem)] -mx-6 -mb-6 overflow-x-auto">
-        <div className="inline-flex h-full gap-3 p-6 min-w-max">
+      <div className="h-[calc(100vh-12rem)] -mx-3 sm:-mx-6 -mb-6 overflow-x-auto snap-x snap-mandatory sm:snap-none scrollbar-thin">
+        <div className="inline-flex h-full gap-3 p-3 sm:p-6 min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
@@ -161,7 +161,7 @@ export function KanbanBoard({
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-72 flex flex-col rounded-xl border shrink-0 transition-all duration-200",
+                  "w-[85vw] sm:w-72 flex flex-col rounded-xl border shrink-0 snap-center transition-all duration-200",
                   isOver && !isDisabled
                     ? "border-[#65BD6C] bg-[#EBF7EC] shadow-lg shadow-[#65BD6C]/10 scale-[1.02]"
                     : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",

@@ -29,8 +29,9 @@ export function Topbar() {
   const title = getPageTitle(pathname)
 
   return (
-    <header className="sticky top-0 z-20 h-16 glass flex items-center justify-between px-6 border-b border-[#E5E7EB]/60">
-      <h2 className="text-[15px] font-bold text-[#1A1B1E] tracking-tight">{title}</h2>
+    <header className="sticky top-0 z-20 h-14 lg:h-16 glass flex items-center justify-end lg:justify-between px-4 lg:px-6 border-b border-[#E5E7EB]/60">
+      {/* Hidden on mobile — the drawer's own bar already shows branding there. */}
+      <h2 className="hidden lg:block text-[15px] font-bold text-[#1A1B1E] tracking-tight">{title}</h2>
       <StatusBar />
     </header>
   )
