@@ -78,7 +78,7 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="hidden lg:block sticky top-0 bg-white border-b border-[#E5E7EB] shadow-sm" style={{ zIndex: 50 }}>
+    <header className="hidden lg:block   bg-white border-b border-[#E5E7EB] shadow-sm" >
       <div className="flex items-center justify-between px-6 py-3.5 h-16">
         {/* Left: Search */}
         <div className="flex-1 max-w-sm">
