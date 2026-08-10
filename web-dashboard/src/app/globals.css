@@ -185,6 +185,12 @@
 .animate-delay-1000 { animation-delay: 1s; }
 
 @layer utilities {
+  /* Extended z-index utilities for modals and overlays */
+  .z-40 { z-index: 40; }
+  .z-50 { z-index: 50; }
+  .z-60 { z-index: 60; }
+  .z-100 { z-index: 100; }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #d4d4d8 transparent;

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/auth/useAuth"
+import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import {
   Search,
   Settings,
@@ -18,38 +19,15 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import axiosInstance from "@/lib/axios"
 
-interface Notification {
-  id: string
-  message: string
-  type: "flag" | "stale" | "assignment" | "info"
-  timestamp: Date
-  read: boolean
-}
-
 export function DashboardHeader() {
   const router = useRouter()
   const { user, logout } = useAuth()
+  const { notifications, unreadCount } = useNotificationsContext()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [profileOpen, setProfileOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: "1",
-      message: "3 cards flagged for review",
-      type: "flag",
-      timestamp: new Date(Date.now() - 5 * 60000),
-      read: false,
-    },
-    {
-      id: "2",
-      message: "2 stale cards in pipeline",
-      type: "stale",
-      timestamp: new Date(Date.now() - 15 * 60000),
-      read: false,
-    },
-  ])
 
   const profileRef = useRef<HTMLDivElement>(null)
   const notificationsRef = useRef<HTMLDivElement>(null)
@@ -74,9 +52,7 @@ export function DashboardHeader() {
     router.push("/login")
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
-
-  const getNotificationIcon = (type: Notification["type"]) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case "flag":
         return "🚩"
@@ -84,6 +60,10 @@ export function DashboardHeader() {
         return "⏱️"
       case "assignment":
         return "👤"
+      case "onboarding":
+        return "➕"
+      case "success":
+        return "✅"
       default:
         return "ℹ️"
     }
@@ -98,7 +78,7 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="hidden lg:block sticky top-0 z-20 bg-white border-b border-[#E5E7EB] shadow-sm">
+    <header className="hidden lg:block sticky top-0 bg-white border-b border-[#E5E7EB] shadow-sm" style={{ zIndex: 50 }}>
       <div className="flex items-center justify-between px-6 py-3.5 h-16">
         {/* Left: Search */}
         <div className="flex-1 max-w-sm">
@@ -146,7 +126,7 @@ export function DashboardHeader() {
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-5 h-5 px-1.5 bg-red-500 text-white text-[11px] font-bold rounded-full shadow-md">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -154,7 +134,7 @@ export function DashboardHeader() {
 
             {/* Notifications Dropdown */}
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E5E7EB] rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" style={{ zIndex: 60 }}>
                 <div className="bg-gradient-to-r from-[#036638] to-[#025030] px-4 py-3">
                   <h3 className="text-sm font-bold text-white">Notifications</h3>
                 </div>
@@ -217,7 +197,7 @@ export function DashboardHeader() {
 
             {/* Profile Dropdown Menu */}
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E5E7EB] rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" style={{ zIndex: 60 }}>
                 {/* User Info */}
                 <div className="bg-gradient-to-br from-[#036638]/10 to-[#065040]/10 px-4 py-3 border-b border-[#E5E7EB]">
                   <p className="text-sm font-bold text-[#1A1B1E]">{user?.name}</p>

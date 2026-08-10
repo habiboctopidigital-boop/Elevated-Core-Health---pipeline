@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/auth/useAuth"
 import { useDashboard } from "@/hooks/query/useDashboard"
 import { usePatients } from "@/hooks/query/usePatients"
 import { useAdminAnalytics } from "@/hooks/query/useAdmin"
+import { SplashLoader } from "@/components/ui/splash-loader"
 import { useClearFlag } from "@/hooks/query/usePatients"
 import { ROUTES } from "@/constants"
 import { useStageMeta } from "@/hooks/query/useStages"
@@ -64,8 +65,19 @@ export default function AdminDashboardPage() {
     { label: "Profile", icon: User, href: ROUTES.ADMIN.PROFILE, desc: "Update your profile" },
   ]
 
+  // Show splash screen while data is loading
+  const isLoading = !summary || !patients || !analytics
+
   return (
-    <div className="relative z-10 space-y-6 max-w-[1600px] mx-auto">
+    <>
+      {isLoading && (
+        <SplashLoader
+          show={true}
+          message="Loading"
+          subtitle="Setting up your workspace..."
+        />
+      )}
+      <div className="relative z-10 space-y-6 max-w-[1600px] mx-auto">
       <div>
         <h1 className="text-xl font-bold text-[#1A1B1E]">
           Admin Dashboard
@@ -180,8 +192,8 @@ export default function AdminDashboardPage() {
 
       {/* Clear Flag with Reason Modal */}
       {clearingPatientId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setClearingPatientId(null); setClearReasonInput("") }} />
+        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 50 }}>
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-lg" onClick={() => { setClearingPatientId(null); setClearReasonInput("") }} />
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -295,7 +307,8 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 

@@ -11,6 +11,7 @@ const orbitron = Orbitron({
 import ReduxProvider from "@/providers/ReduxProvider"
 import QueryProvider from "@/providers/QueryProvider"
 import ThemeProvider from "@/providers/ThemeProvider"
+import { NotificationsProvider } from "@/providers/NotificationsProvider"
 import { Toaster } from "sonner"
 
 export const metadata = {
@@ -29,7 +30,9 @@ export default function RootLayout({
         <ReduxProvider>
           <QueryProvider>
             <ThemeProvider>
-              {children}
+              <NotificationsProvider>
+                {children}
+              </NotificationsProvider>
               <Toaster 
                 position="top-right" 
                 toastOptions={{

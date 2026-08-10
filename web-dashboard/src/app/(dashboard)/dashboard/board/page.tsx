@@ -20,17 +20,17 @@ export default function VABoardPage() {
   return (
     <div className="flex flex-col h-full">
       {/* - Board Header - */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center shrink-0">
             <LayoutGrid className="w-5 h-5 text-[#036638]" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#1A1B1E]">Patient Pipeline Board</h1>
-            <p className="text-xs text-[#6B7280]">Track patients through 7 workflow stages</p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-[#1A1B1E] truncate">Patient Pipeline Board</h1>
+            <p className="text-xs text-[#6B7280] truncate">Track patients through 7 workflow stages</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <AddPatientDialog />
           <ImportDialog />
           <StatusBar />
@@ -38,9 +38,9 @@ export default function VABoardPage() {
       </div>
 
       {/* - Search & Filter Bar - */}
-      <div className="flex items-center gap-4 mb-4 pb-3 border-b border-[#E5E7EB]">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-3 border-b border-[#E5E7EB]">
         {/* Stage Filter Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
           <button
             onClick={() => setSelectedStageFilter(null)}
             className={cn(
@@ -70,7 +70,7 @@ export default function VABoardPage() {
         </div>
 
         {/* Search Input */}
-        <div className="w-64 relative">
+        <div className="w-full sm:w-64 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
           <input
             type="text"

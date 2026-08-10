@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/auth/useAuth"
 import { useDashboard } from "@/hooks/query/useDashboard"
 import { usePatients } from "@/hooks/query/usePatients"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { SplashLoader } from "@/components/ui/splash-loader"
 import { ROUTES } from "@/constants"
 import {
   Columns3,
@@ -47,8 +48,19 @@ export default function VADashboardPage() {
   // Quick nav grid - 4 columns for 4 items
   const navCols = "grid-cols-2 sm:grid-cols-4"
 
+  // Show splash screen while data is loading
+  const isLoading = !summary || !patients
+
   return (
-    <div className="relative z-10 space-y-6 max-w-[1600px] mx-auto">
+    <>
+      {isLoading && (
+        <SplashLoader
+          show={true}
+          message="Loading"
+          subtitle="Setting up your workspace..."
+        />
+      )}
+      <div className="relative z-10 space-y-6 max-w-[1600px] mx-auto">
       {/* Greeting */}
       <div>
         <h1 className="text-xl font-bold text-[#1A1B1E]">
@@ -168,6 +180,7 @@ export default function VADashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

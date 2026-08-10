@@ -414,16 +414,54 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4">
+    <div className="fixed inset-0 z-10 flex items-center justify-center sm:p-4">
       <div
-        className="absolute inset-0 bg-[#0F1115]/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/75 backdrop-blur-lg"
         onClick={() => !assigning && onClose()}
       />
       {/* Full-screen sheet on mobile (no rounding/margin); centered card from sm up. */}
       <div className="relative bg-[#FAFAFA]/95 backdrop-blur-3xl rounded-none sm:rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border-0  w-full h-[100dvh] sm:h-auto max-w-full sm:max-w-4xl max-h-full sm:max-h-[92vh] flex flex-col overflow-hidden mx-0 sm:mx-4 animate-in fade-in zoom-in-95 duration-300">
         {isLoading || !patient ? (
-          <div className="flex-1 flex items-center justify-center p-8 text-center text-[#6B7280] text-sm">
-            {isLoading ? "Loading..." : "Patient not found"}
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            {isLoading ? (
+              <>
+                {/* Logo Container with Animation */}
+                <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-6">
+                  {/* Outer spinning ring */}
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#65BD6C] border-r-[#036638] animate-spin" />
+
+                  {/* Middle pulsing ring */}
+                  <div className="absolute inset-2 rounded-full border-2 border-[#65BD6C]/30 animate-pulse" />
+
+                  {/* Inner glowing ring */}
+                  <div className="absolute inset-4 rounded-full bg-gradient-to-br from-[#036638]/10 to-[#065040]/5 blur-xl animate-pulse" />
+
+                  {/* Logo Image */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/logo.png"
+                      alt="Elevated Core Health"
+                      className="w-12 h-12 sm:w-16 sm:h-16 object-contain animate-bounce"
+                      style={{
+                        animation: "bounce 2s infinite",
+                      }}
+                    />
+                  </div>
+
+                  {/* Floating particles effect */}
+                  <div className="absolute inset-0">
+                    <div className="absolute top-0 left-1/2 w-1 h-1 bg-[#65BD6C] rounded-full animate-ping" />
+                    <div className="absolute bottom-0 right-1/4 w-1 h-1 bg-[#036638] rounded-full animate-ping" style={{ animationDelay: "0.5s" }} />
+                    <div className="absolute top-1/2 right-0 w-1 h-1 bg-[#65BD6C] rounded-full animate-ping" style={{ animationDelay: "1s" }} />
+                  </div>
+                </div>
+
+                <p className="text-sm font-semibold text-[#1A1B1E]">Loading patient details...</p>
+                <p className="text-xs text-[#6B7280] mt-1">Please wait</p>
+              </>
+            ) : (
+              <p className="text-sm text-[#6B7280]">Patient not found</p>
+            )}
           </div>
         ) : (
           <>
@@ -1722,9 +1760,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
         {/* Unified Flag Popup Modal */}
         {showFlagPopup && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 60 }}>
             <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/75 backdrop-blur-lg"
               onClick={() => setShowFlagPopup(false)}
             />
             <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">

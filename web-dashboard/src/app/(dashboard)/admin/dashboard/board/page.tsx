@@ -105,26 +105,26 @@ export default function AdminBoardPage() {
   return (
     <div className="flex flex-col h-full">
       {/* - Board Header - */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5 text-[#036638]" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-[#1A1B1E]">Admin Pipeline Board</h1>
-            <p className="text-xs text-[#6B7280]">Full oversight - manage all patient stages</p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-[#1A1B1E] truncate">Admin Pipeline Board</h1>
+            <p className="text-xs text-[#6B7280] truncate">Full oversight - manage all patient stages</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <AddPatientDialog />
           <ImportDialog />
         </div>
       </div>
 
       {/* - Search & Filter Bar - */}
-      <div className="flex items-center gap-4 mb-4 pb-3 border-b border-[#E5E7EB]">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-3 border-b border-[#E5E7EB]">
         {/* Priority Filters */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
           <button
             onClick={() => setFilterMode("all")}
             className={cn(
@@ -161,7 +161,7 @@ export default function AdminBoardPage() {
         </div>
 
         {/* Stage Filter Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
           <button
             onClick={() => setSelectedStageFilter(null)}
             className={cn(
@@ -191,7 +191,7 @@ export default function AdminBoardPage() {
         </div>
 
         {/* Search Input */}
-        <div className="w-64 relative">
+        <div className="w-full sm:w-64 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
           <input
             type="text"
@@ -212,14 +212,14 @@ export default function AdminBoardPage() {
       </div>
 
       {/* - Kanban Board - */}
-      <div className="h-[calc(100vh-12rem)] -mx-6 -mb-6 overflow-x-auto">
-        <div className="inline-flex h-full gap-3 p-6 min-w-max">
+      <div className="sm:h-[calc(100vh-12rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto">
+        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-3 p-0 sm:p-6 sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             return (
               <div
                 key={stage}
-                className="w-72 flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 shrink-0"
+                className="w-full sm:w-72 flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 sm:shrink-0"
               >
                 <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50 relative">
                   <div className="flex items-center justify-between">

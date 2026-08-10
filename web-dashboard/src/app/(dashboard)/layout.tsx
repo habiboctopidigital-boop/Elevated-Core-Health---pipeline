@@ -51,7 +51,7 @@ export default function DashboardLayout({
 
       {/* Mobile Sidebar Drawer - Only render when open for reliability */}
       {isMobileMenuOpen && (
-        <div className="fixed left-0 top-0 h-screen w-64 z-50 lg:hidden animate-in slide-in-from-left duration-300">
+        <div className="fixed left-0 top-0 h-screen w-64 z-[60] lg:hidden animate-in slide-in-from-left duration-300">
           <EchSidebar
             isCollapsed={false}
             setIsCollapsed={() => {}}
@@ -89,7 +89,7 @@ export default function DashboardLayout({
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-6">
-          <div className="relative z-50 max-w-[1440px] mx-auto">
+          <div className="relative z-10 max-w-[1440px] mx-auto">
             <DashboardWatermark
               position="center"
               opacity={WatermarkOpacity.DASHBOARD_SUBTLE}

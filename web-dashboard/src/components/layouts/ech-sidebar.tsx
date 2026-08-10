@@ -19,9 +19,11 @@ import {
   User,
   Loader2,
   ChevronLeft,
+  RulerIcon,
   ChevronRight,
   CalendarDays,
   X,
+  NotebookText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/constants"
@@ -60,6 +62,7 @@ const ADMIN_NAV = [
   ]},
   { section: "Configuration", items: [
     { href: ROUTES.ADMIN.APP_SETTINGS, icon: Settings, label: "App Settings" },
+    { href: ROUTES.ADMIN.SOP, icon: NotebookText, label: "Sop Guide" },
   ]},
 ]
 

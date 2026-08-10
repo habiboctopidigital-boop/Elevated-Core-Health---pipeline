@@ -26,6 +26,8 @@ export function KanbanBoard({
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(initialPatientId ?? null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [quickJumpStage, setQuickJumpStage] = useState<string | null>(null)
+  const stageRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const pendingMoves = useRef<Set<string>>(new Set())
 
   // Filter patients by search query and stage
@@ -146,10 +148,39 @@ export function KanbanBoard({
     )
   }
 
+  const handleQuickJump = (stage: string) => {
+    setQuickJumpStage(stage)
+    setTimeout(() => {
+      stageRefs.current[stage]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
+    }, 0)
+  }
+
   return (
     <>
-      <div className="h-[calc(100vh-12rem)] -mx-3 sm:-mx-6 -mb-6 overflow-x-auto snap-x snap-mandatory sm:snap-none scrollbar-thin">
-        <div className="inline-flex h-full gap-3 p-3 sm:p-6 min-w-max">
+      {/* Quick Jump Selector */}
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-[#6B7280]">Jump to stage:</span>
+        <div className="flex gap-2 flex-wrap">
+          {stageOrder.map((stage) => (
+            <button
+              key={stage}
+              onClick={() => handleQuickJump(stage)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer",
+                quickJumpStage === stage
+                  ? "bg-[#036638] text-white border-[#036638] shadow-md"
+                  : "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#036638] hover:text-[#036638]"
+              )}
+            >
+              {stageLabels[stage]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop: Horizontal scroll | Mobile: Vertical stack */}
+      <div className="sm:h-[calc(100vh-12rem)] sm:-mx-3 sm:sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin">
+        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-3 p-3 sm:p-6 sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
@@ -157,13 +188,17 @@ export function KanbanBoard({
             return (
               <div
                 key={stage}
+                ref={(el) => {
+                  if (el) stageRefs.current[stage] = el
+                }}
                 onDragOver={(e) => handleDragOver(e, stage)}
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-[85vw] sm:w-72 flex flex-col rounded-xl border shrink-0 snap-center transition-all duration-200",
+                  "w-full sm:w-72 sm:shrink-0 sm:snap-center flex flex-col rounded-xl border transition-all duration-200",
+                  quickJumpStage === stage && "ring-2 ring-[#036638] ring-offset-2",
                   isOver && !isDisabled
-                    ? "border-[#65BD6C] bg-[#EBF7EC] shadow-lg shadow-[#65BD6C]/10 scale-[1.02]"
+                    ? "border-[#65BD6C] bg-[#EBF7EC] shadow-lg shadow-[#65BD6C]/10 sm:scale-[1.02]"
                     : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",
                 )}
               >

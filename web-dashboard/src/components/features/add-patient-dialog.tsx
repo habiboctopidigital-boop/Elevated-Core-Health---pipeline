@@ -15,6 +15,7 @@ import { Plus, Loader2 } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { useListVas } from "@/hooks/query/usePatients"
+import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { SelectOrOther } from "@/components/shared/select-or-other"
 import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
 import { toast } from "sonner"
@@ -66,6 +67,7 @@ export function AddPatientDialog() {
   const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
 
   const { data: vaList } = useListVas()
+  const { addNotification } = useNotificationsContext()
   const queryClient = useQueryClient()
 
   const addPatientMutation = useMutation({
@@ -89,6 +91,7 @@ export function AddPatientDialog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] })
+      addNotification(`New patient "${formData.firstName} ${formData.lastName}" added to onboarding`, "onboarding")
       toast.success("Patient added successfully")
       setOpen(false)
       setFormData(EMPTY_FORM)
@@ -117,7 +120,8 @@ export function AddPatientDialog() {
   }
 
   return (
-    <Dialog
+  //  <div className="fixed opacity-35 inset-0 z-40  w-full h-full bg-blue-800">
+     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
@@ -127,6 +131,7 @@ export function AddPatientDialog() {
           setInsuranceProviderOther(false)
         }
       }}
+      
     >
       <DialogTrigger asChild>
         <Button className="bg-[#036638] hover:bg-[#025030] text-white gap-2" size="sm">
@@ -134,15 +139,15 @@ export function AddPatientDialog() {
           Add Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Patient</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300">
+        <DialogHeader className="border-b border-[#E5E7EB] pb-4">
+          <DialogTitle className="text-2xl font-bold text-[#1A1B1E]">Add Patient</DialogTitle>
+          <DialogDescription className="text-sm text-[#6B7280] mt-1">
             Add a new patient to the pipeline. They'll start in the Onboarding stage.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5 py-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-[#1A1B1E]">
@@ -222,7 +227,7 @@ export function AddPatientDialog() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Where They Came From</label>
+              <label className="text-sm font-semibold text-[#1A1B1E]">Source is</label>
               <select
                 name="bookingPlatform"
                 value={formData.bookingPlatform}
@@ -292,7 +297,7 @@ export function AddPatientDialog() {
               </select>
             </div>
 
-            <div className="space-y-1.5 col-span-2">
+            {/* <div className="space-y-1.5 col-span-2">
               <label className="text-sm font-semibold text-[#1A1B1E]">
                 Reason for Visit <span className="text-[#9CA3AF] font-normal">(optional, operational notes only)</span>
               </label>
@@ -303,11 +308,11 @@ export function AddPatientDialog() {
                 placeholder="e.g. Follow-up visit, medication review..."
                 className="text-sm min-h-[60px]"
               />
-            </div>
+            </div> */}
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2 pt-6 border-t border-[#E5E7EB]">
             <Button
               type="button"
               variant="ghost"
@@ -334,5 +339,6 @@ export function AddPatientDialog() {
         </form>
       </DialogContent>
     </Dialog>
+  //  </div>
   )
 }
