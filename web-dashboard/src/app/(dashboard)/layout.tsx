@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { EchSidebar } from "@/components/layouts/ech-sidebar"
 import { Topbar } from "@/components/layouts/topbar"
 import { Menu, X } from "lucide-react"
@@ -12,6 +13,21 @@ export default function DashboardLayout({
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+
+  // Auto-close the drawer whenever the route changes (tapping a nav link
+  // should navigate AND close it, not require a second tap on the overlay).
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
+
+  // Lock background scroll while the drawer is open.
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? "hidden" : ""
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isMobileMenuOpen])
 
   return (
     <div className="flex min-h-screen bg-[#F4F5F7]">
@@ -20,12 +36,17 @@ export default function DashboardLayout({
         <EchSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay — z-40 so it sits above ALL page content
+          (including the sticky Topbar, also z-20) and only below the drawer itself. */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-in fade-in duration-200"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
       )}
-      <div className={`fixed left-0 top-0 h-screen z-30 lg:hidden transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <EchSidebar isCollapsed={false} setIsCollapsed={() => {}} />
+      <div className={`fixed left-0 top-0 h-screen z-50 lg:hidden transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <EchSidebar isCollapsed={false} setIsCollapsed={() => {}} onMobileClose={() => setIsMobileMenuOpen(false)} />
       </div>
 
       {/* Main Content */}

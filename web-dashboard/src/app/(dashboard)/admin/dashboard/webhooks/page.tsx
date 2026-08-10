@@ -17,7 +17,7 @@ export default function WebhooksPage() {
   const [testLoading, setTestLoading] = useState(false)
   const [testResponse, setTestResponse] = useState<any>(null)
 
-  const webhookUrl = `${API_BASE_URL}/api/patients/intake`
+  const webhookUrl = `${API_BASE_URL}/patients/intake`
 
   useEffect(() => {
     // Fetch webhook secret from localStorage or env

@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarDays,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/constants"
@@ -51,9 +52,11 @@ const ADMIN_NAV = [
 interface EchSidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
+  /** Passed only by the mobile drawer instance — renders an explicit close (X) button. */
+  onMobileClose?: () => void;
 }
 
-export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
+export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
@@ -106,6 +109,15 @@ export function EchSidebar({ isCollapsed, setIsCollapsed }: EchSidebarProps) {
         >
           {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
         </button>
+        {onMobileClose && (
+          <button
+            onClick={onMobileClose}
+            aria-label="Close menu"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full text-gray-300 hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
