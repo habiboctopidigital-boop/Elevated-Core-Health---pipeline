@@ -30,7 +30,7 @@ class SettingsService {
       }
 
       return ServiceResponse.success(
-        { key: setting.key, value: setting.value, updatedAt: setting.updatedAt } as SettingValue,
+        { key: setting.key, value: setting.value, updatedAt: setting.updatedAt } as unknown as string,
         "Setting retrieved successfully"
       );
     } catch (error) {
@@ -70,7 +70,7 @@ class SettingsService {
       });
 
       return ServiceResponse.success(
-        { key: setting.key, value: setting.value, updatedAt: setting.updatedAt } as SettingValue,
+        { key: setting.key, value: setting.value, updatedAt: setting.updatedAt } as unknown as string,
         "Setting updated successfully"
       );
     } catch (error) {

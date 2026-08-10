@@ -1,6 +1,7 @@
 import { type RequestHandler } from "express";
 import { settingsService } from "./settings.service";
 import { handleServiceResponse } from "@/utils/httpHandlers";
+import { ServiceResponse } from "@/utils/serviceResponse";
 
 class SettingsController {
   /**
@@ -9,7 +10,8 @@ class SettingsController {
    */
   getSetting: RequestHandler = async (req, res) => {
     const { key } = req.params;
-    const result = await settingsService.getSetting(key);
+    const keyValue = Array.isArray(key) ? key[0] : key;
+    const result = await settingsService.getSetting(keyValue);
     handleServiceResponse(result, res);
   };
 
@@ -24,12 +26,13 @@ class SettingsController {
 
     if (!userId) {
       return handleServiceResponse(
-        { statusCode: 401, isSuccess: false, message: "Unauthorized", data: null },
+        ServiceResponse.failure("Unauthorized", null, 401),
         res
       );
     }
 
-    const result = await settingsService.updateSetting(key, value, userId);
+    const keyValue = Array.isArray(key) ? key[0] : key;
+    const result = await settingsService.updateSetting(keyValue, value, userId);
     handleServiceResponse(result, res);
   };
 }
