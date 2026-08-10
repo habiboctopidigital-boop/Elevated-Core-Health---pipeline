@@ -475,11 +475,11 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
           </div>
         ) : (
           <>
-            <div className="flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-5 py-6 sm:px-8 sm:py-8 flex items-start justify-between border-b border-white/10 shadow-[0_4px_24px_rgba(3,102,56,0.3)]">
+            <div className="flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-4 py-4 sm:px-8 sm:py-8 flex items-start justify-between border-b border-white/10 shadow-[0_4px_24px_rgba(3,102,56,0.3)]">
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
               <div className="min-w-0 flex-1 relative z-50">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-white truncate">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-white truncate">
                     {patient.name}
                   </h2>
                   {patient.isFlagged && (
@@ -501,7 +501,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <span className="px-3 py-1 bg-white/20 text-white text-xs font-semibold rounded-full">
                     {stageLabels[patient.stage]}
                   </span>
@@ -655,7 +655,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     )}
                   </div>
 
-                  {/* Eligibility Check */}
+                  {/* Eligibility Check — light brand-green "premium" pill (mirrors the emerald-50/700/200 treatment, in-palette) */}
                   <button
                     onClick={handleCheckEligibility}
                     disabled={checkEligibility.isPending}
@@ -663,7 +663,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-xs font-bold shrink-0",
                       checkEligibility.isPending
                         ? "bg-white/10 border-white/15 text-white/60 cursor-wait"
-                        : "bg-white text-[#036638] border-white hover:bg-[#EBF7EC] shadow-sm cursor-pointer",
+                        : "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/40 hover:bg-white hover:border-[#65BD6C] shadow-sm cursor-pointer",
                     )}
                   >
                     {checkEligibility.isPending ? (
@@ -684,43 +684,56 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     )}
                   </button>
 
-                  {/* Assign / Reassign (SI/VA dropdown, elevated from the body) */}
+                  {/* Assign / Reassign — SI (staff) selector: micro-label + active/unassigned status dot + chevron */}
                   {(!!vaList && (isAdmin || !patient.assignedUser)) && (
-                    <div className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl pl-3 pr-3.5 py-2 backdrop-blur-md">
-                      <div className="p-1.5 rounded-lg bg-white/15 shrink-0">
-                        <UserPlus className="w-3.5 h-3.5 text-white" />
+                    <div className="flex flex-col gap-1 bg-white/10 border border-white/15 rounded-2xl px-3.5 py-2 backdrop-blur-md">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full shrink-0",
+                            patient.assignedUser
+                              ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]"
+                              : "bg-white/30",
+                          )}
+                        />
+                        <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">
+                          {isAdmin ? "Assigned SI" : "Assignment"}
+                        </p>
                       </div>
-                      {!isAdmin && !patient.assignedUser && (
-                        <button
-                          onClick={handleClaim}
-                          disabled={claimPatient.isPending}
-                          className="text-xs font-bold text-white hover:text-white/80 transition-all disabled:opacity-50 whitespace-nowrap"
-                        >
-                          {claimPatient.isPending ? "Claiming..." : "Assign to Me"}
-                        </button>
-                      )}
-                      {vaList && (
-                        <div className="relative">
-                          <select
-                            onChange={(e) => {
-                              const val = e.target.value
-                              e.target.value = ""
-                              if (val) handleAssignTo(val)
-                            }}
-                            value=""
-                            disabled={assigning}
-                            className="appearance-none text-xs font-semibold bg-transparent text-white pr-5 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&>option]:text-[#1A1B1E]"
+                      <div className="flex items-center gap-2.5">
+                        <UserPlus className="w-3.5 h-3.5 text-white shrink-0" />
+                        {!isAdmin && !patient.assignedUser && (
+                          <button
+                            onClick={handleClaim}
+                            disabled={claimPatient.isPending}
+                            className="text-xs font-bold text-white hover:text-white/80 transition-all disabled:opacity-50 whitespace-nowrap"
                           >
-                            <option value="">{patient.assignedUser ? "Reassign to..." : "Assign to VA..."}</option>
-                            {vaList.filter((v) => v.id !== user?.id).map((va) => (
-                              <option key={va.id} value={va.id}>
-                                {va.name}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown className="w-3 h-3 text-white/70 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        </div>
-                      )}
+                            {claimPatient.isPending ? "Claiming..." : "Assign to Me"}
+                          </button>
+                        )}
+                        {vaList && (
+                          <div className="relative">
+                            <select
+                              onChange={(e) => {
+                                const val = e.target.value
+                                e.target.value = ""
+                                if (val) handleAssignTo(val)
+                              }}
+                              value=""
+                              disabled={assigning}
+                              className="appearance-none text-xs font-semibold bg-transparent text-white pr-5 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&>option]:text-[#1A1B1E]"
+                            >
+                              <option value="">{patient.assignedUser ? "Reassign to..." : "Assign to VA..."}</option>
+                              {vaList.filter((v) => v.id !== user?.id).map((va) => (
+                                <option key={va.id} value={va.id}>
+                                  {va.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown className="w-3 h-3 text-white/70 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -769,9 +782,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
-            <div className="p-5 sm:p-8 space-y-7">
+            <div className="p-4 sm:p-8 space-y-5 sm:space-y-7">
               {/* Stage Navigation (sticky so the pipeline is always visible while scrolling) */}
-              <div className="sticky top-0 z-20 bg-[#FAFAFA]/80 backdrop-blur-2xl border-b border-gray-200/50 -mx-5 px-5 sm:-mx-8 sm:px-8 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-6">
+              <div className="sticky top-0 z-20 bg-[#FAFAFA]/80 backdrop-blur-2xl border-b border-gray-200/50 -mx-4 px-4 sm:-mx-8 sm:px-8 py-3 sm:py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] mb-5 sm:mb-6">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-3 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full shadow-[0_0_8px_rgba(3,102,56,0.6)]"></span>
                   Pipeline Stage
@@ -783,7 +796,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     const isCurrent = stage === patient.stage
                     const isNext = idx === currentIdx + 1
                     const isFuture = idx > currentIdx + 1
-                    const isFirst = idx === 0
                     const isLast = idx === stageOrder.length - 1
 
                     // EVERYONE: next stage is only clickable if current stage checklist is 100% complete
@@ -802,52 +814,65 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         ? "Complete the current stage first"
                         : null
 
-                    // Chevron/arrow shape: point on the right, notch on the left so
-                    // consecutive steps interlock. First/last steps skip the notch/point
-                    // on their outer edge to keep the row's ends flush.
-                    const clipPath = isFirst
-                      ? "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)"
-                      : isLast
-                        ? "polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%)"
-                        : "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%)"
-
                     return (
-                      <button
-                        key={stage}
-                        onClick={() => isClickable && handleMoveStage(stage)}
-                        disabled={moveStage.isPending || !isClickable}
-                        title={isDisabledReason || stageLabels[stage]}
-                        style={{ clipPath, zIndex: idx, marginLeft: isFirst ? 0 : "-14px" }}
-                        className={cn(
-                          "relative flex items-center justify-center gap-1.5 flex-1 min-w-[108px] sm:min-w-[126px] py-2.5 pl-5 pr-4 text-[11px] font-bold transition-all whitespace-nowrap",
-                          // Current stage (dark green, elevated)
-                          isCurrent &&
-                            "bg-gradient-to-r from-[#036638] to-[#025030] text-white shadow-[0_2px_14px_rgba(3,102,56,0.4)] cursor-default",
-                          // Completed stages (light green, clickable to go back)
-                          !isCurrent && isComplete &&
-                            "bg-[#EBF7EC] text-[#036638] hover:bg-[#dff4eb] cursor-pointer",
-                          // Next stage when checklist COMPLETE (white, clickable)
-                          !isCurrent && !isComplete && !isFuture && isClickable &&
-                            "bg-white text-[#036638] ring-1 ring-inset ring-[#036638]/25 hover:ring-[#036638]/50 hover:shadow-sm cursor-pointer",
-                          // Next stage when checklist INCOMPLETE or future stages (gray, DISABLED)
-                          !isCurrent && !isComplete && !isClickable &&
-                            "bg-gray-100 text-gray-400 cursor-not-allowed",
-                          // Future unreachable stages (lighter gray)
-                          isFuture && !isClickable &&
-                            "bg-gray-50 text-gray-300 cursor-not-allowed",
+                      <div key={stage} className="relative flex-1 min-w-[76px] sm:min-w-[92px] flex flex-col items-center">
+                        {/* Connector to the next step — centered on the circle (circle is 2rem/32px, so its center sits at top-4/16px) */}
+                        {!isLast && (
+                          <div
+                            className={cn(
+                              "absolute top-4 left-1/2 w-full h-0.5 -z-0 transition-colors",
+                              isComplete ? "bg-[#65BD6C]" : "bg-gray-200",
+                            )}
+                          />
                         )}
-                      >
-                        {isComplete && <Check className="w-3.5 h-3.5 shrink-0" />}
-                        {isBlocked && <Lock className="w-3 h-3 shrink-0" />}
-                        <span className="truncate">{stageLabels[stage]}</span>
-                      </button>
+                        <button
+                          onClick={() => isClickable && handleMoveStage(stage)}
+                          disabled={moveStage.isPending || !isClickable}
+                          title={isDisabledReason || stageLabels[stage]}
+                          className="relative z-10 flex flex-col items-center gap-1.5 group"
+                        >
+                          <span
+                            className={cn(
+                              "flex items-center justify-center w-8 h-8 rounded-full border-2 text-[11px] font-bold transition-all shrink-0",
+                              // Current stage — solid, elevated with a soft focus ring
+                              isCurrent &&
+                                "bg-[#036638] border-[#036638] text-white shadow-[0_0_0_4px_rgba(3,102,56,0.15)]",
+                              // Completed — light green fill, clickable to go back
+                              !isCurrent && isComplete &&
+                                "bg-[#EBF7EC] border-[#65BD6C] text-[#036638] group-hover:bg-[#dff4eb] cursor-pointer",
+                              // Next stage, unlocked — white with a highlighted border
+                              !isCurrent && !isComplete && !isFuture && isClickable &&
+                                "bg-white border-[#036638]/40 text-[#036638] group-hover:border-[#036638] group-hover:shadow-sm cursor-pointer",
+                              // Locked (checklist incomplete) or future — flat gray, disabled
+                              !isCurrent && !isComplete && !isClickable &&
+                                "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed",
+                            )}
+                          >
+                            {isComplete ? (
+                              <Check className="w-4 h-4" />
+                            ) : isBlocked ? (
+                              <Lock className="w-3.5 h-3.5" />
+                            ) : (
+                              idx + 1
+                            )}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold text-center leading-tight max-w-[84px] truncate transition-colors",
+                              isCurrent ? "text-[#036638]" : isComplete ? "text-[#036638]/70" : "text-gray-400",
+                            )}
+                          >
+                            {stageLabels[stage]}
+                          </span>
+                        </button>
+                      </div>
                     )
                   })}
                 </div>
               </div>
 
               {/* Checklist */}
-              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-4 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2.5">
                     <div className="p-1.5 bg-[#EBF7EC] rounded-lg border border-[#65BD6C]/20">
@@ -996,7 +1021,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Stage-Specific SOPs */}
-              <div className="bg-gradient-to-br from-amber-50/90 to-orange-50/90 backdrop-blur-md border border-amber-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(245,158,11,0.06)] transition-all hover:shadow-[0_12px_40px_rgba(245,158,11,0.1)]">
+              <div className="bg-gradient-to-br from-amber-50/90 to-orange-50/90 backdrop-blur-md border border-amber-200/60 rounded-3xl p-4 sm:p-7 shadow-[0_8px_30px_rgba(245,158,11,0.06)] transition-all hover:shadow-[0_12px_40px_rgba(245,158,11,0.1)]">
                 <div className="flex items-center gap-2.5 mb-4">
                   <Zap className="w-5 h-5 text-amber-600" />
                   <p className="text-[11px] font-bold text-amber-900 uppercase tracking-widest">
@@ -1014,7 +1039,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Eligibility Check */}
-              <div className="bg-gradient-to-br from-[#F0F9F5]/90 to-[#E8F5F2]/90 backdrop-blur-md border border-[#65BD6C]/30 rounded-3xl p-7 shadow-[0_8px_30px_rgba(3,102,56,0.06)] transition-all hover:shadow-[0_12px_40px_rgba(3,102,56,0.1)]">
+              <div className="bg-gradient-to-br from-[#F0F9F5]/90 to-[#E8F5F2]/90 backdrop-blur-md border border-[#65BD6C]/30 rounded-3xl p-4 sm:p-7 shadow-[0_8px_30px_rgba(3,102,56,0.06)] transition-all hover:shadow-[0_12px_40px_rgba(3,102,56,0.1)]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
                     <Shield className="w-5 h-5 text-[#036638]" />
@@ -1163,8 +1188,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 )}
               </div>
 
-              {/* Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Details — stacked & center-aligned on mobile, 2-up and left-aligned once there's room to breathe */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-center sm:text-left">
                 {patient.assignedUser && (
                   <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
@@ -1266,7 +1291,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               )}
 
               {/* Patient Status & Access */}
-              <div className="bg-gradient-to-br from-white/95 to-[#F9FAFB]/95 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+              <div className="bg-gradient-to-br from-white/95 to-[#F9FAFB]/95 backdrop-blur-md border border-gray-200/60 rounded-3xl p-4 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 {/* Decorative background element */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#EBF7EC]/50 to-transparent rounded-bl-full pointer-events-none" />
                 
@@ -1460,7 +1485,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Contact & Payment Info */}
-              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-4 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest flex items-center gap-2">
                     <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
@@ -1696,7 +1721,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               )}
 
               {/* Operational Notes */}
-              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
+              <div className="bg-white/90 backdrop-blur-md border border-gray-200/60 rounded-3xl p-4 sm:p-7 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
                 <p className="text-[11px] font-bold text-[#036638] uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full"></span>
                   Operational Notes
