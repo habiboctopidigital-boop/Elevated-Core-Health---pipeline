@@ -10,12 +10,13 @@ import { QUERY_KEYS } from "@/constants"
 import type { Patient, PatientStage } from "@/types"
 import { toast } from "sonner"
 
-export function usePatients(stage?: string) {
+export function usePatients(stage?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...QUERY_KEYS.PATIENTS.ALL, stage],
     queryFn: () => PatientsService.list(stage),
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    enabled: options?.enabled,
   })
 }
 

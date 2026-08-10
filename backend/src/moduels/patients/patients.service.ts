@@ -909,15 +909,6 @@ export const patientsService = {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
-		// Only VAs can reschedule appointments — admin is intentionally excluded.
-		if (user.role === "admin") {
-			return ServiceResponse.failure(
-				"Only VAs can update the appointment date and time.",
-				null,
-				StatusCodes.FORBIDDEN,
-			);
-		}
-
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
 				"This patient is locked by the assigned VA. Only they or an admin can update it.",

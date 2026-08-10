@@ -159,7 +159,7 @@ export default function AdminDashboardPage() {
               <button
                 key={action.href}
                 onClick={() => router.push(action.href)}
-                className="bg-white rounded-xl border cursor-pointer border-[#E5E7EB] p-4 text-left hover:border-[#65BD6C]/40 hover:shadow-sm transition-all "
+                className="bg-white rounded-xl border cursor-pointer  border-[#E5E7EB] p-4 text-left hover:border-[#65BD6C]/40 hover:shadow-sm transition-all "
               >
                 <Icon className="w-6 h-6 text-[#036638]  mb-2" />
                 <p className="text-sm font-semibold text-[#1A1B1E]">{action.label}</p>

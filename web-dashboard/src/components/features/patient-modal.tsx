@@ -115,6 +115,15 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`
 }
 
+// Format a Date as a local `datetime-local` value (YYYY-MM-DDTHH:mm). Using
+// toISOString() here would return the UTC time and silently shift the
+// appointment by the timezone offset when re-saving. Add a zero timezone offset
+// to keep the local wall-clock time.
+function toLocalDatetimeLocal(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 const VOB_LABELS: Array<[string, string]> = [
   ["coverage", "Coverage"],
   ["payer", "Payer"],
@@ -247,11 +256,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setShowCancelInput(false)
     setCancelReason("")
     setEditingAppointment(false)
-    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm)
+    // Convert ISO datetime to datetime-local format (YYYY-MM-DDTHH:mm) in LOCAL time
     if (patient?.appointmentDatetime) {
       const dt = new Date(patient.appointmentDatetime)
-      const localStr = dt.toISOString().slice(0, 16) // Gets YYYY-MM-DDTHH:mm
-      setNewAppointmentDatetime(localStr)
+      setNewAppointmentDatetime(toLocalDatetimeLocal(dt))
     } else {
       setNewAppointmentDatetime("")
     }
@@ -973,16 +981,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         </span>
                       )}
                     </div>
-                    {!editingAppointment && user?.role === "va" && (
+                    {!editingAppointment && (
                       <button
                         onClick={() => setEditingAppointment(true)}
                         className="text-xs font-medium text-[#036638] hover:underline"
                       >
                         {patient.appointmentDatetime ? "Edit" : "Set Appointment"}
                       </button>
-                    )}
-                    {isAdmin && (
-                      <span className="text-[10px] text-[#9CA3AF] italic">Only VAs can edit</span>
                     )}
                   </div>
                   {editingAppointment ? (
@@ -1030,8 +1035,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                             setEditingAppointment(false)
                             if (patient?.appointmentDatetime) {
                               const dt = new Date(patient.appointmentDatetime)
-                              const localStr = dt.toISOString().slice(0, 16)
-                              setNewAppointmentDatetime(localStr)
+                              setNewAppointmentDatetime(toLocalDatetimeLocal(dt))
                             } else {
                               setNewAppointmentDatetime("")
                             }

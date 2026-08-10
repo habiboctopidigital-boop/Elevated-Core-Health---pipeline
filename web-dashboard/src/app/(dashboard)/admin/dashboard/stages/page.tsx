@@ -491,11 +491,11 @@ function StageChecklistManager({
       </div>
 
       {showAdd && (
-        <form onSubmit={handleSubmit(onSubmit)} className="flex items-center gap-2 bg-white border border-[#E5E7EB] rounded-lg p-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-wrap items-center gap-2 bg-white border border-[#E5E7EB] rounded-lg p-2">
           <input
             {...register("label", { required: "Label is required" })}
             placeholder="New checklist item..."
-            className="flex-1 h-8 px-2.5 rounded border border-[#E5E7EB] text-sm focus:outline-none focus:ring-1 focus:ring-[#036638]/40"
+            className="flex-1 min-w-[160px] h-8 px-2.5 rounded border border-[#E5E7EB] text-sm focus:outline-none focus:ring-1 focus:ring-[#036638]/40"
           />
           <select
             {...register("status")}

@@ -27,8 +27,8 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-xl border border-[#E5E7EB] p-8 shadow-sm">
+    <div className="min-h-dvh bg-[#F4F5F7] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white rounded-xl border border-[#E5E7EB] p-6 sm:p-8 shadow-sm">
         {sent ? (
           <div className="text-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-[#EBF7EC] flex items-center justify-center mx-auto">
@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
+                  className="w-full h-11 sm:h-10 pl-10 pr-3 rounded-lg border border-[#E5E7EB] text-base sm:text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 transition-all"
                 />
               </div>
             </div>

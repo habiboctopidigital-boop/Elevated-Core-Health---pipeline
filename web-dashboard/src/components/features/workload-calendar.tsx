@@ -23,10 +23,12 @@ import {
   List as ListIcon,
   X,
 } from "lucide-react"
+import { addDays, endOfWeek, format, startOfWeek } from "date-fns"
 import { usePatients, useListVas } from "@/hooks/query/usePatients"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { PatientModal } from "@/components/features/patient-modal"
+import { WorkloadTimeGrid, type TimeGridEvent } from "@/components/features/workload-time-grid"
 import type { Patient } from "@/types"
 import { cn } from "@/lib/utils"
 
@@ -97,6 +99,11 @@ export function WorkloadCalendar() {
   const [vaFilter, setVaFilter] = useState<string>("")
   const [stageFilter, setStageFilter] = useState<string>("")
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  // Week and Day are our own component rather than FullCalendar's timeGrid (see
+  // workload-time-grid.tsx), so they need their own navigation anchor.
+  const [anchorDate, setAnchorDate] = useState(() => new Date())
+  const isCustomGrid = activeView === "timeGridWeek" || activeView === "timeGridDay"
+  const gridMode = activeView === "timeGridDay" ? "day" : "week"
 
   const appointments = useMemo(() => {
     if (!patients) return []
@@ -130,6 +137,18 @@ export function WorkloadCalendar() {
     [filtered, stageOrder],
   )
 
+  const gridEvents = useMemo<TimeGridEvent[]>(
+    () =>
+      filtered.map((p) => ({
+        id: p.id,
+        title: p.name,
+        start: new Date(p.appointmentDatetime as string),
+        color: stageColor(p.stage, stageOrder),
+        patient: p,
+      })),
+    [filtered, stageOrder],
+  )
+
   const stats = useMemo(() => {
     const unassigned = filtered.filter((p) => !p.assignedTo).length
     const flagged = filtered.filter((p) => p.isFlagged).length
@@ -141,22 +160,71 @@ export function WorkloadCalendar() {
     if (api) setTitleText(api.view.title)
   }, [])
 
+  // The custom grid derives its own title from the anchor date; FullCalendar
+  // reports its title through `syncTitle` into `titleText`.
+  const gridTitle = useMemo(() => {
+    if (gridMode === "day") return format(anchorDate, "EEEE, MMMM d, yyyy")
+    const start = startOfWeek(anchorDate, { weekStartsOn: 1 })
+    const end = endOfWeek(anchorDate, { weekStartsOn: 1 })
+    const sameMonth = start.getMonth() === end.getMonth()
+    return sameMonth
+      ? `${format(start, "MMM d")} – ${format(end, "d, yyyy")}`
+      : `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`
+  }, [anchorDate, gridMode])
+
+  const displayTitle = isCustomGrid ? gridTitle : titleText
+
+  // Week steps by 7 days, Day by 1.
+  const gridStep = gridMode === "day" ? 1 : 7
+
   const goToday = () => {
+    if (isCustomGrid) {
+      setAnchorDate(new Date())
+      return
+    }
     calendarRef.current?.getApi().today()
     syncTitle()
   }
   const goPrev = () => {
+    if (isCustomGrid) {
+      setAnchorDate((d) => addDays(d, -gridStep))
+      return
+    }
     calendarRef.current?.getApi().prev()
     syncTitle()
   }
   const goNext = () => {
+    if (isCustomGrid) {
+      setAnchorDate((d) => addDays(d, gridStep))
+      return
+    }
     calendarRef.current?.getApi().next()
     syncTitle()
   }
   const changeView = (view: ViewKey) => {
-    calendarRef.current?.getApi().changeView(view)
+    if (view === activeView) return
+    const goingToCustomGrid = view === "timeGridWeek" || view === "timeGridDay"
+
+    // Switching in or out of the custom grid swaps which component is mounted, so hand
+    // the current date across the boundary — otherwise the calendar silently jumps back
+    // to today whenever FullCalendar remounts.
+    if (goingToCustomGrid) {
+      const api = calendarRef.current?.getApi()
+      if (api) setAnchorDate(api.getDate())
+      setActiveView(view)
+      return
+    }
+
+    const carriedDate = isCustomGrid ? anchorDate : null
     setActiveView(view)
-    syncTitle()
+    // Defer so FullCalendar is mounted again before we call into its API.
+    requestAnimationFrame(() => {
+      const api = calendarRef.current?.getApi()
+      if (!api) return
+      if (carriedDate) api.gotoDate(carriedDate)
+      api.changeView(view)
+      syncTitle()
+    })
   }
 
   // A month grid is unreadable at phone width — default to the agenda list
@@ -338,7 +406,7 @@ export function WorkloadCalendar() {
           >
             Today
           </button>
-          <span className="text-xs sm:text-sm font-bold text-[#1A1B1E] ml-1 truncate">{titleText}</span>
+          <span className="text-xs sm:text-sm font-bold text-[#1A1B1E] ml-1 truncate">{displayTitle}</span>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-1.5 bg-[#F3F4F6] rounded-lg p-1">
@@ -455,6 +523,13 @@ export function WorkloadCalendar() {
             <p className="text-sm text-[#6B7280] font-medium">No scheduled appointments yet</p>
             <p className="text-xs text-[#9CA3AF]">Appointments will appear here once patients have a scheduled date/time.</p>
           </div>
+        ) : isCustomGrid ? (
+          <WorkloadTimeGrid
+            anchorDate={anchorDate}
+            events={gridEvents}
+            mode={gridMode}
+            onEventClick={setSelectedPatientId}
+          />
         ) : (
           <FullCalendar
             ref={calendarRef}

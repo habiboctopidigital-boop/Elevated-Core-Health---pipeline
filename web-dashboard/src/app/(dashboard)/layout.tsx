@@ -4,8 +4,8 @@ import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { EchSidebar } from "@/components/layouts/ech-sidebar"
 import { DashboardHeader } from "@/components/layouts/dashboard-header"
+import { MobileTopbar } from "@/components/layouts/mobile-topbar"
 import { DashboardWatermark, WatermarkOpacity } from "@/components/ui/dashboard-watermark"
-import { Menu } from "lucide-react"
 
 export default function DashboardLayout({
   children,
@@ -67,20 +67,11 @@ export default function DashboardLayout({
         }`}
       >
 
-        {/* Mobile Topbar with Hamburger */}
-        <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-[#E5E7EB] px-4 py-3 z-20 flex items-center justify-between">
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-[#F3F4F6] cursor-pointer transition-colors"
-            aria-label="Open menu"
-          >
-            <Menu className="w-5 h-5 text-[#036638]" />
-          </button>
-          <p className="text-sm font-bold text-[#1A1B1E] truncate flex-1 ml-3">ECH Pipeline</p>
-        </div>
+        {/* Mobile Topbar — logo, notifications, profile */}
+        <MobileTopbar onMenuClick={() => setIsMobileMenuOpen(true)} />
 
-        {/* Content offset for mobile topbar */}
-        <div className="lg:hidden h-14" />
+        {/* Content offset for the fixed h-14 mobile topbar */}
+        <div className="lg:hidden h-14 shrink-0" />
 
         {/* Desktop Premium Header */}
         <div className="hidden lg:block w-full">

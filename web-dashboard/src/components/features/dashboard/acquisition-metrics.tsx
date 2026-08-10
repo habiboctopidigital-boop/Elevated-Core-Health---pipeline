@@ -41,7 +41,7 @@ export function AcquisitionMetrics({ metrics }: AcquisitionMetricsProps) {
       title="Acquisition Overview"
       subtitle="New patient intake & conversion metrics"
     >
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {data.map((metric) => (
           <div
             key={metric.label}

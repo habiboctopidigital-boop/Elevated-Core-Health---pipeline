@@ -139,7 +139,7 @@ export function AddPatientDialog() {
           Add Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300">
+      <DialogContent className="max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300 p-4 sm:p-6">
         <DialogHeader className="border-b border-[#E5E7EB] pb-4">
           <DialogTitle className="text-2xl font-bold text-[#1A1B1E]">Add Patient</DialogTitle>
           <DialogDescription className="text-sm text-[#6B7280] mt-1">

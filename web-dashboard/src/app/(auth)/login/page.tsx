@@ -34,107 +34,109 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md rounded-md bg-white p-10">
-          <div className="mb-8 text-center">
-            <div className="flex justify-center mb-6">
-              <Image
-                src="/logo.png"
-                alt="Elevated Core Health Logo"
-                width={100}
-                height={100}
-                priority
-                className="h-24 w-auto"
-              />
-            </div>
-            <h1 className="text-xl font-bold text-[#1A1B1E]">Welcome back</h1>
-            <p className="text-sm text-[#6B7280] mt-1">
-              Sign in to the Patient Pipeline Portal
-            </p>
+    // min-h-dvh (not vh) so mobile browser chrome doesn't push the card out of view,
+    // and the outer padding scales down on phones instead of eating the screen.
+    <div className="min-h-dvh bg-[#F4F5F7] flex items-center justify-center px-4 py-8 sm:p-8">
+      <div className="w-full max-w-md rounded-xl bg-white border border-[#E5E7EB] shadow-sm p-6 sm:p-10">
+        <div className="mb-6 sm:mb-8 text-center">
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Image
+              src="/logo.png"
+              alt="Elevated Core Health Logo"
+              width={100}
+              height={100}
+              priority
+              className="h-16 sm:h-24 w-auto"
+            />
           </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-1.5">
-              <label htmlFor="email" className="text-xs font-semibold text-[#374151] uppercase tracking-wider">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all"
-                placeholder="name@example.com"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="password" className="text-xs font-semibold text-[#374151] uppercase tracking-wider">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  className="w-full h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all pr-10"
-                  placeholder="Enter your password"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-[#374151]"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-[11px] text-red-500 mt-1">{errors.password.message}</p>
-              )}
-              <div className="flex justify-end mt-1">
-                <Link
-                  href={ROUTES.FORGOT_PASSWORD}
-                  className="text-[11px] text-[#6B7280] hover:text-[#036638] transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-100 rounded-lg p-2.5 text-center">
-                <p className="text-xs text-red-600 font-medium">{error}</p>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-10 bg-[#036638] hover:bg-[#025030] text-white font-semibold rounded-lg shadow shadow-[#036638]/20 disabled:opacity-60 transition-all"
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
-                </span>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-          </form>
-
-          <p className="text-center text-[10px] text-[#6B7280] mt-6">
-            Elevated Core Health - Patient Pipeline Portal
+          <h1 className="text-lg sm:text-xl font-bold text-[#1A1B1E]">Welcome back</h1>
+          <p className="text-sm text-[#6B7280] mt-1">
+            Sign in to the Patient Pipeline Portal
           </p>
         </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="email" className="text-xs font-semibold text-[#374151] uppercase tracking-wider">
+              Email
+            </label>
+            {/* text-base on mobile keeps the font at 16px, which stops iOS Safari from
+                auto-zooming the whole page when the field takes focus. */}
+            <input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              className="w-full h-11 sm:h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-base sm:text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all"
+              placeholder="name@example.com"
+              {...register("email")}
+            />
+            {errors.email && (
+              <p className="text-[11px] text-red-500 mt-1">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="password" className="text-xs font-semibold text-[#374151] uppercase tracking-wider">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                className="w-full h-11 sm:h-10 px-3 rounded-lg border border-[#E5E7EB] bg-white text-base sm:text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all pr-11"
+                placeholder="Enter your password"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg text-[#6B7280] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="text-[11px] text-red-500 mt-1">{errors.password.message}</p>
+            )}
+            <div className="flex justify-end mt-1">
+              <Link
+                href={ROUTES.FORGOT_PASSWORD}
+                className="text-xs text-[#6B7280] hover:text-[#036638] transition-colors py-1"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-100 rounded-lg p-2.5 text-center">
+              <p className="text-xs text-red-600 font-medium break-words">{error}</p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-11 sm:h-10 bg-[#036638] hover:bg-[#025030] text-white font-semibold rounded-lg shadow shadow-[#036638]/20 disabled:opacity-60 transition-all"
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Signing in...
+              </span>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+        </form>
+
+        <p className="text-center text-[10px] text-[#6B7280] mt-6 px-2">
+          Elevated Core Health - Patient Pipeline Portal
+        </p>
       </div>
-
-
     </div>
   )
 }

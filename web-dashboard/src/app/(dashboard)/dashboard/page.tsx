@@ -140,7 +140,7 @@ export default function VADashboardPage() {
                 onClick={() => router.push(action.href)}
                 className="bg-white rounded-xl border border-[#E5E7EB] p-4 text-left hover:border-[#65BD6C]/40 hover:shadow-sm transition-all text-center"
               >
-                <Icon className="w-6 h-6 text-[#036638] mx-auto mb-2" />
+                <Icon className="w-6 h-6 text-[#036638]  mb-2" />
                 <p className="text-sm font-semibold text-[#1A1B1E]">{action.label}</p>
                 <p className="text-xs text-[#6B7280] mt-0.5">{action.desc}</p>
               </button>
