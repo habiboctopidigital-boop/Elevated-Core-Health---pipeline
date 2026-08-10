@@ -140,7 +140,12 @@ export function KanbanBoard({
     )
   }
 
-  if (error) {
+  // Only replace the whole board with an error state when we have nothing to
+  // fall back on. A background refetch (e.g. right after a mutation invalidates
+  // the cache) can transiently fail without losing the data we already have —
+  // in that case keep the board rendered with its last-known-good patients
+  // instead of blanking every stage to empty.
+  if (error && !patients) {
     return (
       <div className="text-center py-12">
         <p className="text-sm text-red-500">Failed to load patients</p>
@@ -157,6 +162,13 @@ export function KanbanBoard({
 
   return (
     <>
+      {/* Stale-data banner — a background refetch failed but we're still showing the last good board */}
+      {error && patients && (
+        <div className="mb-3 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
+          Couldn&apos;t refresh the board just now — showing the last loaded data. It&apos;ll retry automatically.
+        </div>
+      )}
+
       {/* Quick Jump Selector */}
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-[#6B7280]">Jump to stage:</span>

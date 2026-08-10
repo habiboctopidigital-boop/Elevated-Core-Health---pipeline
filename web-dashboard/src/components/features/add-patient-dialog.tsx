@@ -18,6 +18,8 @@ import { useListVas } from "@/hooks/query/usePatients"
 import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { SelectOrOther } from "@/components/shared/select-or-other"
 import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
+import { QUERY_KEYS } from "@/constants"
+import type { Patient } from "@/types"
 import { toast } from "sonner"
 
 const BOOKING_PLATFORMS = [
@@ -89,8 +91,25 @@ export function AddPatientDialog() {
         problemDescription: data.problemDescription || undefined,
       })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["patients"] })
+    onSuccess: (newPatient) => {
+      // Merge the server-created patient straight into every cached patients
+      // list synchronously, so the board updates instantly and never renders
+      // an empty transitional state while waiting on a background refetch to
+      // land (a slow/blipped refetch previously meant the whole board — every
+      // stage column — looked empty until a manual page reload).
+      const cachedPatientLists = queryClient.getQueriesData<Patient[]>({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      for (const [key, old] of cachedPatientLists) {
+        if (!old) continue
+        // Per-stage-filtered caches (queryKey = ["patients", stage]) should
+        // only gain the new patient if it actually belongs to that stage.
+        const stageFilter = key[1] as string | undefined
+        if (stageFilter && stageFilter !== newPatient.stage) continue
+        queryClient.setQueryData<Patient[]>(key, [newPatient, ...old])
+      }
+      // Still invalidate so the cache reconciles with the server in the
+      // background (e.g. picks up anything computed server-side) — this is
+      // now a background-consistency refresh, not the thing the UI depends on.
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       addNotification(`New patient "${formData.firstName} ${formData.lastName}" added to onboarding`, "onboarding")
       toast.success("Patient added successfully")
       setOpen(false)
