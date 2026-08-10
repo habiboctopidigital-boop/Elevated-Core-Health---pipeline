@@ -14,10 +14,15 @@ export const RefreshSchema = z.object({
 });
 
 export const UpdateProfileSchema = z.object({
-	body: z.object({
-		name: z.string().trim().min(1, "Name is required").optional(),
-		email: z.string().trim().toLowerCase().email("A valid email address is required").optional(),
-	}),
+	// .strict() rejects any field that isn't name/email outright (e.g. leftover firstName,
+	// phone, location, bio from an older client build) instead of silently dropping them —
+	// callers get a clear 400 instead of a payload that quietly did less than they expected.
+	body: z
+		.object({
+			name: z.string().trim().min(1, "Name is required").max(200, "Name is too long").optional(),
+			email: z.string().trim().toLowerCase().email("A valid email address is required").optional(),
+		})
+		.strict("Unrecognized field — only name and email can be updated here."),
 });
 
 export const ChangePasswordSchema = z.object({

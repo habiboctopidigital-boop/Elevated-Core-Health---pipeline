@@ -35,6 +35,20 @@ export const authController = {
 		handleServiceResponse(serviceResponse, res);
 	},
 
+	async uploadAvatar(req: Request, res: Response): Promise<void> {
+		const userId = req.user?.id;
+		if (!userId) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		if (!req.file) {
+			handleServiceResponse(ServiceResponse.failure("No image file was provided.", null, 400), res);
+			return;
+		}
+		const serviceResponse = await authService.uploadAvatar(userId, req.file);
+		handleServiceResponse(serviceResponse, res);
+	},
+
 	async changePassword(req: Request, res: Response): Promise<void> {
 		const userId = req.user?.id;
 		if (!userId) {

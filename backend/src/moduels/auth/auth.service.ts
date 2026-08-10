@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import { StatusCodes } from "http-status-codes";
 
 import { comparePassword, hashPassword, signAccessToken, signRefreshToken, verifyRefreshToken } from "@/lib/auth";
+import { isCloudinaryConfigured, uploadAvatarBuffer } from "@/lib/cloudinary";
+import { sanitizeText } from "@/lib/sanitize";
 import type { AuthenticatedUser } from "@/lib/types";
 import { emailService } from "@/services/email.service";
 import { logger } from "@/utils/logger";
@@ -16,8 +18,20 @@ import type {
 	UpdateProfileInput,
 } from "./auth.validation";
 
-function toAuthenticatedUser(user: { id: string; name: string; email: string; role: string }): AuthenticatedUser {
-	return { id: user.id, name: user.name, email: user.email, role: user.role as "admin" | "va" };
+function toAuthenticatedUser(user: {
+	id: string;
+	name: string;
+	email: string;
+	role: string;
+	avatar?: string | null;
+}): AuthenticatedUser {
+	return {
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role as "admin" | "va",
+		avatar: user.avatar ?? null,
+	};
 }
 
 interface AuthTokens {
@@ -104,7 +118,13 @@ export const authService = {
 		}
 
 		const data: Record<string, unknown> = {};
-		if (input.name !== undefined) data.name = input.name;
+		if (input.name !== undefined) {
+			const cleanName = sanitizeText(input.name);
+			if (!cleanName) {
+				return ServiceResponse.failure("Name cannot be empty.", null, StatusCodes.BAD_REQUEST);
+			}
+			data.name = cleanName;
+		}
 		if (input.email !== undefined) {
 			const existing = await prisma.user.findUnique({ where: { email: input.email } });
 			if (existing && existing.id !== userId) {
@@ -123,6 +143,42 @@ export const authService = {
 		});
 
 		return ServiceResponse.success("Profile updated.", toAuthenticatedUser(updated));
+	},
+
+	/**
+	 * Uploads a pre-validated avatar image buffer (mimetype/size already checked by the
+	 * multer middleware) to Cloudinary and persists the resulting URL. `userId` always comes
+	 * from the verified access token (see requireAuth), never from client input, so this can
+	 * only ever update the caller's own avatar.
+	 */
+	async uploadAvatar(userId: string, file: Express.Multer.File): Promise<ServiceResponse<AuthenticatedUser | null>> {
+		if (!isCloudinaryConfigured) {
+			return ServiceResponse.failure(
+				"Avatar uploads aren't configured on this server yet.",
+				null,
+				StatusCodes.SERVICE_UNAVAILABLE,
+			);
+		}
+
+		const user = await prisma.user.findUnique({ where: { id: userId } });
+		if (!user) {
+			return ServiceResponse.failure("User not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		let avatarUrl: string;
+		try {
+			avatarUrl = await uploadAvatarBuffer(file.buffer, userId);
+		} catch (err) {
+			logger.error({ err }, "Cloudinary avatar upload failed");
+			return ServiceResponse.failure("Failed to upload avatar. Please try again.", null, StatusCodes.BAD_GATEWAY);
+		}
+
+		const updated = await prisma.user.update({
+			where: { id: userId },
+			data: { avatar: avatarUrl },
+		});
+
+		return ServiceResponse.success("Avatar updated.", toAuthenticatedUser(updated));
 	},
 
 	async changePassword(userId: string, input: ChangePasswordInput): Promise<ServiceResponse<null>> {

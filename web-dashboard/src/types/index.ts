@@ -22,6 +22,7 @@ export interface User {
   email: string
   role: UserRole
   shift?: string | null
+  avatar?: string | null
   createdAt?: string
 }
 

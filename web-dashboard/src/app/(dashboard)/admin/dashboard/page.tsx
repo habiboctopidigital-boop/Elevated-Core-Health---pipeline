@@ -61,7 +61,6 @@ export default function AdminDashboardPage() {
     { label: "Board", icon: Columns3, href: ROUTES.ADMIN.BOARD, desc: "Full pipeline view" },
     { label: "Users", icon: Users, href: ROUTES.ADMIN.USERS, desc: "Manage team accounts" },
     { label: "Stage Settings", icon: Settings, href: ROUTES.ADMIN.STAGES, desc: "Manage stages & checklists" },
-    { label: "Webhooks", icon: Zap, href: ROUTES.ADMIN.WEBHOOKS, desc: "Configure Make.com & automations" },
     { label: "Profile", icon: User, href: ROUTES.ADMIN.PROFILE, desc: "Update your profile" },
   ]
 

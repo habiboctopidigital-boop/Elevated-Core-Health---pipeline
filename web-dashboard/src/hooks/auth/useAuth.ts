@@ -6,13 +6,15 @@ import Cookies from "js-cookie"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { setUser, setLoading, logout } from "@/store/slices/auth.slice"
 import { AuthService } from "@/services/auth.service"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { QUERY_KEYS } from "@/constants"
 import { config } from "@/config"
+import type { User } from "@/types"
 
 export function useAuth() {
   const dispatch = useAppDispatch()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth)
 
   const { data: me, isError } = useQuery({
@@ -49,6 +51,18 @@ export function useAuth() {
     [dispatch, router],
   )
 
+  // After a profile/avatar/password update, push the fresh user into both the redux
+  // store and the react-query cache so every consumer (header, sidebar, this hook)
+  // reflects it immediately — without this, callers only see the change after a
+  // full reload re-triggers the `me` query.
+  const refreshUser = useCallback(
+    (updated: User) => {
+      dispatch(setUser(updated))
+      queryClient.setQueryData(QUERY_KEYS.AUTH.ME, updated)
+    },
+    [dispatch, queryClient],
+  )
+
   const logoutUser = useCallback(async () => {
     const refreshToken = Cookies.get(config.auth.refreshTokenKey)
     try {
@@ -71,5 +85,6 @@ export function useAuth() {
     isLoading: isLoading,
     login,
     logout: logoutUser,
+    refreshUser,
   }
 }

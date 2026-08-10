@@ -206,12 +206,17 @@ export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSi
           )}
         >
           <div className={cn(
-            "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border font-semibold text-white transition-all duration-200",
+            "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 border font-semibold text-white transition-all duration-200 overflow-hidden",
             isProfileActive
               ? "bg-gradient-to-br from-[#036638] to-[#025030] border-[#65BD6C]/50"
               : "bg-gradient-to-br from-[#1F2937] to-[#111827] border-white/10 group-hover:border-[#65BD6C]/50",
           )}>
-            {user?.name?.charAt(0).toUpperCase() || "U"}
+            {user?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote avatar, no static optimization needed
+              <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+            ) : (
+              user?.name?.charAt(0).toUpperCase() || "U"
+            )}
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">

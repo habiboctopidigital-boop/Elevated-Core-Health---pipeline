@@ -1,16 +1,19 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { AuthService } from "@/services/auth.service"
-import { User, Shield, Save, Key, Loader2 } from "lucide-react"
+import { User, Shield, Save, Key, Loader2, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SettingsNav } from "./settings-nav"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
+const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp"]
+
 export function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshUser } = useAuth()
 
   const [name, setName] = useState(user?.name || "")
   const [email, setEmail] = useState(user?.email || "")
@@ -30,15 +33,52 @@ export function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [changingPassword, setChangingPassword] = useState(false)
 
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
   const handleSaveProfile = async () => {
     setSaving(true)
     try {
-      await AuthService.updateProfile({ name, email })
+      const updated = await AuthService.updateProfile({ name, email })
+      refreshUser(updated)
       toast.success("Profile updated")
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to update profile")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleAvatarPick = () => avatarInputRef.current?.click()
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = "" // allow re-selecting the same file later
+    if (!file) return
+
+    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
+      toast.error("Please choose a PNG, JPG, or WEBP image")
+      return
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error("Image must be 5MB or smaller")
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarPreview(previewUrl)
+    setUploadingAvatar(true)
+    try {
+      const updated = await AuthService.uploadAvatar(file)
+      refreshUser(updated)
+      toast.success("Profile picture updated")
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to upload profile picture")
+    } finally {
+      setUploadingAvatar(false)
+      URL.revokeObjectURL(previewUrl)
+      setAvatarPreview(null)
     }
   }
 
@@ -82,19 +122,61 @@ export function ProfilePage() {
       {/* Account Info */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] p-5 space-y-4">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E7EB]/50">
-          <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center",
-            user?.role === "admin" ? "bg-[#036638]" : "bg-[#EBF7EC]",
-          )}>
-            {user?.role === "admin" ? (
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={handleAvatarChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={handleAvatarPick}
+            disabled={uploadingAvatar}
+            title="Change profile picture"
+            className={cn(
+              "relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden group cursor-pointer disabled:cursor-wait",
+              user?.role === "admin" ? "bg-[#036638]" : "bg-[#EBF7EC]",
+            )}
+          >
+            {avatarPreview || user?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote/blob avatar, no static optimization needed
+              <img
+                src={avatarPreview ?? user!.avatar!}
+                alt={user?.name ?? "Profile picture"}
+                className="w-full h-full object-cover"
+              />
+            ) : user?.role === "admin" ? (
               <Shield className="w-6 h-6 text-white" />
             ) : (
               <User className="w-6 h-6 text-[#036638]" />
             )}
-          </div>
+
+            {/* Hover / uploading overlay */}
+            <div
+              className={cn(
+                "absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity",
+                uploadingAvatar ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+              )}
+            >
+              {uploadingAvatar ? (
+                <Loader2 className="w-4 h-4 text-white animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4 text-white" />
+              )}
+            </div>
+          </button>
           <div>
             <p className="text-sm font-bold text-[#1A1B1E]">{user?.name}</p>
             <p className="text-xs text-[#6B7280] capitalize">{user?.role}</p>
+            <button
+              type="button"
+              onClick={handleAvatarPick}
+              disabled={uploadingAvatar}
+              className="text-[11px] font-medium text-[#036638] hover:underline disabled:opacity-50 disabled:cursor-wait mt-0.5"
+            >
+              {uploadingAvatar ? "Uploading…" : "Change photo"}
+            </button>
           </div>
         </div>
 

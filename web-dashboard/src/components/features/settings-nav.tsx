@@ -1,40 +1,32 @@
 "use client"
 
-import { Settings, Users, Lock, Zap, Plug } from "lucide-react"
+import { Lock } from "lucide-react"
 import Link from "next/link"
 import { ROUTES } from "@/constants"
+import { useAuth } from "@/hooks/auth/useAuth"
 import { cn } from "@/lib/utils"
 
 interface SettingsNavProps {
-  currentPage: "profile" | "webhooks" | "users" | "stages" | "config-crm"
+  currentPage: "profile" | "users" | "stages"
   className?: string
 }
 
+// Webhooks and CRM Connect tabs (and their admin pages) were removed. Only Profile
+// remains, and it routes to the VA or Admin profile page depending on who's signed
+// in, since this nav is shared by both.
 const settingsPages = [
   {
     id: "profile" as const,
     label: "Profile",
     icon: Lock,
-    href: ROUTES.ADMIN.PROFILE,
     desc: "Account & security",
-  },
-  {
-    id: "webhooks" as const,
-    label: "Webhooks",
-    icon: Zap,
-    href: ROUTES.ADMIN.WEBHOOKS,
-    desc: "Automations",
-  },
-  {
-    id: "config-crm" as const,
-    label: "CRM Connect",
-    icon: Plug,
-    href: ROUTES.ADMIN.CONFIG_CRM,
-    desc: "External CRM integration",
   },
 ]
 
 export function SettingsNav({ currentPage, className }: SettingsNavProps) {
+  const { user } = useAuth()
+  const profileHref = user?.role === "admin" ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
+
   return (
     <div className={cn("", className)}>
       {/* Premium Tab Navigation */}
@@ -52,7 +44,7 @@ export function SettingsNav({ currentPage, className }: SettingsNavProps) {
               return (
                 <Link
                   key={page.id}
-                  href={page.href}
+                  href={profileHref}
                   className={cn(
                     "relative px-5 py-3 text-sm font-medium transition-all flex items-center gap-2 group whitespace-nowrap",
                     "border-b-2 -mb-4 pb-4",

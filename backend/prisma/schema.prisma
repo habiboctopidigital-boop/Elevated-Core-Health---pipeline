@@ -72,6 +72,7 @@ model User {
   passwordHash         String    @map("password_hash")
   role                 UserRole  @default(va)
   shift                String?
+  avatar               String?   @map("avatar_url")
   passwordResetToken   String?   @map("password_reset_token")
   passwordResetExpires DateTime? @map("password_reset_expires")
   createdAt            DateTime  @default(now()) @map("created_at")

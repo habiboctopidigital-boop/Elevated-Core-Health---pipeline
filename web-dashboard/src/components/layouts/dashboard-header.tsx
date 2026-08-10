@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { useNotificationsContext } from "@/providers/NotificationsProvider"
+import { ROUTES } from "@/constants"
 import {
   Search,
   Settings,
@@ -22,6 +23,7 @@ import axiosInstance from "@/lib/axios"
 export function DashboardHeader() {
   const router = useRouter()
   const { user, logout } = useAuth()
+  const profileRoute = user?.role === "admin" ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
   const { notifications, unreadCount } = useNotificationsContext()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -110,7 +112,7 @@ export function DashboardHeader() {
 
           {/* Settings */}
           <button
-            onClick={() => router.push("/dashboard/profile")}
+            onClick={() => router.push(profileRoute)}
             className="p-2 rounded-lg hover:bg-[#F3F4F6] text-[#6B7280] hover:text-[#1A1B1E] transition-all"
             title="Settings"
           >
@@ -189,8 +191,13 @@ export function DashboardHeader() {
               onClick={() => setProfileOpen(!profileOpen)}
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-[#F3F4F6] transition-all group"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#036638] to-[#025030] flex items-center justify-center text-white text-sm font-bold">
-                {user?.name?.charAt(0).toUpperCase()}
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#036638] to-[#025030] flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                {user?.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- remote avatar, no static optimization needed
+                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  user?.name?.charAt(0).toUpperCase()
+                )}
               </div>
               <ChevronDown className="w-4 h-4 text-[#6B7280] group-hover:text-[#1A1B1E] transition-colors" />
             </button>
@@ -211,23 +218,13 @@ export function DashboardHeader() {
                 <div className="py-1">
                   <button
                     onClick={() => {
-                      router.push("/dashboard/profile")
+                      router.push(profileRoute)
                       setProfileOpen(false)
                     }}
                     className="w-full px-4 py-2.5 text-sm text-[#1A1B1E] hover:bg-[#F9FAFB] transition-colors flex items-center gap-2"
                   >
                     <User className="w-4 h-4 text-[#6B7280]" />
                     My Profile
-                  </button>
-                  <button
-                    onClick={() => {
-                      router.push("/dashboard/settings")
-                      setProfileOpen(false)
-                    }}
-                    className="w-full px-4 py-2.5 text-sm text-[#1A1B1E] hover:bg-[#F9FAFB] transition-colors flex items-center gap-2"
-                  >
-                    <Settings className="w-4 h-4 text-[#6B7280]" />
-                    Settings
                   </button>
                 </div>
 

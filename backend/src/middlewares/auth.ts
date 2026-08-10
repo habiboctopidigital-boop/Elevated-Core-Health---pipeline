@@ -22,12 +22,18 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
 
 		const user = await prisma.user.findUnique({
 			where: { id: payload.userId },
-			select: { id: true, name: true, email: true, role: true },
+			select: { id: true, name: true, email: true, role: true, avatar: true },
 		});
 
 		if (!user) throw AppError.unauthorized();
 
-		req.user = { id: user.id, name: user.name, email: user.email, role: user.role as UserRole };
+		req.user = {
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			role: user.role as UserRole,
+			avatar: user.avatar,
+		};
 		next();
 	} catch (err) {
 		sendError(err, res, AppError.unauthorized());

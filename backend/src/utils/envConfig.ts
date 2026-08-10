@@ -32,6 +32,12 @@ const envSchema = z.object({
 
 	GMAIL_USER: emptyToUndefined(z.string().email().optional()),
 	GMAIL_APP_PASSWORD: emptyToUndefined(z.string().optional()),
+
+	// Cloudinary (profile avatar uploads) — optional; the avatar endpoint 400s with a clear
+	// "not configured" message if these are missing, same pattern as RESEND_API_KEY above.
+	CLOUDINARY_CLOUD_NAME: emptyToUndefined(z.string().optional()),
+	CLOUDINARY_API_KEY: emptyToUndefined(z.string().optional()),
+	CLOUDINARY_API_SECRET: emptyToUndefined(z.string().optional()),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

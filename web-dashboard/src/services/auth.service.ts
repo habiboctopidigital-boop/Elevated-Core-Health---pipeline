@@ -38,6 +38,19 @@ export const AuthService = {
     return data.data
   },
 
+  async uploadAvatar(file: File): Promise<User> {
+    const formData = new FormData()
+    formData.append("avatar", file)
+    const { data } = await axiosInstance.post<ApiResponse<User>>(
+      API_ENDPOINTS.AUTH.PROFILE_AVATAR,
+      formData,
+      // Let the browser set its own multipart boundary — the instance's default
+      // "application/json" header would otherwise stick and break the upload.
+      { headers: { "Content-Type": undefined } },
+    )
+    return data.data
+  },
+
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await axiosInstance.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, { currentPassword, newPassword })
   },
