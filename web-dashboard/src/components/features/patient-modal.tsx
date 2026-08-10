@@ -414,7 +414,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
         onClick={() => !assigning && onClose()}
       />
       {/* Full-screen sheet on mobile (no rounding/margin); centered card from sm up. */}
-      <div className="relative bg-[#FAFAFA]/95 backdrop-blur-3xl rounded-none sm:rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border-0 sm:border border-white/20 w-full h-[100dvh] sm:h-auto max-w-full sm:max-w-4xl max-h-full sm:max-h-[92vh] flex flex-col overflow-hidden mx-0 sm:mx-4 animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative bg-[#FAFAFA]/95 backdrop-blur-3xl rounded-none sm:rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] border-0  w-full h-[100dvh] sm:h-auto max-w-full sm:max-w-4xl max-h-full sm:max-h-[92vh] flex flex-col overflow-hidden mx-0 sm:mx-4 animate-in fade-in zoom-in-95 duration-300">
         {isLoading || !patient ? (
           <div className="flex-1 flex items-center justify-center p-8 text-center text-[#6B7280] text-sm">
             {isLoading ? "Loading..." : "Patient not found"}

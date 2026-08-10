@@ -92,7 +92,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSi
               width={40}
               height={40}
               priority
-              className="w-10 h-10 object-contain"
+              className="w-10 h-10 object-contain border-none"
             />
           </div>
           {!isCollapsed && (
