@@ -48,7 +48,7 @@ export default function VADashboardPage() {
   const navCols = "grid-cols-2 sm:grid-cols-4"
 
   return (
-    <div className="space-y-6  max-w-[1600px] mx-auto">
+    <div className="relative z-10 space-y-6 max-w-[1600px] mx-auto">
       {/* Greeting */}
       <div>
         <h1 className="text-xl font-bold text-[#1A1B1E]">

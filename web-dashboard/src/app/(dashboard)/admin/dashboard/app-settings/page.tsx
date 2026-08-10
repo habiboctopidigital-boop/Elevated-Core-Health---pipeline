@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings as SettingsIcon, Loader2, Check, AlertCircle } from "lucide-react"
+import { Settings as SettingsIcon, Loader2, Check, AlertCircle, Flag, Shield, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import axiosInstance from "@/lib/axios"
@@ -150,6 +150,92 @@ export default function AppSettingsPage() {
               <br />
               <strong>Range:</strong> 1 to 720 hours (30 days)
             </p>
+          </div>
+        </div>
+
+        <hr className="border-[#E5E7EB]/50" />
+
+        {/* Admin Flag Raising */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Flag className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[#1A1B1E]">Admin Flag Raising</h3>
+              <p className="text-xs text-[#6B7280]">Manage oversight and escalation flags</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Admin Flags */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="w-4 h-4 text-amber-600" />
+                <h4 className="text-sm font-semibold text-amber-900">Admin Flags</h4>
+              </div>
+              <ul className="space-y-2 text-xs text-amber-800">
+                <li className="flex gap-2">
+                  <span className="text-amber-600 font-bold">→</span>
+                  <span>Raised by: Donna (Admin) only</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-amber-600 font-bold">→</span>
+                  <span>Purpose: Management oversight & escalation</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-amber-600 font-bold">→</span>
+                  <span>Style: Amber/Golden color indicator</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-amber-600 font-bold">→</span>
+                  <span>Access: Patient details modal → Flag for Follow-up</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* VA Flags */}
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 border border-red-200/50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <h4 className="text-sm font-semibold text-red-900">VA Flags</h4>
+              </div>
+              <ul className="space-y-2 text-xs text-red-800">
+                <li className="flex gap-2">
+                  <span className="text-red-600 font-bold">→</span>
+                  <span>Raised by: VAs (Jude, Amanda)</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-red-600 font-bold">→</span>
+                  <span>Purpose: Alert admin to issues</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-red-600 font-bold">→</span>
+                  <span>Style: Red color indicator</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-red-600 font-bold">→</span>
+                  <span>Access: Patient details modal → Flag for Donna</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* How to Use */}
+          <div className="bg-[#F0F9FF] border border-blue-200 rounded-xl p-4 space-y-3">
+            <h4 className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              How to Raise Flags
+            </h4>
+            <ol className="text-xs text-blue-900 space-y-2 ml-4 list-decimal">
+              <li>Click <strong>Patient Card</strong> to open patient details modal</li>
+              <li>Scroll to <strong>Flag Section</strong> at the bottom</li>
+              <li>Select <strong>Patient Stage</strong> from dropdown (optional - for context)</li>
+              <li>Enter detailed reason for the flag</li>
+              <li>Click <strong>"Flag for Follow-up"</strong> (admin) or <strong>"Flag for Donna"</strong> (VA)</li>
+              <li>Flag appears in patient card with visual indicator</li>
+              <li><strong>Admin only</strong>: Click <strong>"Clear Flag"</strong> button to resolve</li>
+            </ol>
           </div>
         </div>
       </div>

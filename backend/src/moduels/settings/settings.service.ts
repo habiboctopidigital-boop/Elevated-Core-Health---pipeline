@@ -1,4 +1,4 @@
-import { prisma } from "@/utils/prismaClient";
+import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 
 interface SettingValue {

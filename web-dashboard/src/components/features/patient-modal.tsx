@@ -176,6 +176,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [notesText, setNotesText] = useState("")
   const [flagReason, setFlagReason] = useState("")
   const [showFlagInput, setShowFlagInput] = useState(false)
+  const [flagStage, setFlagStage] = useState<PatientStage | "">("")
   const [clearReason, setClearReason] = useState("")
   const [showClearInput, setShowClearInput] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
@@ -277,6 +278,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     await flagPatient.mutateAsync({ id: patient.id, reason: flagReason })
     setShowFlagInput(false)
     setFlagReason("")
+    setFlagStage("")
   }
 
   const handleClearFlag = async () => {
@@ -1380,44 +1382,107 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Flag Controls */}
               {!patient.isFlagged ? (
-                <div>
-                  {showFlagInput ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        placeholder={isAdmin ? "Reason for flagging this card..." : "Reason for flagging Donna..."}
-                        value={flagReason}
-                        onChange={(e) => setFlagReason(e.target.value)}
-                        className="text-sm min-h-[60px]"
-                      />
+                <div className={cn(
+                  "border rounded-xl p-4 space-y-3",
+                  isAdmin
+                    ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/60"
+                    : "bg-gradient-to-br from-red-50 to-pink-50 border-red-200/60"
+                )}>
+                  {!showFlagInput ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFlagInput(true)}
+                      className={cn(
+                        "text-xs gap-2 font-medium w-full justify-start",
+                        isAdmin
+                          ? "border-amber-300 text-amber-700 hover:text-amber-900 hover:bg-amber-100 hover:border-amber-400"
+                          : "border-red-300 text-red-700 hover:text-red-900 hover:bg-red-100 hover:border-red-400"
+                      )}
+                    >
+                      <Flag className="w-4 h-4" fill="currentColor" />
+                      {isAdmin ? "Raise Admin Follow-up Flag" : "Flag for Donna"}
+                    </Button>
+                  ) : (
+                    <div className="space-y-3.5">
+                      <div>
+                        <label className={cn(
+                          "text-xs font-semibold block mb-1.5",
+                          isAdmin ? "text-amber-900" : "text-red-900"
+                        )}>
+                          Related Stage (optional)
+                        </label>
+                        <select
+                          value={flagStage}
+                          onChange={(e) => setFlagStage(e.target.value as PatientStage | "")}
+                          className="w-full px-3 py-2 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-0 transition-all"
+                          style={{
+                            borderColor: isAdmin ? '#daa520' : '#dc2626',
+                            backgroundColor: 'rgba(255,255,255,0.7)',
+                          }}
+                        >
+                          <option value="">-- Select stage (optional) --</option>
+                          {stageOrder.map((stage) => (
+                            <option key={stage} value={stage}>
+                              {stageLabels[stage]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className={cn(
+                          "text-xs font-semibold block mb-1.5",
+                          isAdmin ? "text-amber-900" : "text-red-900"
+                        )}>
+                          Reason <span className="text-red-500">*</span>
+                        </label>
+                        <Textarea
+                          placeholder={isAdmin ? "e.g., Missing lab results, needs review before billing..." : "e.g., Patient called, needs Donna's guidance..."}
+                          value={flagReason}
+                          onChange={(e) => setFlagReason(e.target.value)}
+                          className="text-xs min-h-[70px] resize-none"
+                        />
+                      </div>
+
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           onClick={handleFlag}
                           disabled={!flagReason.trim() || flagPatient.isPending}
-                          className={isAdmin ? "bg-amber-600 hover:bg-amber-700 text-white text-xs" : "bg-[#036638] hover:bg-[#025030] text-white text-xs"}
+                          className={cn(
+                            "text-xs font-medium flex-1",
+                            isAdmin
+                              ? "bg-amber-600 hover:bg-amber-700 text-white"
+                              : "bg-red-600 hover:bg-red-700 text-white"
+                          )}
                         >
-                          {flagPatient.isPending ? "Flagging..." : isAdmin ? "Flag for Follow-up" : "Flag for Donna"}
+                          {flagPatient.isPending ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                              Flagging...
+                            </>
+                          ) : (
+                            <>
+                              <Flag className="w-3 h-3 mr-1.5" fill="currentColor" />
+                              {isAdmin ? "Submit Admin Flag" : "Flag for Donna"}
+                            </>
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setShowFlagInput(false)}
+                          onClick={() => {
+                            setShowFlagInput(false)
+                            setFlagReason("")
+                            setFlagStage("")
+                          }}
                           className="text-xs"
                         >
                           Cancel
                         </Button>
                       </div>
                     </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowFlagInput(true)}
-                      className={isAdmin ? "text-xs gap-1.5 border-amber-300 text-amber-700 hover:text-amber-900 hover:bg-amber-50 hover:border-amber-400 transition-colors shadow-sm font-medium" : "text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:text-[#025030] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-colors shadow-sm font-medium"}
-                    >
-                      <Flag className="w-3.5 h-3.5" />
-                      {isAdmin ? "Flag for Follow-up" : "Flag for Donna"}
-                    </Button>
                   )}
                 </div>
               ) : isAdmin && patient.isFlagged && !showClearInput ? (
@@ -1425,9 +1490,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowClearInput(true)}
-                  className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-300 hover:text-black"
+                  className="text-xs gap-1.5 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-900 hover:border-red-300 w-full font-medium"
                 >
-                  Clear Flag with Feedback
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Clear Flag & Provide Feedback
                 </Button>
               ) : null}
 
