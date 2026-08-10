@@ -7,7 +7,6 @@ import { useStageMeta } from "@/hooks/query/useStages"
 import {
   X,
   Flag,
-  Clock,
   Check,
   CheckCheck,
   CheckCircle,
@@ -24,6 +23,9 @@ import {
   Unlock,
   Ban,
   RefreshCw,
+  Calendar,
+  Pencil,
+  UserPlus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -553,6 +555,193 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </div>
                   </div>
                 )}
+
+                {/* Quick Actions — Appointment, Eligibility, Assignment (elevated from the body per UX pass) */}
+                <div className="mt-4 flex flex-wrap items-start gap-2.5">
+                  {/* Appointment */}
+                  <div
+                    className={cn(
+                      "rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md transition-all",
+                      editingAppointment ? "p-3 w-full sm:w-auto" : "px-4 py-2.5",
+                    )}
+                  >
+                    {!editingAppointment ? (
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-lg bg-white/15 shrink-0">
+                          <Calendar className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none mb-1">
+                            Appointment
+                          </p>
+                          {patient.appointmentDatetime ? (
+                            <p className="text-xs font-semibold text-white truncate">
+                              {new Date(patient.appointmentDatetime).toLocaleString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          ) : (
+                            <p className="text-xs font-medium text-white/60 italic">Not scheduled</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setEditingAppointment(true)}
+                          title={patient.appointmentDatetime ? "Edit appointment" : "Set appointment"}
+                          className="ml-1 p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-all shrink-0"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-xl p-3.5 shadow-xl space-y-2.5 w-full sm:w-72">
+                        <label className="text-[10px] font-bold text-[#036638] uppercase tracking-wider flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3" />
+                          {patient.appointmentDatetime ? "Update Date & Time" : "Set Date & Time"}
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={newAppointmentDatetime}
+                          onChange={(e) => setNewAppointmentDatetime(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#036638] transition-all"
+                        />
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={handleUpdateAppointment}
+                            disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()}
+                            className="flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#036638] text-white hover:bg-[#025030] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            {updateAppointment.isPending ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                {patient.appointmentDatetime ? "Update" : "Set"}
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingAppointment(false)
+                              if (patient?.appointmentDatetime) {
+                                setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(patient.appointmentDatetime)))
+                              } else {
+                                setNewAppointmentDatetime("")
+                              }
+                            }}
+                            disabled={updateAppointment.isPending}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F3F4F6] disabled:opacity-50 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {updateAppointment.isPending && (
+                          <p className="text-[10px] font-medium text-blue-700 flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Saving &amp; notifying patient...
+                          </p>
+                        )}
+                        {updateAppointment.isSuccess && !updateAppointment.isPending && (
+                          <p className="text-[10px] font-medium text-[#036638] flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Saved — patient notified via email
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Eligibility Check */}
+                  <button
+                    onClick={handleCheckEligibility}
+                    disabled={checkEligibility.isPending}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-xs font-bold shrink-0",
+                      checkEligibility.isPending
+                        ? "bg-white/10 border-white/15 text-white/60 cursor-wait"
+                        : "bg-white text-[#036638] border-white hover:bg-[#EBF7EC] shadow-sm cursor-pointer",
+                    )}
+                  >
+                    {checkEligibility.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Shield className="w-3.5 h-3.5" />
+                    )}
+                    {checkEligibility.isPending
+                      ? "Checking..."
+                      : patient.eligibilityStatus !== "not_checked"
+                        ? "Re-check Eligibility"
+                        : "Check Eligibility"}
+                    {!checkEligibility.isPending && patient.eligibilityStatus === "eligible" && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                    )}
+                    {!checkEligibility.isPending && patient.eligibilityStatus === "not_eligible" && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
+                    )}
+                  </button>
+
+                  {/* Assign / Reassign (SI/VA dropdown, elevated from the body) */}
+                  {(!!vaList && (isAdmin || !patient.assignedUser)) && (
+                    <div className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl pl-3 pr-3.5 py-2 backdrop-blur-md">
+                      <div className="p-1.5 rounded-lg bg-white/15 shrink-0">
+                        <UserPlus className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      {!isAdmin && !patient.assignedUser && (
+                        <button
+                          onClick={handleClaim}
+                          disabled={claimPatient.isPending}
+                          className="text-xs font-bold text-white hover:text-white/80 transition-all disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {claimPatient.isPending ? "Claiming..." : "Assign to Me"}
+                        </button>
+                      )}
+                      {vaList && (
+                        <div className="relative">
+                          <select
+                            onChange={(e) => {
+                              const val = e.target.value
+                              e.target.value = ""
+                              if (val) handleAssignTo(val)
+                            }}
+                            value=""
+                            disabled={assigning}
+                            className="appearance-none text-xs font-semibold bg-transparent text-white pr-5 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&>option]:text-[#1A1B1E]"
+                          >
+                            <option value="">{patient.assignedUser ? "Reassign to..." : "Assign to VA..."}</option>
+                            {vaList.filter((v) => v.id !== user?.id).map((va) => (
+                              <option key={va.id} value={va.id}>
+                                {va.name}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3 h-3 text-white/70 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {assignFeedback && (
+                  <div
+                    className={cn(
+                      "mt-2.5 flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl border w-fit",
+                      assignFeedback.type === "success"
+                        ? "bg-white/15 border-white/20 text-white"
+                        : "bg-red-500/20 border-red-400/40 text-white",
+                    )}
+                  >
+                    {assignFeedback.type === "success" ? (
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5" />
+                    )}
+                    {assignFeedback.message}
+                  </div>
+                )}
               </div>
 
               {/* Unified Flag Button (top-right, below close) */}
@@ -587,14 +776,15 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <span className="w-1.5 h-1.5 bg-[#036638] rounded-full shadow-[0_0_8px_rgba(3,102,56,0.6)]"></span>
                   Pipeline Stage
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {stageOrder.map((stage) => {
-                    const idx = stageOrder.indexOf(stage)
+                <div className="flex w-full overflow-x-auto pb-1 -mx-1 px-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300">
+                  {stageOrder.map((stage, idx) => {
                     const currentIdx = stageOrder.indexOf(patient.stage)
                     const isComplete = idx < currentIdx
                     const isCurrent = stage === patient.stage
                     const isNext = idx === currentIdx + 1
                     const isFuture = idx > currentIdx + 1
+                    const isFirst = idx === 0
+                    const isLast = idx === stageOrder.length - 1
 
                     // EVERYONE: next stage is only clickable if current stage checklist is 100% complete
                     // Both VAs and Admins must complete all checklist items before advancing
@@ -612,33 +802,44 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         ? "Complete the current stage first"
                         : null
 
+                    // Chevron/arrow shape: point on the right, notch on the left so
+                    // consecutive steps interlock. First/last steps skip the notch/point
+                    // on their outer edge to keep the row's ends flush.
+                    const clipPath = isFirst
+                      ? "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)"
+                      : isLast
+                        ? "polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%)"
+                        : "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%)"
+
                     return (
                       <button
                         key={stage}
                         onClick={() => isClickable && handleMoveStage(stage)}
                         disabled={moveStage.isPending || !isClickable}
                         title={isDisabledReason || stageLabels[stage]}
+                        style={{ clipPath, zIndex: idx, marginLeft: isFirst ? 0 : "-14px" }}
                         className={cn(
-                          "flex items-center gap-1 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all border",
-                          // Current stage (dark green)
+                          "relative flex items-center justify-center gap-1.5 flex-1 min-w-[108px] sm:min-w-[126px] py-2.5 pl-5 pr-4 text-[11px] font-bold transition-all whitespace-nowrap",
+                          // Current stage (dark green, elevated)
                           isCurrent &&
-                            "bg-[#036638] text-white border-[#036638] shadow-md cursor-default",
+                            "bg-gradient-to-r from-[#036638] to-[#025030] text-white shadow-[0_2px_14px_rgba(3,102,56,0.4)] cursor-default",
                           // Completed stages (light green, clickable to go back)
                           !isCurrent && isComplete &&
-                            "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/50 hover:bg-[#dff4eb] cursor-pointer",
+                            "bg-[#EBF7EC] text-[#036638] hover:bg-[#dff4eb] cursor-pointer",
                           // Next stage when checklist COMPLETE (white, clickable)
                           !isCurrent && !isComplete && !isFuture && isClickable &&
-                            "bg-white text-[#036638] border-[#036638] hover:border-[#036638] hover:shadow-md cursor-pointer font-bold",
+                            "bg-white text-[#036638] ring-1 ring-inset ring-[#036638]/25 hover:ring-[#036638]/50 hover:shadow-sm cursor-pointer",
                           // Next stage when checklist INCOMPLETE or future stages (gray, DISABLED)
                           !isCurrent && !isComplete && !isClickable &&
-                            "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed opacity-60 line-through",
-                          // Future unreachable stages (light gray)
+                            "bg-gray-100 text-gray-400 cursor-not-allowed",
+                          // Future unreachable stages (lighter gray)
                           isFuture && !isClickable &&
-                            "bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed opacity-40",
+                            "bg-gray-50 text-gray-300 cursor-not-allowed",
                         )}
                       >
-                        {isComplete && <Check className="w-3.5 h-3.5" />}
-                        {stageLabels[stage]}
+                        {isComplete && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        {isBlocked && <Lock className="w-3 h-3 shrink-0" />}
+                        <span className="truncate">{stageLabels[stage]}</span>
                       </button>
                     )
                   })}
@@ -821,22 +1022,24 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       Eligibility Check
                     </p>
                   </div>
-                  <button
-                    onClick={handleCheckEligibility}
-                    disabled={checkEligibility.isPending}
+                  {/* Trigger lives in the modal header now — this just reflects the latest result. */}
+                  <span
                     className={cn(
-                      "text-[10px] font-medium px-2.5 py-1 rounded transition-all",
-                      checkEligibility.isPending
-                        ? "bg-[#036638]/20 text-[#036638] cursor-wait"
-                        : "bg-[#036638] text-white hover:bg-[#025030]",
+                      "text-[10px] font-bold px-2.5 py-1 rounded-full border",
+                      patient.eligibilityStatus === "eligible" &&
+                        "bg-emerald-50 text-emerald-700 border-emerald-200",
+                      patient.eligibilityStatus === "not_eligible" &&
+                        "bg-red-50 text-red-700 border-red-200",
+                      patient.eligibilityStatus === "not_checked" &&
+                        "bg-white text-[#6B7280] border-gray-200",
                     )}
                   >
-                    {checkEligibility.isPending
-                      ? "Checking..."
-                      : patient.eligibilityStatus !== "not_checked"
-                        ? "Re-check Eligibility"
-                        : "Check Eligibility"}
-                  </button>
+                    {patient.eligibilityStatus === "eligible"
+                      ? "Eligible"
+                      : patient.eligibilityStatus === "not_eligible"
+                        ? "Not Eligible"
+                        : "Not Checked"}
+                  </span>
                 </div>
 
                 {/* Payment details used for the check (persisted to the patient record) */}
@@ -930,8 +1133,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
                 {patient.eligibilityStatus === "not_checked" && (
                   <p className="text-sm text-[#6B7280] italic mb-3">
-                    Click "Check Eligibility" to compare this patient's payment details
-                    against the configured rules.
+                    Use &ldquo;Check Eligibility&rdquo; in the header above to compare this
+                    patient&apos;s payment details against the configured rules.
                   </p>
                 )}
 
@@ -962,125 +1165,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
               {/* Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Appointment - Always Show */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow col-span-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest">
-                        Appointment
-                      </p>
-                      {patient.appointmentDatetime ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-semibold border border-green-200">
-                          <Check className="w-3 h-3" />
-                          Scheduled
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-50 text-red-700 text-[10px] font-semibold border border-red-200">
-                          <AlertTriangle className="w-3 h-3" />
-                          Not Set
-                        </span>
-                      )}
-                    </div>
-                    {!editingAppointment && (
-                      <button
-                        onClick={() => setEditingAppointment(true)}
-                        className="text-xs font-medium text-[#036638] hover:underline"
-                      >
-                        {patient.appointmentDatetime ? "Edit" : "Set Appointment"}
-                      </button>
-                    )}
-                  </div>
-                  {editingAppointment ? (
-                    <div className="space-y-3 mt-3">
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold text-[#1A1B1E]">
-                          {patient.appointmentDatetime ? "New Date & Time" : "Set Appointment Date & Time"}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="datetime-local"
-                            value={newAppointmentDatetime}
-                            onChange={(e) => setNewAppointmentDatetime(e.target.value)}
-                            className="w-full px-4 py-2.5 text-sm border border-[#E5E7EB] rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#036638] focus:border-transparent transition-all shadow-sm hover:border-[#D1D5DB]"
-                          />
-                        </div>
-                        <p className="text-[10px] text-[#6B7280]">
-                          {newAppointmentDatetime
-                            ? `Scheduled for: ${new Date(newAppointmentDatetime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                            : "Select a new appointment date and time"
-                          }
-                        </p>
-                      </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={handleUpdateAppointment}
-                          disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()}
-                          className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg bg-[#036638] text-white hover:bg-[#025030] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm"
-                        >
-                          {updateAppointment.isPending ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              {patient.appointmentDatetime ? "Updating..." : "Setting..."}
-                            </>
-                          ) : (
-                            <>
-                              <CheckCheck className="w-4 h-4" />
-                              {patient.appointmentDatetime ? "Update" : "Set"}
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingAppointment(false)
-                            if (patient?.appointmentDatetime) {
-                              const dt = new Date(patient.appointmentDatetime)
-                              setNewAppointmentDatetime(toLocalDatetimeLocal(dt))
-                            } else {
-                              setNewAppointmentDatetime("")
-                            }
-                          }}
-                          disabled={updateAppointment.isPending}
-                          className="flex-1 px-4 py-2 text-xs font-semibold rounded-lg border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F3F4F6] hover:border-[#D1D5DB] disabled:opacity-50 transition-all"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-
-                      {updateAppointment.isPending && (
-                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                          <p className="text-xs font-medium text-blue-700">
-                            Saving appointment & notifying patient...
-                          </p>
-                        </div>
-                      )}
-                      {updateAppointment.isSuccess && (
-                        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                          <CheckCheck className="w-4 h-4 text-green-600" />
-                          <p className="text-xs font-medium text-green-700">
-                            ✓ Appointment saved! Patient notified via email
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : patient.appointmentDatetime ? (
-                    <p className="text-sm text-[#1A1B1E] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-[#65BD6C]" />
-                      {new Date(patient.appointmentDatetime).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-[#9CA3AF] italic">
-                      No appointment set yet. Click "Set Appointment" to schedule.
-                    </p>
-                  )}
-                </div>
                 {patient.assignedUser && (
                   <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow">
                     <p className="text-[10px] font-bold text-[#6B7280] uppercase tracking-widest mb-2">
@@ -1608,65 +1692,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       Cancel
                     </Button>
                   </div>
-                </div>
-              )}
-
-              {/* Claim / Assign - show dropdown for VAs, simple claim for unassigned */}
-              {(isAdmin || (!patient.assignedUser && user?.role === "va")) && vaList && (
-                <div>
-                  <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider mb-2">
-                    Assign Patient
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {!isAdmin && (
-                      <Button
-                        size="sm"
-                        onClick={handleClaim}
-                        disabled={claimPatient.isPending}
-                        className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
-                      >
-                        <UserCheck className="w-3.5 h-3.5 mr-1" />
-                        {claimPatient.isPending ? "Claiming..." : "Assign to Me"}
-                      </Button>
-                    )}
-                    <div className="relative inline-block">
-                      <select
-                        onChange={(e) => {
-                          const val = e.target.value
-                          e.target.value = ""
-                          if (val) handleAssignTo(val)
-                        }}
-                        value=""
-                        disabled={assigning}
-                        className="appearance-none text-xs border border-[#E5E7EB] rounded-md px-3 py-1.5 pr-8 text-[#1A1B1E] bg-white cursor-pointer hover:border-[#65BD6C]/40 focus:outline-none focus:ring-1 focus:ring-[#036638] disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="">Assign to VA...</option>
-                        {vaList.filter((v) => v.id !== user?.id).map((va) => (
-                          <option key={va.id} value={va.id}>
-                            {va.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-3 h-3 text-[#6B7280] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-                  {assignFeedback && (
-                    <div
-                      className={cn(
-                        "mt-3 flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border",
-                        assignFeedback.type === "success"
-                          ? "bg-[#EBF7EC] border-[#65BD6C]/40 text-[#036638]"
-                          : "bg-red-50 border-red-200 text-red-700",
-                      )}
-                    >
-                      {assignFeedback.type === "success" ? (
-                        <CheckCircle className="w-3.5 h-3.5" />
-                      ) : (
-                        <XCircle className="w-3.5 h-3.5" />
-                      )}
-                      {assignFeedback.message}
-                    </div>
-                  )}
                 </div>
               )}
 
