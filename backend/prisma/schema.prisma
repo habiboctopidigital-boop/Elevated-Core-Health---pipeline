@@ -86,6 +86,7 @@ model User {
   activityLogs         ActivityLog[] @relation("ActivityLogActor")
   importBatches        ImportBatch[] @relation("ImportBatchImportedBy")
   crmIntegrations      CrmIntegration[]
+  appSettingsUpdated   AppSetting[]
 
   @@map("users")
 }
@@ -266,4 +267,20 @@ model CrmIntegration {
   connectedByUser User? @relation(fields: [connectedById], references: [id])
 
   @@map("crm_integrations")
+}
+
+/**
+ * Application-wide settings (key-value pairs).
+ * Used for configurable thresholds like stale card detection time.
+ * Updated only by admin users via the settings API.
+ */
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedById String? @map("updated_by_id")
+
+  updatedByUser User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("app_settings")
 }

@@ -1,10 +1,13 @@
 import { getFinalStageKeys } from "@/config/stages";
+import { settingsService } from "@/moduels/settings/settings.service";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 
 export const dashboardService = {
 	async getSummary() {
-		const staleThreshold = new Date(Date.now() - 48 * 60 * 60 * 1000);
+		// Get stale threshold from settings (defaults to 48 hours)
+		const staleThresholdMs = await settingsService.getStaleThresholdMs();
+		const staleThreshold = new Date(Date.now() - staleThresholdMs);
 
 		// Stages marked as Final are exempt from the stale flag (was hardcoded "reconciled").
 		const finalKeys = await getFinalStageKeys();

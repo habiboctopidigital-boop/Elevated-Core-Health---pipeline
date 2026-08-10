@@ -31,6 +31,7 @@ export const ROUTES = {
     ELIGIBILITY: "/admin/dashboard/eligibility",
     WEBHOOKS: "/admin/dashboard/webhooks",
     CONFIG_CRM: "/admin/dashboard/config-crm",
+    APP_SETTINGS: "/admin/dashboard/app-settings",
     PROFILE: "/admin/dashboard/profile",
   },
 }

@@ -8,6 +8,7 @@ import { dashboardRouter } from "./dashboard/dashboard.router";
 import { importRouter } from "./import/import.router";
 import { patientsPublicRouter, patientsRouter } from "./patients/patients.router";
 import { reportingRouter } from "./reporting/reporting.router";
+import { settingsRouter } from "./settings/settings.router";
 import { stagesRouter } from "./stages/stages.router";
 import { usersRouter } from "./users/users.router";
 
@@ -24,3 +25,4 @@ apiRouter.use("/admin", adminRouter);
 apiRouter.use("/crm", crmRouter);
 apiRouter.use("/stages", stagesRouter);
 apiRouter.use("/users", usersRouter);
+apiRouter.use("/admin/settings", settingsRouter);

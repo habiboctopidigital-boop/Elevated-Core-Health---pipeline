@@ -280,7 +280,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                 title={
                   allComplete
                     ? `Move to ${stageLabels[stageOrder[currentIdx + 1]]}`
-                    : "Complete all checklist items first"
+                    : "Tick every required item before moving this card forward."
                 }
               >
                 Move Next

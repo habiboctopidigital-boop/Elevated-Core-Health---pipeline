@@ -47,6 +47,7 @@ const ADMIN_NAV = [
   { href: ROUTES.ADMIN.STAGES, icon: Settings, label: "Stage Settings" },
   { href: ROUTES.ADMIN.CRM, icon: Contact, label: "CRM" },
   { href: ROUTES.ADMIN.ELIGIBILITY, icon: ShieldCheck, label: "Eligibility Rules" },
+  { href: ROUTES.ADMIN.APP_SETTINGS, icon: Settings, label: "App Settings" },
 ]
 
 interface EchSidebarProps {
@@ -81,24 +82,31 @@ export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSi
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className={cn(
-        "flex items-center justify-center border-b border-white/5 px-4 relative transition-all duration-300",
-        isCollapsed ? "h-20 w-20" : "h-24 w-64"
+        "flex items-center justify-between border-b border-white/5 relative transition-all duration-300 px-3",
+        isCollapsed ? "h-20 w-20" : "h-20 w-64"
       )}>
-        <div className="flex flex-col items-center justify-center gap-1">
-          <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
-            <Image
+        <div className={cn(
+          "flex items-center transition-all duration-300",
+          isCollapsed ? "justify-center w-full" : "justify-start gap-3 w-full"
+        )}>
+          {/* Logo */}
+          <div className={cn(
+            "flex-shrink-0 flex items-center justify-center transition-all duration-300",
+            isCollapsed ? "w-16 h-16" : "w-16 h-16"
+          )}>
+            <img
               src="/logo.png"
               alt="Elevated Core Health"
-              width={40}
-              height={40}
-              priority
-              className="w-10 h-10 object-contain border-none"
+              width={isCollapsed ? 64 : 64}
+              className="w-16 h-16 object-contain"
             />
           </div>
+
+          {/* Text */}
           {!isCollapsed && (
-            <div className="text-center leading-tight">
-              <p className="text-white text-[13px] font-bold tracking-tight">Elevated Core</p>
-              <p className="text-[#65BD6C] text-[9px] font-semibold uppercase tracking-widest">Pipeline Portal</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-[12px] font-bold tracking-tight leading-tight">Elevated Health</p>
+              <p className="text-[#65BD6C] text-[8px] font-semibold uppercase tracking-widest leading-tight mt-0.5">Care Dashboard</p>
             </div>
           )}
         </div>
@@ -193,6 +201,8 @@ export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSi
           )}
         </Button>
       </div>
+
+      
     </aside>
   )
 }

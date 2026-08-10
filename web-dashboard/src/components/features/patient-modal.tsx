@@ -520,7 +520,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
                     const isBlocked = isNext && !allComplete
                     const isDisabledReason = isBlocked
-                      ? "Complete all checklist items before advancing"
+                      ? "Tick every required item before moving this card forward."
                       : isFuture
                         ? "Complete the current stage first"
                         : null
@@ -1379,12 +1379,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Flag Controls */}
-              {!isAdmin && !patient.isFlagged ? (
+              {!patient.isFlagged ? (
                 <div>
                   {showFlagInput ? (
                     <div className="space-y-2">
                       <Textarea
-                        placeholder="Reason for flagging Donna..."
+                        placeholder={isAdmin ? "Reason for flagging this card..." : "Reason for flagging Donna..."}
                         value={flagReason}
                         onChange={(e) => setFlagReason(e.target.value)}
                         className="text-sm min-h-[60px]"
@@ -1394,9 +1394,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           size="sm"
                           onClick={handleFlag}
                           disabled={!flagReason.trim() || flagPatient.isPending}
-                          className="bg-[#036638] hover:bg-[#025030] text-white text-xs"
+                          className={isAdmin ? "bg-amber-600 hover:bg-amber-700 text-white text-xs" : "bg-[#036638] hover:bg-[#025030] text-white text-xs"}
                         >
-                          {flagPatient.isPending ? "Flagging..." : "Flag for Donna"}
+                          {flagPatient.isPending ? "Flagging..." : isAdmin ? "Flag for Follow-up" : "Flag for Donna"}
                         </Button>
                         <Button
                           variant="ghost"
@@ -1413,10 +1413,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFlagInput(true)}
-                      className="text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:text-[#025030] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-colors shadow-sm font-medium"
+                      className={isAdmin ? "text-xs gap-1.5 border-amber-300 text-amber-700 hover:text-amber-900 hover:bg-amber-50 hover:border-amber-400 transition-colors shadow-sm font-medium" : "text-xs gap-1.5 border-[#036638]/30 text-[#036638] hover:text-[#025030] hover:bg-[#EBF7EC] hover:border-[#036638]/60 transition-colors shadow-sm font-medium"}
                     >
                       <Flag className="w-3.5 h-3.5" />
-                      Flag for Donna
+                      {isAdmin ? "Flag for Follow-up" : "Flag for Donna"}
                     </Button>
                   )}
                 </div>

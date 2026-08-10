@@ -7,9 +7,10 @@ import { PatientModal } from "@/components/features/patient-modal"
 import { StatusBar } from "@/components/features/status-bar"
 import { ImportDialog } from "@/components/features/import-dialog"
 import { AddPatientDialog } from "@/components/features/add-patient-dialog"
+import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { useStageMeta } from "@/hooks/query/useStages"
 import type { Patient, PatientStage } from "@/types"
-import { Loader2, ShieldCheck, Search, X, AlertTriangle, RefreshCw } from "lucide-react"
+import { Loader2, ShieldCheck, Search, X, AlertTriangle, RefreshCw, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminBoardPage() {
@@ -20,6 +21,8 @@ export default function AdminBoardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedStageFilter, setSelectedStageFilter] = useState<string | null>(null)
   const [filterMode, setFilterMode] = useState<"all" | "stale" | "flagged">("all")
+  const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
+  const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
 
   // Filter patients by search query, stage, and status
   const filteredPatients = useMemo(() => {
@@ -42,15 +45,27 @@ export default function AdminBoardPage() {
     })
   }, [patients, searchQuery, selectedStageFilter, filterMode])
 
-  const groupedPatients =
-    filteredPatients.reduce(
+  const groupedPatients = useMemo(() => {
+    let result = filteredPatients.reduce(
       (acc, p) => {
         if (!acc[p.stage]) acc[p.stage] = []
         acc[p.stage].push(p)
         return acc
       },
       {} as Record<string, Patient[]>,
-    ) || {}
+    )
+
+    // Apply per-stage filters if they exist
+    if (Object.keys(stageFilters).length > 0) {
+      Object.keys(result).forEach(stage => {
+        if (stageFilters[stage]) {
+          result[stage] = stageFilters[stage]
+        }
+      })
+    }
+
+    return result || {}
+  }, [filteredPatients, stageFilters])
 
   const handleMoveStage = (id: string, target: PatientStage) => {
     moveStage.mutate({ id, targetStage: target })
@@ -206,7 +221,7 @@ export default function AdminBoardPage() {
                 key={stage}
                 className="w-72 flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 shrink-0"
               >
-                <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50">
+                <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50 relative">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-[#036638] truncate">
@@ -216,10 +231,40 @@ export default function AdminBoardPage() {
                         {stageHints[stage]}
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center shrink-0 border border-[#E5E7EB]">
-                      {stagePatients.length}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setOpenStageFilterPopup(openStageFilterPopup === stage ? null : stage)}
+                        className={cn(
+                          "p-1.5 rounded-lg transition-all cursor-pointer",
+                          openStageFilterPopup === stage
+                            ? "bg-[#036638]/15 text-[#036638]"
+                            : "text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280]"
+                        )}
+                        title="Filter and sort"
+                      >
+                        <Filter className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center border border-[#E5E7EB]">
+                        {stagePatients.length}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Stage Filter Popup */}
+                  <StageFilterPopup
+                    stage={stageLabels[stage]}
+                    patients={filteredPatients.filter(p => p.stage === stage)}
+                    onFilterChange={(filtered) => {
+                      setStageFilters(prev => ({
+                        ...prev,
+                        [stage]: filtered
+                      }))
+                    }}
+                    isOpen={openStageFilterPopup === stage}
+                    onOpenChange={(open) => {
+                      if (!open) setOpenStageFilterPopup(null)
+                    }}
+                  />
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
