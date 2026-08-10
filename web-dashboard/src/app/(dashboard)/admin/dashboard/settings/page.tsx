@@ -2,17 +2,16 @@
 
 import { useState } from "react"
 import { useAuth } from "@/hooks/auth/useAuth"
-import { User, Lock, Zap, Download, Phone, MapPin, Copy, Check } from "lucide-react"
+import { User, Lock, Palette, Zap, Settings, Download, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-type ProfileTab = "profile" | "security" | "webhooks"
+type AdminSettingsTab = "profile" | "security" | "appearance" | "webhooks" | "integrations"
 
-export default function ProfilePage() {
+export default function AdminSettingsPage() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<ProfileTab>("profile")
+  const [activeTab, setActiveTab] = useState<AdminSettingsTab>("profile")
   const [isSaving, setIsSaving] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -24,10 +23,12 @@ export default function ProfilePage() {
     bio: "",
   })
 
-  const tabs: Array<{ id: ProfileTab; label: string; icon: React.ReactNode }> = [
+  const tabs: Array<{ id: AdminSettingsTab; label: string; icon: React.ReactNode; admin?: boolean }> = [
     { id: "profile", label: "Profile", icon: <User className="w-4 h-4" /> },
     { id: "security", label: "Security", icon: <Lock className="w-4 h-4" /> },
-    { id: "webhooks", label: "Webhooks & CRM", icon: <Zap className="w-4 h-4" /> },
+    { id: "appearance", label: "Appearance", icon: <Palette className="w-4 h-4" /> },
+    { id: "webhooks", label: "Webhooks", icon: <Zap className="w-4 h-4" />, admin: true },
+    { id: "integrations", label: "Integrations", icon: <Settings className="w-4 h-4" />, admin: true },
   ]
 
   const handleSaveProfile = async () => {
@@ -39,29 +40,23 @@ export default function ProfilePage() {
     }
   }
 
-  const handleCopyKey = () => {
-    navigator.clipboard.writeText("sk_test_12345678901234567890")
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-[#1A1B1E]">My Profile</h1>
-        <p className="text-sm text-[#6B7280] mt-1">Manage your account and preferences</p>
+        <h1 className="text-3xl font-bold text-[#1A1B1E]">Settings</h1>
+        <p className="text-sm text-[#6B7280] mt-1">Manage your account, security, and integrations</p>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-[#E5E7EB]">
-        <div className="flex gap-8">
+        <div className="flex gap-6 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "px-1 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-all",
+                "px-1 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-all whitespace-nowrap",
                 activeTab === tab.id
                   ? "border-[#036638] text-[#036638]"
                   : "border-transparent text-[#6B7280] hover:text-[#1A1B1E]"
@@ -79,7 +74,6 @@ export default function ProfilePage() {
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <div className="space-y-8">
-            {/* Section Header */}
             <div>
               <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Profile Details</h2>
               <p className="text-sm text-[#6B7280]">Update your personal information and profile picture.</p>
@@ -166,20 +160,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Bio */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-[#1A1B1E]">Professional Bio</label>
-              <p className="text-xs text-[#6B7280] mb-2">Tell us about yourself (optional)</p>
-              <textarea
-                value={profileForm.bio}
-                onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                placeholder="Your professional background and expertise..."
-                rows={4}
-                className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] resize-none transition-all"
-              />
-              <p className="text-xs text-[#9CA3AF]">{profileForm.bio.length}/500</p>
-            </div>
-
             {/* Actions */}
             <div className="flex gap-2 pt-4">
               <Button
@@ -246,25 +226,47 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Webhooks & CRM Tab */}
+        {/* Appearance Tab */}
+        {activeTab === "appearance" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Appearance</h2>
+              <p className="text-sm text-[#6B7280]">Customize how the app looks for you.</p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-[#1A1B1E]">Theme</label>
+              <div className="grid grid-cols-3 gap-4">
+                {["Light", "Dark", "System"].map((theme) => (
+                  <button
+                    key={theme}
+                    className={cn(
+                      "p-4 rounded-lg border-2 transition-all",
+                      theme === "Light"
+                        ? "border-[#036638] bg-[#EBF7EC]"
+                        : "border-[#E5E7EB] hover:border-[#036638]"
+                    )}
+                  >
+                    <p className="text-sm font-semibold text-[#1A1B1E]">{theme}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button className="bg-[#036638] hover:bg-[#025030] text-white font-medium">
+                Save Preferences
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Webhooks Tab (Admin Only) */}
         {activeTab === "webhooks" && (
           <div className="space-y-8">
             <div>
-              <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Webhooks & CRM Configuration</h2>
-              <p className="text-sm text-[#6B7280]">Configure external integrations and automation.</p>
-            </div>
-
-            {/* Make.com Webhook */}
-            <div className="space-y-4 border border-[#E5E7EB] rounded-lg p-4 bg-[#F9FAFB]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-[#1A1B1E]">Make.com Automation</h3>
-                  <p className="text-xs text-[#6B7280] mt-1">Connect your automation workflows</p>
-                </div>
-                <span className="px-3 py-1 bg-[#EBF7EC] text-[#036638] text-xs font-bold rounded-full">
-                  Connected
-                </span>
-              </div>
+              <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Webhook Configuration</h2>
+              <p className="text-sm text-[#6B7280]">Manage webhook endpoints for external integrations.</p>
             </div>
 
             {/* Webhook URL */}
@@ -280,12 +282,13 @@ export default function ProfilePage() {
 
             {/* Events Selection */}
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#1A1B1E]">Subscribe to Events</label>
+              <label className="block text-sm font-semibold text-[#1A1B1E]">Events to Subscribe</label>
               <div className="space-y-2">
                 {[
                   "patient.created",
                   "patient.updated",
                   "patient.flagged",
+                  "patient.stage_changed",
                   "appointment.scheduled",
                 ].map((event) => (
                   <label key={event} className="flex items-center gap-3 cursor-pointer">
@@ -311,24 +314,15 @@ export default function ProfilePage() {
                   readOnly
                   className="flex-1 px-4 py-2 border border-[#E5E7EB] rounded-lg bg-[#F9FAFB] text-[#6B7280]"
                 />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-[#E5E7EB]"
-                  onClick={handleCopyKey}
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-[#036638]" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
+                <Button variant="outline" className="border-[#E5E7EB]">
+                  Copy
                 </Button>
               </div>
             </div>
 
             {/* Test Webhook */}
             <div className="bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-lg p-4">
-              <p className="text-sm font-semibold text-[#036638] mb-2">Test Webhook Connection</p>
+              <p className="text-sm font-semibold text-[#036638] mb-2">Test Webhook</p>
               <p className="text-xs text-[#036638] mb-3">Send a test event to verify your configuration</p>
               <Button className="bg-[#036638] hover:bg-[#025030] text-white font-medium text-xs">
                 Send Test Event
@@ -338,14 +332,77 @@ export default function ProfilePage() {
             {/* Actions */}
             <div className="flex gap-2 pt-4">
               <Button className="bg-[#036638] hover:bg-[#025030] text-white font-medium">
-                Save Configuration
+                Save Webhook
               </Button>
               <Button variant="outline" className="border-[#E5E7EB]">
-                Reset
+                Delete Webhook
               </Button>
             </div>
           </div>
         )}
+
+        {/* Integrations Tab (Admin Only) */}
+        {activeTab === "integrations" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Integrations</h2>
+              <p className="text-sm text-[#6B7280]">Connect with external services and tools.</p>
+            </div>
+
+            {/* Integration Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { name: "Make.com", description: "Automation workflows", status: "Connected" },
+                { name: "Slack", description: "Send notifications", status: "Not Connected" },
+                { name: "Gmail", description: "Email integration", status: "Connected" },
+                { name: "Google Calendar", description: "Appointment sync", status: "Not Connected" },
+              ].map((integration) => (
+                <div key={integration.name} className="border border-[#E5E7EB] rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-semibold text-[#1A1B1E]">{integration.name}</p>
+                      <p className="text-xs text-[#6B7280] mt-1">{integration.description}</p>
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold px-2 py-1 rounded-full",
+                        integration.status === "Connected"
+                          ? "bg-[#EBF7EC] text-[#036638]"
+                          : "bg-[#F3F4F6] text-[#6B7280]"
+                      )}
+                    >
+                      {integration.status}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={integration.status === "Connected" ? "outline" : "default"}
+                    className={cn(
+                      "w-full text-xs font-medium",
+                      integration.status === "Connected"
+                        ? "border-[#E5E7EB] text-[#6B7280]"
+                        : "bg-[#036638] hover:bg-[#025030] text-white"
+                    )}
+                  >
+                    {integration.status === "Connected" ? "Disconnect" : "Connect"}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Export Data */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-[#1A1B1E]">Export Organization Data</h3>
+          <p className="text-sm text-[#6B7280] mt-1">Download all patient and activity data in JSON format</p>
+        </div>
+        <Button variant="outline" className="gap-2 border-[#E5E7EB]">
+          <Download className="w-4 h-4" />
+          Export
+        </Button>
       </div>
     </div>
   )

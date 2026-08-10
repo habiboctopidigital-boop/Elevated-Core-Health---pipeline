@@ -2,17 +2,16 @@
 
 import { useState } from "react"
 import { useAuth } from "@/hooks/auth/useAuth"
-import { User, Lock, Zap, Download, Phone, MapPin, Copy, Check } from "lucide-react"
+import { User, Lock, Palette, Download, Mail, Phone, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-type ProfileTab = "profile" | "security" | "webhooks"
+type SettingsTab = "profile" | "security" | "appearance"
 
-export default function ProfilePage() {
+export default function VASettingsPage() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<ProfileTab>("profile")
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile")
   const [isSaving, setIsSaving] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
@@ -24,32 +23,28 @@ export default function ProfilePage() {
     bio: "",
   })
 
-  const tabs: Array<{ id: ProfileTab; label: string; icon: React.ReactNode }> = [
+  const tabs: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
     { id: "profile", label: "Profile", icon: <User className="w-4 h-4" /> },
     { id: "security", label: "Security", icon: <Lock className="w-4 h-4" /> },
-    { id: "webhooks", label: "Webhooks & CRM", icon: <Zap className="w-4 h-4" /> },
+    { id: "appearance", label: "Appearance", icon: <Palette className="w-4 h-4" /> },
   ]
 
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
+      // API call would go here
       await new Promise(resolve => setTimeout(resolve, 1000))
+      // toast.success("Profile updated successfully")
     } finally {
       setIsSaving(false)
     }
-  }
-
-  const handleCopyKey = () => {
-    navigator.clipboard.writeText("sk_test_12345678901234567890")
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-[#1A1B1E]">My Profile</h1>
+        <h1 className="text-3xl font-bold text-[#1A1B1E]">Settings</h1>
         <p className="text-sm text-[#6B7280] mt-1">Manage your account and preferences</p>
       </div>
 
@@ -79,7 +74,7 @@ export default function ProfilePage() {
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <div className="space-y-8">
-            {/* Section Header */}
+            {/* Profile Header */}
             <div>
               <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Profile Details</h2>
               <p className="text-sm text-[#6B7280]">Update your personal information and profile picture.</p>
@@ -94,7 +89,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex-1">
                   <div className="border-2 border-dashed border-[#E5E7EB] rounded-lg p-6 text-center hover:border-[#036638]/50 transition-colors cursor-pointer">
-                    <Download className="w-6 h-6 text-[#6B7280] mx-auto mb-2" />
+                    <Upload className="w-6 h-6 text-[#6B7280] mx-auto mb-2" />
                     <p className="text-xs text-[#6B7280]">Drop image here or click to upload</p>
                     <p className="text-[10px] text-[#9CA3AF] mt-1">PNG, JPG (Max 5MB)</p>
                   </div>
@@ -189,7 +184,10 @@ export default function ProfilePage() {
               >
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
-              <Button variant="outline" className="border-[#E5E7EB] text-[#6B7280] hover:text-[#1A1B1E]">
+              <Button
+                variant="outline"
+                className="border-[#E5E7EB] text-[#6B7280] hover:text-[#1A1B1E]"
+              >
                 Cancel
               </Button>
             </div>
@@ -246,107 +244,59 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Webhooks & CRM Tab */}
-        {activeTab === "webhooks" && (
+        {/* Appearance Tab */}
+        {activeTab === "appearance" && (
           <div className="space-y-8">
             <div>
-              <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Webhooks & CRM Configuration</h2>
-              <p className="text-sm text-[#6B7280]">Configure external integrations and automation.</p>
+              <h2 className="text-xl font-bold text-[#1A1B1E] mb-2">Appearance</h2>
+              <p className="text-sm text-[#6B7280]">Customize how the app looks for you.</p>
             </div>
 
-            {/* Make.com Webhook */}
-            <div className="space-y-4 border border-[#E5E7EB] rounded-lg p-4 bg-[#F9FAFB]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-[#1A1B1E]">Make.com Automation</h3>
-                  <p className="text-xs text-[#6B7280] mt-1">Connect your automation workflows</p>
-                </div>
-                <span className="px-3 py-1 bg-[#EBF7EC] text-[#036638] text-xs font-bold rounded-full">
-                  Connected
-                </span>
-              </div>
-            </div>
-
-            {/* Webhook URL */}
+            {/* Theme Selection */}
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#1A1B1E]">Webhook URL</label>
-              <p className="text-xs text-[#6B7280] mb-2">Where should webhook events be sent?</p>
-              <input
-                type="url"
-                placeholder="https://your-domain.com/webhooks"
-                className="w-full px-4 py-2 border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638]"
-              />
-            </div>
-
-            {/* Events Selection */}
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#1A1B1E]">Subscribe to Events</label>
-              <div className="space-y-2">
-                {[
-                  "patient.created",
-                  "patient.updated",
-                  "patient.flagged",
-                  "appointment.scheduled",
-                ].map((event) => (
-                  <label key={event} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="w-4 h-4 accent-[#036638]"
-                    />
-                    <span className="text-sm text-[#1A1B1E]">{event}</span>
-                  </label>
+              <label className="block text-sm font-semibold text-[#1A1B1E]">Theme</label>
+              <div className="grid grid-cols-3 gap-4">
+                {["Light", "Dark", "System"].map((theme) => (
+                  <button
+                    key={theme}
+                    className={cn(
+                      "p-4 rounded-lg border-2 transition-all",
+                      theme === "Light"
+                        ? "border-[#036638] bg-[#EBF7EC]"
+                        : "border-[#E5E7EB] hover:border-[#036638]"
+                    )}
+                  >
+                    <p className="text-sm font-semibold text-[#1A1B1E]">{theme}</p>
+                  </button>
                 ))}
               </div>
-            </div>
-
-            {/* Secret Key */}
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#1A1B1E]">Secret Key</label>
-              <p className="text-xs text-[#6B7280] mb-2">Use this to verify webhook authenticity</p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  defaultValue="sk_test_12345678901234567890"
-                  readOnly
-                  className="flex-1 px-4 py-2 border border-[#E5E7EB] rounded-lg bg-[#F9FAFB] text-[#6B7280]"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-[#E5E7EB]"
-                  onClick={handleCopyKey}
-                >
-                  {copied ? (
-                    <Check className="w-4 h-4 text-[#036638]" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Test Webhook */}
-            <div className="bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-lg p-4">
-              <p className="text-sm font-semibold text-[#036638] mb-2">Test Webhook Connection</p>
-              <p className="text-xs text-[#036638] mb-3">Send a test event to verify your configuration</p>
-              <Button className="bg-[#036638] hover:bg-[#025030] text-white font-medium text-xs">
-                Send Test Event
-              </Button>
             </div>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">
               <Button className="bg-[#036638] hover:bg-[#025030] text-white font-medium">
-                Save Configuration
-              </Button>
-              <Button variant="outline" className="border-[#E5E7EB]">
-                Reset
+                Save Preferences
               </Button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Export Data */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-[#1A1B1E]">Export Your Data</h3>
+          <p className="text-sm text-[#6B7280] mt-1">Download all your account data in JSON format</p>
+        </div>
+        <Button variant="outline" className="gap-2 border-[#E5E7EB]">
+          <Download className="w-4 h-4" />
+          Export Data
+        </Button>
+      </div>
     </div>
   )
+}
+
+function Upload({ className }: { className?: string }) {
+  return <Mail className={className} />
 }

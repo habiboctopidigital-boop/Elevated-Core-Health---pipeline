@@ -71,7 +71,7 @@ export function ProfilePage() {
       {/* Settings Navigation - Top */}
       <SettingsNav currentPage="profile" />
 
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6 max-w-4xl mt-10">
         <div>
           <h1 className="text-xl font-bold text-[#1A1B1E]">Profile</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">

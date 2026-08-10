@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { EchSidebar } from "@/components/layouts/ech-sidebar"
-import { Topbar } from "@/components/layouts/topbar"
+import { DashboardHeader } from "@/components/layouts/dashboard-header"
 import { DashboardWatermark, WatermarkOpacity } from "@/components/ui/dashboard-watermark"
 import { Menu } from "lucide-react"
 
@@ -82,14 +82,14 @@ export default function DashboardLayout({
         {/* Content offset for mobile topbar */}
         <div className="lg:hidden h-14" />
 
-        {/* Desktop Topbar */}
-        <div className="hidden lg:block">
-          <Topbar />
+        {/* Desktop Premium Header */}
+        <div className="hidden lg:block w-full">
+          <DashboardHeader />
         </div>
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-6">
-          <div className="relative z-10 max-w-[1440px] mx-auto">
+          <div className="relative z-50 max-w-[1440px] mx-auto">
             <DashboardWatermark
               position="center"
               opacity={WatermarkOpacity.DASHBOARD_SUBTLE}

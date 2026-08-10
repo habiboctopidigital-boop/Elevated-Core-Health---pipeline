@@ -177,6 +177,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [flagReason, setFlagReason] = useState("")
   const [showFlagInput, setShowFlagInput] = useState(false)
   const [flagStage, setFlagStage] = useState<PatientStage | "">("")
+  const [showFlagPopup, setShowFlagPopup] = useState(false)
+  const [newFlagReason, setNewFlagReason] = useState("")
+  const [newFlagType, setNewFlagType] = useState<"positive" | "negative">("positive")
+  const [showAllFlags, setShowAllFlags] = useState(false)
   const [clearReason, setClearReason] = useState("")
   const [showClearInput, setShowClearInput] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
@@ -425,7 +429,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
           <>
             <div className="flex-shrink-0 relative overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-5 py-6 sm:px-8 sm:py-8 flex items-start justify-between border-b border-white/10 shadow-[0_4px_24px_rgba(3,102,56,0.3)]">
               <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-              <div className="min-w-0 flex-1 relative z-10">
+              <div className="min-w-0 flex-1 relative z-50">
                 <div className="flex items-center gap-3 mb-2">
                   <h2 className="text-2xl font-bold text-white truncate">
                     {patient.name}
@@ -433,9 +437,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   {patient.isFlagged && (
                     <Badge
                       variant="outline"
-                      className="bg-white text-[#036638] border-white text-[10px] font-bold gap-1 shadow-sm"
+                      className="bg-[#E15C4E]/90 text-white border-[#E15C4E] text-[10px] font-bold gap-1 shadow-sm animate-pulse"
                     >
-                      <Flag className="w-3 h-3" fill="#036638" />
+                      <Flag className="w-3 h-3" fill="white" />
                       Flagged
                     </Badge>
                   )}
@@ -484,14 +488,49 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     Created {new Date(patient.createdAt).toLocaleDateString()}
                   </p>
                 </div>
+
+                {/* Unified Flag Display */}
+                {patient.isFlagged && patient.flagReason && (
+                  <div className="mt-3 p-3 rounded-lg border bg-[#E15C4E]/15 border-[#E15C4E]/40 backdrop-blur-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-[#E15C4E] mb-1 flex items-center gap-1">
+                          🚩 Flagged
+                        </p>
+                        <p className="text-xs text-white/90">{patient.flagReason}</p>
+                        {patient.flaggedByUser && (
+                          <p className="text-[10px] text-white/60 mt-2">
+                            By {patient.flaggedByUser.name} • {timeAgo(patient.flaggedAt?.toString() || '')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={onClose}
-                title="Press ESC to close"
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all ml-4 flex-shrink-0 relative z-10 shadow-sm border border-white/10"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* Unified Flag Button (top-right, below close) */}
+              <div className="flex flex-col gap-2 ml-4 flex-shrink-0 relative z-10">
+                <button
+                  onClick={() => setShowFlagPopup(true)}
+                  title={isAdmin ? "Raise flag for VAs" : "Raise flag for admin"}
+                  className={cn(
+                    "p-2.5 rounded-xl transition-all border shadow-sm flex items-center justify-center",
+                    isAdmin
+                      ? "bg-[#65BD6C]/20 hover:bg-[#65BD6C]/30 text-[#65BD6C] hover:text-[#036638] border-[#65BD6C]/40"
+                      : "bg-[#E15C4E]/20 hover:bg-[#E15C4E]/30 text-[#E15C4E] hover:text-white border-[#E15C4E]/40"
+                  )}
+                >
+                  <Flag className="w-4 h-4" fill="currentColor" />
+                </button>
+                <button
+                  onClick={onClose}
+                  title="Press ESC to close"
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all shadow-sm border border-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-[#036638] scrollbar-thumb-rounded">
@@ -1678,6 +1717,148 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
           <div className="absolute inset-0 z-50 bg-white/75 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-9 h-9 text-[#036638] animate-spin" />
             <p className="text-sm font-semibold text-[#036638]">Updating assignment...</p>
+          </div>
+        )}
+
+        {/* Unified Flag Popup Modal */}
+        {showFlagPopup && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowFlagPopup(false)}
+            />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className={cn(
+                "px-6 py-4 flex items-center justify-between",
+                isAdmin
+                  ? "bg-gradient-to-r from-[#65BD6C] to-[#036638]"
+                  : "bg-gradient-to-r from-[#E15C4E] to-[#DC2626]"
+              )}>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Flag className="w-5 h-5" fill="white" />
+                  {isAdmin ? "Raise Flag for VAs" : "Raise Flag for Admin"}
+                </h3>
+                <button
+                  onClick={() => setShowFlagPopup(false)}
+                  className={cn(
+                    "p-1 rounded-lg transition-colors",
+                    isAdmin
+                      ? "hover:bg-[#025030]/30 text-white"
+                      : "hover:bg-red-900/30 text-white"
+                  )}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                {/* Flag Type Selection */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#6B7280] mb-3">
+                    Flag Type
+                  </label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="flagType"
+                        value="positive"
+                        checked={newFlagType === "positive"}
+                        onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")}
+                        className="w-4 h-4 accent-[#65BD6C]"
+                      />
+                      <span className="text-sm font-medium text-[#1A1B1E]">✅ Positive Note</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="flagType"
+                        value="negative"
+                        checked={newFlagType === "negative"}
+                        onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")}
+                        className="w-4 h-4 accent-[#E15C4E]"
+                      />
+                      <span className="text-sm font-medium text-[#1A1B1E]">⚠️ Alert/Issue</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Reason Input */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#6B7280] mb-2">
+                    Reason <span className="text-[#E15C4E]">*</span>
+                  </label>
+                  <textarea
+                    value={newFlagReason}
+                    onChange={(e) => setNewFlagReason(e.target.value)}
+                    placeholder={newFlagType === "positive"
+                      ? "e.g., Excellent progress, great patient compliance..."
+                      : "e.g., Missing lab results, needs immediate follow-up..."}
+                    className="w-full px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] resize-none min-h-[100px]"
+                  />
+                </div>
+
+                {/* Info Box */}
+                <div className={cn(
+                  "p-3 rounded-lg text-xs font-medium",
+                  newFlagType === "positive"
+                    ? "bg-[#EBF7EC] border border-[#65BD6C]/40 text-[#036638]"
+                    : "bg-[#FEE2E2] border border-[#E15C4E]/40 text-[#DC2626]"
+                )}>
+                  {newFlagType === "positive"
+                    ? "✅ Positive flags highlight excellent work and progress."
+                    : "⚠️ Alert flags indicate issues that need immediate follow-up."}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="border-t border-[#E5E7EB] px-6 py-4 flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setShowFlagPopup(false)
+                    setNewFlagReason("")
+                    setNewFlagType("positive")
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#1A1B1E] hover:bg-[#F3F4F6] rounded-lg transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (patient && newFlagReason.trim()) {
+                      await flagPatient.mutateAsync({ id: patient.id, reason: newFlagReason })
+                      setShowFlagPopup(false)
+                      setNewFlagReason("")
+                      setNewFlagType("positive")
+                      toast.success("Flag raised successfully")
+                    }
+                  }}
+                  disabled={!newFlagReason.trim() || flagPatient.isPending}
+                  className={cn(
+                    "px-4 py-2 text-sm font-bold rounded-lg transition-all flex items-center gap-2 uppercase tracking-wide",
+                    newFlagReason.trim() && !flagPatient.isPending
+                      ? isAdmin
+                        ? "bg-[#65BD6C] hover:bg-[#036638] text-white cursor-pointer"
+                        : "bg-[#E15C4E] hover:bg-[#DC2626] text-white cursor-pointer"
+                      : "bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed"
+                  )}
+                >
+                  {flagPatient.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Flag className="w-4 h-4" fill="currentColor" />
+                      Raise Flag
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
