@@ -321,7 +321,7 @@ export function AddPatientDialog() {
 
               <Field label="Payment Type">
                 <SelectOrOther
-                  value={formData.paymentMethod}
+                  value={formData.paymentMethod ?? ""}
                   onChange={(v) => {
                     setFormData((f) => ({ ...f, paymentMethod: v }))
                     clearFieldError("paymentMethod")
@@ -335,7 +335,7 @@ export function AddPatientDialog() {
 
               <Field label="Insurance Company">
                 <SelectOrOther
-                  value={formData.insuranceProvider}
+                  value={formData.insuranceProvider ?? ""}
                   onChange={(v) => {
                     setFormData((f) => ({ ...f, insuranceProvider: v }))
                     clearFieldError("insuranceProvider")
