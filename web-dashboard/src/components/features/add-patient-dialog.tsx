@@ -10,7 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Plus, Loader2 } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
@@ -67,7 +66,6 @@ export function AddPatientDialog() {
   const [formData, setFormData] = useState<AddPatientFormData>(EMPTY_FORM)
   const [paymentMethodOther, setPaymentMethodOther] = useState(false)
   const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
-
   const { data: vaList } = useListVas()
   const { addNotification } = useNotificationsContext()
   const queryClient = useQueryClient()
@@ -94,10 +92,12 @@ export function AddPatientDialog() {
     onSuccess: (newPatient) => {
       // Merge the server-created patient straight into every cached patients
       // list synchronously, so the board updates instantly and never renders
-      // an empty transitional state while waiting on a background refetch to
-      // land (a slow/blipped refetch previously meant the whole board — every
-      // stage column — looked empty until a manual page reload).
-      const cachedPatientLists = queryClient.getQueriesData<Patient[]>({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      // an empty/transitional state while waiting on a background refetch.
+      // Even if that refetch fails (slow network, transient 5xx), the existing
+      // cards are already in the cache — they can never be lost.
+      const cachedPatientLists = queryClient.getQueriesData<Patient[]>({
+        queryKey: QUERY_KEYS.PATIENTS.ALL,
+      })
       for (const [key, old] of cachedPatientLists) {
         if (!old) continue
         // Per-stage-filtered caches (queryKey = ["patients", stage]) should
@@ -106,11 +106,13 @@ export function AddPatientDialog() {
         if (stageFilter && stageFilter !== newPatient.stage) continue
         queryClient.setQueryData<Patient[]>(key, [newPatient, ...old])
       }
-      // Still invalidate so the cache reconciles with the server in the
-      // background (e.g. picks up anything computed server-side) — this is
-      // now a background-consistency refresh, not the thing the UI depends on.
+      // Background-consistency refetch — reconciles with the server (e.g. any
+      // computed fields) without the UI depending on it.
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
-      addNotification(`New patient "${formData.firstName} ${formData.lastName}" added to onboarding`, "onboarding")
+      addNotification(
+        `New patient "${formData.firstName} ${formData.lastName}" added to onboarding`,
+        "onboarding",
+      )
       toast.success("Patient added successfully")
       setOpen(false)
       setFormData(EMPTY_FORM)
@@ -139,8 +141,7 @@ export function AddPatientDialog() {
   }
 
   return (
-  //  <div className="fixed opacity-35 inset-0 z-40  w-full h-full bg-blue-800">
-     <Dialog
+    <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
@@ -358,6 +359,5 @@ export function AddPatientDialog() {
         </form>
       </DialogContent>
     </Dialog>
-  //  </div>
   )
 }

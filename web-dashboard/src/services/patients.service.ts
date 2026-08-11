@@ -188,6 +188,7 @@ export const PatientsService = {
       API_ENDPOINTS.PATIENTS_INTAKE_TEST,
       input,
     )
+    
     return data.data
   },
 

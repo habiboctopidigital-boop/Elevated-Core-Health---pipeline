@@ -23,6 +23,7 @@ export function useStages() {
 export function useStageMeta() {
   const { data, isLoading } = useStages()
   const stages: PipelineStage[] = data && data.length > 0 ? data : DEFAULT_STAGES
+  
   const byKey = new Map(stages.map((s) => [s.key, s]))
   const order = stages.map((s) => s.key)
   const labels: Record<string, string> = Object.fromEntries(stages.map((s) => [s.key, s.name]))

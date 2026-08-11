@@ -4,6 +4,7 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { QUERY_KEYS } from "@/constants"
@@ -17,6 +18,10 @@ export function usePatients(stage?: string, options?: { enabled?: boolean }) {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     enabled: options?.enabled,
+    // Keep the previously-rendered cards on screen during any refetch (e.g.
+    // right after Add Patient invalidates the cache) so the board can never
+    // flash empty / lose the existing cards while waiting on the network.
+    placeholderData: keepPreviousData,
   })
 }
 
