@@ -332,7 +332,11 @@ export function WorkloadCalendar() {
     )
   }
 
-  if (isError) {
+  // Same rule as the board: only blank the whole calendar when there's no
+  // cached data to fall back on. A background refetch failing after some
+  // other mutation invalidates the shared "patients" cache shouldn't wipe a
+  // calendar that's already rendered.
+  if (isError && !patients) {
     return (
       <div className="flex flex-col items-center justify-center h-96 gap-3">
         <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
@@ -355,6 +359,11 @@ export function WorkloadCalendar() {
 
   return (
     <div className="space-y-4">
+      {isError && patients && (
+        <div className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
+          Couldn&apos;t refresh the calendar just now — showing the last loaded data. It&apos;ll retry automatically.
+        </div>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-[#1A1B1E] flex items-center gap-2">

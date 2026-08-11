@@ -79,7 +79,14 @@ export default function AdminBoardPage() {
     )
   }
 
-  if (error) {
+  // Only replace the whole page with an error state when we have nothing to
+  // fall back on. A background refetch (e.g. right after Add Patient or a
+  // bulk import invalidates the cache) can transiently fail without losing
+  // the data we already have — in that case keep the board rendered with its
+  // last-known-good patients instead of wiping every stage to a blank error
+  // screen (this mirrors the same fix already applied to the shared
+  // KanbanBoard used by the VA board).
+  if (error && !patients) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
@@ -104,6 +111,13 @@ export default function AdminBoardPage() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Stale-data banner — a background refetch failed but we're still showing the last good board */}
+      {error && patients && (
+        <div className="mb-3 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
+          Couldn&apos;t refresh the board just now — showing the last loaded data. It&apos;ll retry automatically.
+        </div>
+      )}
+
       {/* - Board Header - */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">

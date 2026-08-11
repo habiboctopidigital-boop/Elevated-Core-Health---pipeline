@@ -27,7 +27,7 @@ function isStale(updatedAt: string): boolean {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const hours = Math.floor(diff / (1000 * 60 * 60))
-  if (hours < 1) return "< 1h ago"
+  if (hours < 1) return "1h ago"
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   return `${days}d ago`
@@ -82,11 +82,11 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             <h1 className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate">
               {patient.name}
             </h1>
-            {patient.bookingPlatform && (
+            {/* {patient.bookingPlatform && (
               <span className="text-[9px] font-medium text-[#6B7280] bg-[#F3F4F6] px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                 {patient.bookingPlatform}
               </span>
-            )}
+            )} */}
             <span className="text-[9px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
               {patient.source === "webhook" ? "Web" : "Manual"}
             </span>
@@ -241,13 +241,14 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
           <span className="text-[10px] text-emerald-600 font-medium">No checklist required</span>
         </div>
       )}
+             <span className="text-[10px] text-[#6B7280]">Last Updated At : {timeAgo(patient.updatedAt)}</span>
+
 
       {/* - Footer: timestamp + move buttons - */}
       <div className="flex items-center justify-between pt-2 border-t border-[#E5E7EB]/50">
-        <span className="text-[10px] text-[#6B7280]">{timeAgo(patient.updatedAt)}</span>
 
         {canMoveStage ? (
-          <div className="flex items-center gap-1.5 sm:gap-1">
+          <div className="flex items-center w-full justify-between gap-1.5 sm:gap-1">
             {canRetreat && (
               <button
                 draggable={false}
