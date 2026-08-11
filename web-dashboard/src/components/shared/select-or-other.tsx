@@ -35,7 +35,7 @@ export function SelectOrOther({
             onChange(e.target.value)
           }
         }}
-        className="w-full h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
+        className="w-full h-10 sm:h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
       >
         <option value="">{placeholder}</option>
         {options.map((o) => (
@@ -51,7 +51,7 @@ export function SelectOrOther({
           onChange={(e) => onChange(e.target.value)}
           placeholder="Enter name..."
           autoFocus
-          className="w-full h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+          className="w-full h-10 sm:h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
         />
       )}
     </div>

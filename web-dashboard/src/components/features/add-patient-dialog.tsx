@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type FormEvent, type ChangeEvent } from "react"
+import { z } from "zod"
 import {
   Dialog,
   DialogContent,
@@ -31,20 +32,37 @@ const BOOKING_PLATFORMS = [
   { value: "walk_in", label: "Walk-in" },
 ]
 
-interface AddPatientFormData {
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  location: string
-  appointmentDatetime: string
-  bookingPlatform: string
-  assignedTo: string
-  paymentMethod: string
-  insuranceProvider: string
-  visitStatus: string
-  problemDescription: string
-}
+// ---------------------------------------------------------------------------
+// Validation schema
+// ---------------------------------------------------------------------------
+const addPatientSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address")
+    .optional()
+    .or(z.literal("")),
+  phone: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || /^[+()\-.\s\d]{7,20}$/.test(v), {
+      message: "Enter a valid phone number",
+    }),
+  location: z.string().trim().max(120, "Location is too long").optional(),
+  appointmentDatetime: z.string().optional(),
+  bookingPlatform: z.string().optional(),
+  assignedTo: z.string().optional(),
+  paymentMethod: z.string().optional(),
+  insuranceProvider: z.string().optional(),
+  visitStatus: z.string().optional(),
+  problemDescription: z.string().optional(),
+})
+
+type AddPatientFormData = z.infer<typeof addPatientSchema>
+type FormErrors = Partial<Record<keyof AddPatientFormData, string>>
 
 const EMPTY_FORM: AddPatientFormData = {
   firstName: "",
@@ -61,14 +79,25 @@ const EMPTY_FORM: AddPatientFormData = {
   problemDescription: "",
 }
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 export function AddPatientDialog() {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState<AddPatientFormData>(EMPTY_FORM)
+  const [errors, setErrors] = useState<FormErrors>({})
   const [paymentMethodOther, setPaymentMethodOther] = useState(false)
   const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
   const { data: vaList } = useListVas()
   const { addNotification } = useNotificationsContext()
   const queryClient = useQueryClient()
+
+  const resetForm = () => {
+    setFormData(EMPTY_FORM)
+    setErrors({})
+    setPaymentMethodOther(false)
+    setInsuranceProviderOther(false)
+  }
 
   const addPatientMutation = useMutation({
     mutationFn: async (data: AddPatientFormData) => {
@@ -93,21 +122,15 @@ export function AddPatientDialog() {
       // Merge the server-created patient straight into every cached patients
       // list synchronously, so the board updates instantly and never renders
       // an empty/transitional state while waiting on a background refetch.
-      // Even if that refetch fails (slow network, transient 5xx), the existing
-      // cards are already in the cache — they can never be lost.
       const cachedPatientLists = queryClient.getQueriesData<Patient[]>({
         queryKey: QUERY_KEYS.PATIENTS.ALL,
       })
       for (const [key, old] of cachedPatientLists) {
         if (!old) continue
-        // Per-stage-filtered caches (queryKey = ["patients", stage]) should
-        // only gain the new patient if it actually belongs to that stage.
         const stageFilter = key[1] as string | undefined
         if (stageFilter && stageFilter !== newPatient.stage) continue
         queryClient.setQueryData<Patient[]>(key, [newPatient, ...old])
       }
-      // Background-consistency refetch — reconciles with the server (e.g. any
-      // computed fields) without the UI depending on it.
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       addNotification(
         `New patient "${formData.firstName} ${formData.lastName}" added to onboarding`,
@@ -115,29 +138,54 @@ export function AddPatientDialog() {
       )
       toast.success("Patient added successfully")
       setOpen(false)
-      setFormData(EMPTY_FORM)
-      setPaymentMethodOther(false)
-      setInsuranceProviderOther(false)
+      resetForm()
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || "Failed to add patient")
     },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    // Appointment date/time is intentionally optional — a patient can be added
-    // before a slot is scheduled.
-    if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      toast.error("First name and last name are required")
+
+    const result = addPatientSchema.safeParse(formData)
+
+    if (!result.success) {
+      const fieldErrors: FormErrors = {}
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as keyof AddPatientFormData
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message
+      }
+      setErrors(fieldErrors)
+      toast.error("Please fix the highlighted fields")
       return
     }
-    addPatientMutation.mutate(formData)
+
+    setErrors({})
+    addPatientMutation.mutate(result.data)
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    // Clear the field's error as soon as the user edits it
+    setErrors((prev) => {
+      if (!prev[name as keyof AddPatientFormData]) return prev
+      const next = { ...prev }
+      delete next[name as keyof AddPatientFormData]
+      return next
+    })
+  }
+
+  const clearFieldError = (name: keyof AddPatientFormData) => {
+    setErrors((prev) => {
+      if (!prev[name]) return prev
+      const next = { ...prev }
+      delete next[name]
+      return next
+    })
   }
 
   return (
@@ -145,13 +193,8 @@ export function AddPatientDialog() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next)
-        if (!next) {
-          setFormData(EMPTY_FORM)
-          setPaymentMethodOther(false)
-          setInsuranceProviderOther(false)
-        }
+        if (!next) resetForm()
       }}
-      
     >
       <DialogTrigger asChild>
         <Button className="bg-[#036638] hover:bg-[#025030] text-white gap-2" size="sm">
@@ -159,192 +202,183 @@ export function AddPatientDialog() {
           Add Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300 p-4 sm:p-6">
-        <DialogHeader className="border-b border-[#E5E7EB] pb-4">
-          <DialogTitle className="text-2xl font-bold text-[#1A1B1E]">Add Patient</DialogTitle>
+
+      {/* Full-screen sheet on mobile (no rounding/margins); centered card from sm up.
+          Header + action buttons stay pinned while only the fields scroll, and the
+          footer respects iPhone safe-area insets. */}
+      <DialogContent className="flex flex-col h-[100dvh] max-h-[100dvh] w-full max-w-full sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl left-0 top-0 sm:left-1/2 sm:top-1/2 translate-x-0 translate-y-0 sm:translate-x-[-50%] sm:translate-y-[-50%] rounded-none sm:rounded-xl p-0 gap-0 overflow-hidden bg-white sm:bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300">
+        <DialogHeader className="shrink-0 text-left border-b border-[#E5E7EB] px-4 sm:px-6 pt-4 sm:pt-6 pb-3.5 pr-10 sm:pr-14">
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-[#1A1B1E]">Add Patient</DialogTitle>
           <DialogDescription className="text-sm text-[#6B7280] mt-1">
-            Add a new patient to the pipeline. They'll start in the Onboarding stage.
+            Add a new patient to the pipeline. They&apos;ll start in the Onboarding stage.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5 py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">
-                First Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                placeholder="John"
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">
-                Last Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                placeholder="Doe"
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-                required
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" noValidate>
+          {/* Scrollable fields */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
+              <Field label="First Name" required error={errors.firstName}>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  placeholder="John"
+                  className={inputClass(!!errors.firstName)}
+                  aria-invalid={!!errors.firstName}
+                />
+              </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="john@example.com"
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Phone</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="(555) 123-4567"
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              />
-            </div>
+              <Field label="Last Name" required error={errors.lastName}>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  placeholder="Doe"
+                  className={inputClass(!!errors.lastName)}
+                  aria-invalid={!!errors.lastName}
+                />
+              </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Location</label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="City, State"
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">
-                Appointment Date & Time
-                <span className="text-[#9CA3AF] font-normal ml-1">(optional)</span>
-              </label>
-              <input
-                type="datetime-local"
-                name="appointmentDatetime"
-                value={formData.appointmentDatetime}
-                onChange={handleInputChange}
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              />
-            </div>
+              <Field label="Email" optional error={errors.email}>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="john@example.com"
+                  className={inputClass(!!errors.email)}
+                  aria-invalid={!!errors.email}
+                />
+              </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Source is</label>
-              <select
-                name="bookingPlatform"
-                value={formData.bookingPlatform}
-                onChange={handleInputChange}
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
-              >
-                {BOOKING_PLATFORMS.map((platform) => (
-                  <option key={platform.value} value={platform.value}>
-                    {platform.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Assign VA</label>
-              <select
-                name="assignedTo"
-                value={formData.assignedTo}
-                onChange={handleInputChange}
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
-              >
-                <option value="">Auto-assign (by appointment time)</option>
-                {vaList?.map((va) => (
-                  <option key={va.id} value={va.id}>
-                    {va.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <Field label="Phone" optional error={errors.phone}>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="(555) 123-4567"
+                  className={inputClass(!!errors.phone)}
+                  aria-invalid={!!errors.phone}
+                />
+              </Field>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Payment Type</label>
-              <SelectOrOther
-                value={formData.paymentMethod}
-                onChange={(v) => setFormData((f) => ({ ...f, paymentMethod: v }))}
-                otherMode={paymentMethodOther}
-                onOtherModeChange={setPaymentMethodOther}
-                options={PAYMENT_METHOD_OPTIONS}
-                placeholder="Select payment type..."
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Insurance Company</label>
-              <SelectOrOther
-                value={formData.insuranceProvider}
-                onChange={(v) => setFormData((f) => ({ ...f, insuranceProvider: v }))}
-                otherMode={insuranceProviderOther}
-                onOtherModeChange={setInsuranceProviderOther}
-                options={INSURANCE_PROVIDER_OPTIONS}
-                placeholder="Select insurance company..."
-              />
-            </div>
+              <Field label="Location" optional error={errors.location}>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  placeholder="City, State"
+                  className={inputClass(!!errors.location)}
+                  aria-invalid={!!errors.location}
+                />
+              </Field>
 
-            <div className="space-y-1.5 col-span-2">
-              <label className="text-sm font-semibold text-[#1A1B1E]">Visit Status</label>
-              <select
-                name="visitStatus"
-                value={formData.visitStatus}
-                onChange={handleInputChange}
-                className="w-full h-9 px-3 border border-[#E5E7EB] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
-              >
-                {VISIT_STATUS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <Field label="Appointment Date & Time" optional>
+                <input
+                  type="datetime-local"
+                  name="appointmentDatetime"
+                  value={formData.appointmentDatetime}
+                  onChange={handleInputChange}
+                  className={inputClass(false)}
+                />
+              </Field>
 
-            {/* <div className="space-y-1.5 col-span-2">
-              <label className="text-sm font-semibold text-[#1A1B1E]">
-                Reason for Visit <span className="text-[#9CA3AF] font-normal">(optional, operational notes only)</span>
-              </label>
-              <Textarea
-                name="problemDescription"
-                value={formData.problemDescription}
-                onChange={(e) => setFormData((f) => ({ ...f, problemDescription: e.target.value }))}
-                placeholder="e.g. Follow-up visit, medication review..."
-                className="text-sm min-h-[60px]"
-              />
-            </div> */}
+              <Field label="Source is">
+                <select
+                  name="bookingPlatform"
+                  value={formData.bookingPlatform}
+                  onChange={handleInputChange}
+                  className={`${inputClass(false)} appearance-none cursor-pointer`}
+                >
+                  {BOOKING_PLATFORMS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Assign VA">
+                <select
+                  name="assignedTo"
+                  value={formData.assignedTo}
+                  onChange={handleInputChange}
+                  className={`${inputClass(false)} appearance-none cursor-pointer`}
+                >
+                  <option value="">Auto-assign (by appointment time)</option>
+                  {vaList?.map((va) => (
+                    <option key={va.id} value={va.id}>
+                      {va.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Payment Type">
+                <SelectOrOther
+                  value={formData.paymentMethod}
+                  onChange={(v) => {
+                    setFormData((f) => ({ ...f, paymentMethod: v }))
+                    clearFieldError("paymentMethod")
+                  }}
+                  otherMode={paymentMethodOther}
+                  onOtherModeChange={setPaymentMethodOther}
+                  options={PAYMENT_METHOD_OPTIONS}
+                  placeholder="Select payment type..."
+                />
+              </Field>
+
+              <Field label="Insurance Company">
+                <SelectOrOther
+                  value={formData.insuranceProvider}
+                  onChange={(v) => {
+                    setFormData((f) => ({ ...f, insuranceProvider: v }))
+                    clearFieldError("insuranceProvider")
+                  }}
+                  otherMode={insuranceProviderOther}
+                  onOtherModeChange={setInsuranceProviderOther}
+                  options={INSURANCE_PROVIDER_OPTIONS}
+                  placeholder="Select insurance company..."
+                />
+              </Field>
+
+              <Field label="Visit Status" className="sm:col-span-2">
+                <select
+                  name="visitStatus"
+                  value={formData.visitStatus}
+                  onChange={handleInputChange}
+                  className={`${inputClass(false)} appearance-none cursor-pointer`}
+                >
+                  {VISIT_STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
           </div>
 
-          {/* Buttons */}
-          <div className="flex justify-end gap-2 pt-6 border-t border-[#E5E7EB]">
+          {/* Sticky footer */}
+          <div className="shrink-0 flex flex-col sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pt-3.5 sm:pt-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-[#E5E7EB] bg-white">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
               disabled={addPatientMutation.isPending}
+              className="w-full sm:w-auto h-11 sm:h-9"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={addPatientMutation.isPending || !formData.firstName.trim() || !formData.lastName.trim()}
-              className="bg-[#036638] hover:bg-[#025030] text-white"
+              className="w-full sm:w-auto h-11 sm:h-9 bg-[#036638] hover:bg-[#025030] text-white"
             >
               {addPatientMutation.isPending ? (
                 <>
@@ -360,4 +394,41 @@ export function AddPatientDialog() {
       </DialogContent>
     </Dialog>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Field wrapper — plain block-level label + optional inline error message.
+// No absolute/floating positioning, so it can never overlap the input on
+// small screens.
+// ---------------------------------------------------------------------------
+interface FieldProps {
+  label: string
+  required?: boolean
+  optional?: boolean
+  error?: string
+  className?: string
+  children: React.ReactNode
+}
+
+export function Field({ label, required, optional, error, className = "", children }: FieldProps) {
+  return (
+    <div className={`space-y-1.5 min-w-0 ${className}`}>
+      <label className="block text-sm font-semibold text-[#1A1B1E]">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+        {optional && <span className="text-[#9CA3AF] font-normal ml-1">(optional)</span>}
+      </label>
+      {children}
+      {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+    </div>
+  )
+}
+
+function inputClass(hasError: boolean) {
+  return [
+    "w-full h-9 px-3 border rounded-lg text-sm focus:outline-none focus:ring-2",
+    hasError
+      ? "border-red-400 focus:ring-red-300/40"
+      : "border-[#E5E7EB] focus:ring-[#036638]/30",
+  ].join(" ")
 }
