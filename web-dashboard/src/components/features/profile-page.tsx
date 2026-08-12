@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { SettingsNav } from "./settings-nav"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp"]
@@ -136,7 +137,7 @@ export function ProfilePage() {
             title="Change profile picture"
             className={cn(
               "relative w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden group cursor-pointer disabled:cursor-wait",
-              user?.role === "admin" ? "bg-[#036638]" : "bg-[#EBF7EC]",
+              isAdminOrAbove(user?.role) ? "bg-[#036638]" : "bg-[#EBF7EC]",
             )}
           >
             {avatarPreview || user?.avatar ? (
@@ -146,7 +147,7 @@ export function ProfilePage() {
                 alt={user?.name ?? "Profile picture"}
                 className="w-full h-full object-cover"
               />
-            ) : user?.role === "admin" ? (
+            ) : isAdminOrAbove(user?.role) ? (
               <Shield className="w-6 h-6 text-white" />
             ) : (
               <User className="w-6 h-6 text-[#036638]" />
@@ -168,7 +169,7 @@ export function ProfilePage() {
           </button>
           <div>
             <p className="text-sm font-bold text-[#1A1B1E]">{user?.name}</p>
-            <p className="text-xs text-[#6B7280] capitalize">{user?.role}</p>
+            <p className="text-xs text-[#6B7280]">{roleLabel(user?.role)}</p>
             <button
               type="button"
               onClick={handleAvatarPick}

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/auth/useAuth"
 import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { ROUTES } from "@/constants"
 import { cn } from "@/lib/utils"
+import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 
 interface MobileTopbarProps {
   onMenuClick: () => void
@@ -42,7 +43,7 @@ export function MobileTopbar({ onMenuClick }: MobileTopbarProps) {
   const router = useRouter()
   const { user, logout } = useAuth()
   const { notifications, unreadCount } = useNotificationsContext()
-  const profileRoute = user?.role === "admin" ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
+  const profileRoute = isAdminOrAbove(user?.role) ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
 
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -79,7 +80,7 @@ export function MobileTopbar({ onMenuClick }: MobileTopbarProps) {
 
       {/* Brand */}
       <button
-        onClick={() => router.push(user?.role === "admin" ? ROUTES.ADMIN.HOME : ROUTES.DASHBOARD.HOME)}
+        onClick={() => router.push(isAdminOrAbove(user?.role) ? ROUTES.ADMIN.HOME : ROUTES.DASHBOARD.HOME)}
         className="flex items-center gap-2 min-w-0 flex-1 rounded-lg px-1 py-1 hover:bg-[#F3F4F6] transition-colors"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- small static brand mark */}
@@ -171,8 +172,8 @@ export function MobileTopbar({ onMenuClick }: MobileTopbarProps) {
             <div className="bg-gradient-to-br from-[#036638]/10 to-[#065040]/10 px-4 py-3 border-b border-[#E5E7EB]">
               <p className="text-sm font-bold text-[#1A1B1E] truncate">{user?.name}</p>
               <p className="text-xs text-[#6B7280] mt-0.5 truncate">{user?.email}</p>
-              <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded bg-[#EBF7EC] text-[#036638] capitalize">
-                {user?.role}
+              <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded bg-[#EBF7EC] text-[#036638]">
+                {roleLabel(user?.role)}
               </span>
             </div>
             <button

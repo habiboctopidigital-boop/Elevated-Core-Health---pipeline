@@ -125,9 +125,11 @@ export interface Patient {
   activityLogs?: ActivityLog[]
 }
 
+export type ActivityCategory = "auth" | "profile" | "patient" | "appointment" | "user_management" | "report" | "system"
+
 export interface ActivityLog {
   id: string
-  patientId: string
+  patientId: string | null
   author: string
   message: string
   type: "auto" | "manual"
@@ -139,6 +141,13 @@ export interface ActivityLog {
   prevValue?: Record<string, unknown> | null
   newValue?: Record<string, unknown> | null
   metadata?: Record<string, unknown> | null
+  /** Additive grouping — see ActivityCategory. System-wide events (login, exports, ...) use it; patient rows default to "patient". */
+  category?: ActivityCategory | null
+  /** Denormalised actor snapshot — survives the actor's user row being deleted. */
+  actorRole?: string | null
+  actorName?: string | null
+  ipAddress?: string | null
+  userAgent?: string | null
   createdAt: string
   patient?: Pick<Patient, "id" | "name">
 }
@@ -198,7 +207,8 @@ export interface PaginatedResponse<T> {
 export interface VaUser {
   id: string
   name: string
-  email: string
+  /** Optional — the API no longer returns emails on the VA list (Phase 3 exposure trim). */
+  email?: string
 }
 
 export interface AdminAnalytics {

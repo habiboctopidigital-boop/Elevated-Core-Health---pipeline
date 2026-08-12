@@ -24,11 +24,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import axiosInstance from "@/lib/axios"
+import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 
 export function DashboardHeader() {
   const router = useRouter()
   const { user, logout } = useAuth()
-  const profileRoute = user?.role === "admin" ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
+  const profileRoute = isAdminOrAbove(user?.role) ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
   const { notifications, unreadCount } = useNotificationsContext()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -215,8 +216,8 @@ export function DashboardHeader() {
                 <div className="bg-gradient-to-br from-[#036638]/10 to-[#065040]/10 px-4 py-3 border-b border-[#E5E7EB]">
                   <p className="text-sm font-bold text-[#1A1B1E]">{user?.name}</p>
                   <p className="text-xs text-[#6B7280] mt-0.5">{user?.email}</p>
-                  <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded bg-[#EBF7EC] text-[#036638] capitalize">
-                    {user?.role}
+                  <span className="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded bg-[#EBF7EC] text-[#036638]">
+                    {roleLabel(user?.role)}
                   </span>
                 </div>
 

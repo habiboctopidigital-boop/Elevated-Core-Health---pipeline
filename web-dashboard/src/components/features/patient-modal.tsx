@@ -645,7 +645,7 @@
 //                       <CheckCheck className="w-4 h-4 text-emerald-600" />
 //                       Checklist - {stageLabels[patient.stage]}
 //                     </h4>
-//                     {checklistBusy && <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />}
+//                     {(checklistPending.size > 0 || bulkPending) && <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />}
 //                   </div>
 //                   {currentStageItems.length > 0 ? (
 //                     <>
@@ -4328,7 +4328,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     message: string
   } | null>(null)
   const assignFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const checklistBusy = toggleChecklist.isPending || bulkPending
+  const [checklistPending, setChecklistPending] = useState<Set<string>>(new Set())
+  const checklistBusy = bulkPending
 
   useEffect(() => () => {
     if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
@@ -4947,7 +4948,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       <CheckCheck className="w-5 h-5 text-emerald-600" />
                       Checklist - {stageLabels[patient.stage]}
                     </h4>
-                    {checklistBusy && <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />}
+                    {(checklistPending.size > 0 || bulkPending) && <Loader2 className="w-4 h-4 text-emerald-600 animate-spin" />}
                   </div>
                   {currentStageItems.length > 0 ? (
                     <>
@@ -4975,19 +4976,33 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       <div className="space-y-1.5">
                         {currentStageItems.map(item => {
                           const checked = !!currentState[item.id]
+                          const isItemPending = checklistPending.has(item.id)
                           return (
                             <label key={item.id}
                               className={cn(
                                 "flex items-start gap-3 p-3 rounded-xl bg-white hover:shadow-md transition-all cursor-pointer border border-gray-100",
-                                checklistBusy && "opacity-50 pointer-events-none",
+                                isItemPending && "opacity-70",
                                 checked && "bg-emerald-50/50 border-emerald-200"
                               )}
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
-                                disabled={checklistBusy}
-                                onChange={() => toggleChecklist.mutate({ id: patient.id, itemId: item.id, checked: !checked })}
+                                disabled={isItemPending}
+                                onChange={() => {
+                                  if (isItemPending) return
+                                  setChecklistPending((prev) => new Set(prev).add(item.id))
+                                  toggleChecklist.mutate(
+                                    { id: patient.id, itemId: item.id, checked: !checked },
+                                    { onSettled: () =>
+                                        setChecklistPending((prev) => {
+                                          const next = new Set(prev)
+                                          next.delete(item.id)
+                                          return next
+                                        }),
+                                    },
+                                  )
+                                }}
                                 className="mt-0.5 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
                               />
                               <div className="min-w-0">
@@ -5001,6 +5016,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                   )}>
                                     {item.status}
                                   </span>
+                                  {isItemPending && (
+                                    <Loader2 className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                                  )}
                                 </div>
                                 {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
                               </div>

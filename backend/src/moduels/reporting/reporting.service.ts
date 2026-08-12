@@ -256,11 +256,12 @@ export const reportingService = {
 			entityType: "export",
 			newValue: {
 				reportType: input.reportType,
+				label: input.label ?? null,
 				scope: input.scope ?? null,
 				recordCount: input.recordCount,
 				format: input.format,
 			},
-			message: `${actor.name} exported ${input.recordCount} ${input.reportType} record${input.recordCount === 1 ? "" : "s"} as ${input.format.toUpperCase()}`,
+			message: `${actor.name} exported ${input.recordCount} ${input.label ?? input.reportType} record${input.recordCount === 1 ? "" : "s"} as ${input.format.toUpperCase()}`,
 			ip: ctx.ip,
 			userAgent: ctx.userAgent,
 		});

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
 import { Loader2, GripVertical, Filter } from "lucide-react"
 import { toast } from "sonner"
@@ -14,12 +15,10 @@ import { useMemo } from "react"
 
 export function KanbanBoard({
   initialPatientId,
-  searchQuery = "",
-  stageFilter = null,
+  filters,
 }: {
   initialPatientId?: string
-  searchQuery?: string
-  stageFilter?: string | null
+  filters: BoardFilters
 }) {
   const { data: patients, isLoading, error } = usePatients()
   const moveStage = useMoveStage()
@@ -32,18 +31,20 @@ export function KanbanBoard({
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const pendingMoves = useRef<Set<string>>(new Set())
+  const jumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Filter patients by search query and stage
+  // Clear the jump-flash timer on unmount so a stale timer can't keep state alive
+  useEffect(() => {
+    return () => {
+      if (jumpTimer.current) clearTimeout(jumpTimer.current)
+    }
+  }, [])
+
+  // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
     if (!patients) return []
-
-    return patients.filter((p) => {
-      const matchesSearch = searchQuery === "" || p.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStage = stageFilter === null || p.stage === stageFilter
-
-      return matchesSearch && matchesStage
-    })
-  }, [patients, searchQuery, stageFilter])
+    return filterPatients(patients, filters)
+  }, [patients, filters])
 
   const groupedPatients = useMemo(() => {
     const result = filteredPatients.reduce(
@@ -173,8 +174,13 @@ export function KanbanBoard({
     )
   }
 
+  // Jump = scroll to the stage with a brief flash highlight only. The flash
+  // clears itself after ~1.2s so no border/ring is left behind (previously the
+  // highlight persisted until reload).
   const handleQuickJump = (stage: string) => {
     setQuickJumpStage(stage)
+    if (jumpTimer.current) clearTimeout(jumpTimer.current)
+    jumpTimer.current = setTimeout(() => setQuickJumpStage(null), 1200)
     setTimeout(() => {
       stageRefs.current[stage]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
     }, 0)
@@ -227,8 +233,9 @@ export function KanbanBoard({
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-full sm:w-72 sm:shrink-0 sm:snap-center flex flex-col rounded-xl border transition-all duration-200",
-                  quickJumpStage === stage && "ring-2 ring-[#036638] ring-offset-2",
+                  "w-full sm:w-[350px] sm:shrink-0 sm:snap-center flex flex-col rounded-xl border transition-all duration-200",
+                  // Brief self-fading flash (animate-jump-flash clears on its own)
+quickJumpStage === stage && "animate-jump-flash",
                   isOver && !isDisabled
                     ? "border-[#65BD6C] bg-[#EBF7EC] shadow-lg shadow-[#65BD6C]/10 sm:scale-[1.02]"
                     : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",
@@ -286,7 +293,7 @@ export function KanbanBoard({
                       const isPending = pendingMoves.current.has(patient.id)
                       const isDragging = draggingId === patient.id
                       return (
-                        <div key={patient.id} className="relative group">
+                        <div key={patient.id} className="relative group w-full">
                           {isPending && (
                             <div className="absolute inset-0 z-10 bg-white/70 rounded-lg flex items-center justify-center">
                               <Loader2 className="w-5 h-5 text-[#036638] animate-spin" />

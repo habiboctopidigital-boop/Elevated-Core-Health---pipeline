@@ -10,6 +10,8 @@ import { z } from "zod";
 export const ExportLogSchema = z.object({
 	body: z.object({
 		reportType: z.string().trim().min(1).max(100),
+		/** Human-readable record noun for the activity message (e.g. "appointment"). Defaults to `reportType` when omitted. */
+		label: z.string().trim().min(1).max(100).optional(),
 		scope: z.string().trim().max(200).optional(),
 		recordCount: z.number().int().min(0),
 		format: z.enum(["csv", "xlsx"]),

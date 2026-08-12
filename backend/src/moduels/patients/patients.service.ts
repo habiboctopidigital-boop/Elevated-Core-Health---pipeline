@@ -20,9 +20,9 @@ import type {
 	IntakeInput,
 	NotesInput,
 	StageMoveInput,
+	UpdateAppointmentInput,
 	UpdatePatientInput,
 	UpdateStatusInput,
-	UpdateAppointmentInput,
 } from "./patients.validation";
 
 /**
@@ -882,7 +882,7 @@ export const patientsService = {
 			const jude = vas.find((va) => va.name?.toLowerCase().includes("jude"));
 			const amanda = vas.find((va) => va.name?.toLowerCase().includes("amanda"));
 
-			assignedTo = appointmentHour < 12 ? jude?.id ?? null : amanda?.id ?? null;
+			assignedTo = appointmentHour < 12 ? (jude?.id ?? null) : (amanda?.id ?? null);
 			if (assignedTo) {
 				assignmentMethod = "appointment_time";
 			}
@@ -910,9 +910,7 @@ export const patientsService = {
 		});
 
 		const platformLabel = input.bookingPlatform ?? "email";
-		const assignmentNote = assignedTo
-			? ` - Auto-assigned via ${assignmentMethod}`
-			: "";
+		const assignmentNote = assignedTo ? ` - Auto-assigned via ${assignmentMethod}` : "";
 		await audit({
 			patientId: patient.id,
 			user: null,
@@ -986,7 +984,7 @@ export const patientsService = {
 			const jude = vas.find((va) => va.name?.toLowerCase().includes("jude"));
 			const amanda = vas.find((va) => va.name?.toLowerCase().includes("amanda"));
 
-			newAssignedTo = appointmentHour < 12 ? jude?.id ?? null : amanda?.id ?? null;
+			newAssignedTo = appointmentHour < 12 ? (jude?.id ?? null) : (amanda?.id ?? null);
 		}
 
 		const updated = await prisma.patient.update({
@@ -1002,13 +1000,12 @@ export const patientsService = {
 			},
 		});
 
-		const autoAssignmentNote = newAssignedTo && !patient.assignedTo
-			? ` - Auto-assigned based on appointment time`
-			: "";
+		const autoAssignmentNote = newAssignedTo && !patient.assignedTo ? ` - Auto-assigned based on appointment time` : "";
 		await audit({
 			patientId: id,
 			user,
 			action: "appointment.update",
+			category: "appointment",
 			entityType: "patient",
 			entityId: id,
 			prevValue: { appointmentDatetime: oldDateTime, assignedTo: patient.assignedTo },
@@ -1023,13 +1020,7 @@ export const patientsService = {
 				select: { email: true },
 			});
 			if (admin?.email && patient.email) {
-				await emailService.notifyAppointmentChanged(
-					patient.name,
-					patient.email,
-					newDateTime,
-					user.name,
-					admin.email,
-				);
+				await emailService.notifyAppointmentChanged(patient.name, patient.email, newDateTime, user.name, admin.email);
 			}
 		} catch (err) {
 			logger.error({ err, patientId: id }, "Failed to send appointment change notification emails");

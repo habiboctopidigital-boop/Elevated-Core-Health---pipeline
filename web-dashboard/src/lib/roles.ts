@@ -18,3 +18,10 @@ export const isSuperAdmin = (role?: UserRole | null): boolean => role === "super
 /** True for admin and super_admin — replaces bare `role === "admin"` checks. */
 export const isAdminOrAbove = (role?: UserRole | null): boolean =>
   !!role && ROLE_RANK[role] >= ROLE_RANK.admin
+
+/** Human-readable role label for badges and profile displays. */
+export const roleLabel = (role?: UserRole | null): string => {
+  if (role === "super_admin") return "Super Admin"
+  if (role === "admin") return "Admin"
+  return "VA"
+}

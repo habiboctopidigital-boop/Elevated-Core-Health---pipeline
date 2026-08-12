@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ROUTES } from "@/constants"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { cn } from "@/lib/utils"
+import { isAdminOrAbove } from "@/lib/roles"
 
 interface SettingsNavProps {
   currentPage: "profile" | "users" | "stages"
@@ -25,7 +26,7 @@ const settingsPages = [
 
 export function SettingsNav({ currentPage, className }: SettingsNavProps) {
   const { user } = useAuth()
-  const profileHref = user?.role === "admin" ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
+  const profileHref = isAdminOrAbove(user?.role) ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
 
   return (
     <div className={cn("", className)}>

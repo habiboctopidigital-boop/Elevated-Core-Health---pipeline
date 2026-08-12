@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/constants"
 import { useAuth } from "@/hooks/auth/useAuth"
+import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 
 const VA_NAV = [
   { section: "Main", items: [
@@ -77,7 +78,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSi
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
-  const isAdmin = user?.role === "admin"
+  const isAdmin = isAdminOrAbove(user?.role)
   const navItems = isAdmin ? ADMIN_NAV : VA_NAV
   const profileRoute = isAdmin ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
   const isProfileActive = pathname === profileRoute
@@ -224,7 +225,7 @@ export function EchSidebar({ isCollapsed, setIsCollapsed, onMobileClose }: EchSi
                 {user?.name}
               </p>
               <p className="text-[#9CA3AF] text-[10px] truncate uppercase font-bold tracking-wide mt-1">
-                {user?.role === "va" ? "Virtual Assistant" : "Administrator"}
+                {roleLabel(user?.role)}
               </p>
             </div>
           )}

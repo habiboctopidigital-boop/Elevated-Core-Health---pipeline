@@ -41,6 +41,35 @@ function csvEscape(value: unknown): string {
 	return `"${s.replace(/"/g, '""')}"`;
 }
 
+/**
+ * Human-readable description of the export's data scope, for the audit row
+ * (task.md §15 — "Exported data scope"). Mirrors the workload calendar's
+ * export scope style ("search: x · va: y") rather than dumping the raw
+ * Prisma `where` object into the log.
+ *
+ * Never throws: this enriches the audit row, and audit must not break the
+ * export it is logging — a failed VA-name lookup falls back to the raw id.
+ */
+async function describeCrmScope(filters: CrmFilters): Promise<string> {
+	try {
+		const parts: string[] = [];
+		if (filters.search) parts.push(`search: ${filters.search}`);
+		if (filters.status) parts.push(`status: ${filters.status}`);
+		if (filters.stage) parts.push(`stage: ${filters.stage}`);
+		if (filters.eligibility) parts.push(`eligibility: ${filters.eligibility}`);
+		if (filters.assignedTo) {
+			const va = await prisma.user.findUnique({
+				where: { id: filters.assignedTo },
+				select: { name: true },
+			});
+			parts.push(`va: ${va?.name ?? filters.assignedTo}`);
+		}
+		return parts.join(" · ") || "all contacts";
+	} catch {
+		return "all contacts";
+	}
+}
+
 export const crmService = {
 	async listContacts(query: Record<string, unknown>) {
 		const page = Math.max(1, Number(query.page) || 1);
@@ -75,13 +104,14 @@ export const crmService = {
 	},
 
 	async exportContacts(query: Record<string, unknown>, actor: AuthenticatedUser, ctx: RequestContext) {
-		const where = buildCrmWhere({
+		const filters: CrmFilters = {
 			search: query.search as string | undefined,
 			status: query.status as string | undefined,
 			stage: query.stage as string | undefined,
 			eligibility: query.eligibility as string | undefined,
 			assignedTo: query.assignedTo as string | undefined,
-		});
+		};
+		const where = buildCrmWhere(filters);
 
 		const contacts = await prisma.patient.findMany({
 			where,
@@ -128,13 +158,15 @@ export const crmService = {
 
 		const csv = [headers.map(csvEscape).join(","), ...rows.map((r) => r.map(csvEscape).join(","))].join("\n");
 
-		// task.md §15: every export creates an activity.
+		// task.md §15: every export creates an activity — user, role, report type,
+		// data scope, record count, format, timestamp.
+		const scope = await describeCrmScope(filters);
 		await audit({
 			user: actor,
 			action: "report.exported",
 			category: "report",
 			entityType: "export",
-			newValue: { reportType: "crm_contacts", scope: JSON.stringify(where), recordCount: contacts.length, format: "csv" },
+			newValue: { reportType: "crm_contacts", scope, recordCount: contacts.length, format: "csv" },
 			message: `${actor.name} exported ${contacts.length} CRM contact record${contacts.length === 1 ? "" : "s"} as CSV`,
 			ip: ctx.ip,
 			userAgent: ctx.userAgent,

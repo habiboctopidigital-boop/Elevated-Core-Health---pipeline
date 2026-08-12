@@ -26,6 +26,7 @@ import {
 import { addDays, endOfWeek, format, startOfWeek } from "date-fns"
 import { usePatients, useListVas } from "@/hooks/query/usePatients"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { useLogExport } from "@/hooks/query/useReporting"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { PatientModal } from "@/components/features/patient-modal"
 import { WorkloadTimeGrid, type TimeGridEvent } from "@/components/features/workload-time-grid"
@@ -92,6 +93,7 @@ export function WorkloadCalendar() {
   const { data: patients, isLoading, isError, error, refetch, isFetching } = usePatients()
   const { data: vaList } = useListVas()
   const { order: stageOrder, labels: stageLabels } = useStageMeta()
+  const logExport = useLogExport()
 
   const calendarRef = useRef<FullCalendar | null>(null)
   const [activeView, setActiveView] = useState<ViewKey>("dayGridMonth")
@@ -276,6 +278,28 @@ export function WorkloadCalendar() {
       ])
     }
     downloadCsv(`workload-appointments-${new Date().toISOString().slice(0, 10)}.csv`, rows)
+
+    // task.md §15: report exports are audit events. Fire-and-forget — a
+    // failed audit write must never block the download the user already has.
+    const scope = [
+      search ? `search: ${search}` : "",
+      vaFilter === "__unassigned__"
+        ? "VA: Unassigned"
+        : vaFilter
+          ? `VA: ${vaList?.find((v) => v.id === vaFilter)?.name ?? vaFilter}`
+          : "",
+      stageFilter ? `Stage: ${stageLabels[stageFilter] ?? stageFilter}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ")
+
+    logExport.mutate({
+      reportType: "workload_appointments",
+      label: "appointment",
+      scope: scope || "all scheduled appointments",
+      recordCount: filtered.length,
+      format: "csv",
+    })
   }
 
   const renderEventContent = (arg: EventContentArg) => {

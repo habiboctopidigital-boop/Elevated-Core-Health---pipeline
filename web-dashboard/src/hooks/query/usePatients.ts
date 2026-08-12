@@ -8,12 +8,22 @@ import {
 } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { QUERY_KEYS } from "@/constants"
+import { useAuth } from "@/hooks/auth/useAuth"
+import { isAdminOrAbove } from "@/lib/roles"
 import type { Patient, PatientStage } from "@/types"
 import { toast } from "sonner"
 
 export function usePatients(stage?: string, options?: { enabled?: boolean }) {
+  const { user } = useAuth()
+  const isAdmin = isAdminOrAbove(user?.role)
+
+  // Normalize the query key so the common no-stage call (["patients"]) is
+  // exactly QUERY_KEYS.PATIENTS.ALL — otherwise the optimistic writers below
+  // (setQueryData(QUERY_KEYS.PATIENTS.ALL, ...)) target a different cache
+  // entry than this hook reads, making checklist toggles only update after a
+  // refetch instead of instantly.
   return useQuery({
-    queryKey: [...QUERY_KEYS.PATIENTS.ALL, stage],
+    queryKey: stage ? [...QUERY_KEYS.PATIENTS.ALL, stage] : QUERY_KEYS.PATIENTS.ALL,
     queryFn: () => PatientsService.list(stage),
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -22,6 +32,16 @@ export function usePatients(stage?: string, options?: { enabled?: boolean }) {
     // right after Add Patient invalidates the cache) so the board can never
     // flash empty / lose the existing cards while waiting on the network.
     placeholderData: keepPreviousData,
+    // task.md §17 / phase.md Phase 3 — a VA's world is their own assigned
+    // patients plus the unassigned pool, never another VA's cards. The
+    // backend already enforces this server-side (patientScopeFor), and this
+    // belt-and-braces filter guarantees the board, workload calendar and
+    // every other consumer of this hook can't render another VA's patient
+    // even if a stale/leaky response ever got through. Admin/super_admin are
+    // unaffected (no filter applied).
+    select: isAdmin
+      ? undefined
+      : (patients: Patient[]) => patients.filter((p) => !p.assignedTo || p.assignedTo === user?.id),
   })
 }
 

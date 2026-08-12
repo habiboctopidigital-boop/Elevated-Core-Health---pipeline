@@ -158,6 +158,13 @@
   0%, 100% { transform: translateY(0); opacity: 0.6; }
   50% { transform: translateY(6px); opacity: 1; }
 }
+@keyframes jump-flash {
+  0%, 45% { box-shadow: 0 0 0 3px rgba(3, 102, 56, 0.55); }
+  100% { box-shadow: 0 0 0 3px rgba(3, 102, 56, 0); }
+}
+.animate-jump-flash {
+  animation: jump-flash 1.2s ease-out forwards;
+}
 
 .animate-mesh { animation: mesh-shift 20s ease-in-out infinite; }
 .animate-mesh-2 { animation: mesh-shift-2 25s ease-in-out infinite; }

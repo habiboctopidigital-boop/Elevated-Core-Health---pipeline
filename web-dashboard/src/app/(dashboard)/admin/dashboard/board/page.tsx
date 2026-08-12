@@ -1,49 +1,34 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
+import { usePatients, useMoveStage, useListVas } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
-import { StatusBar } from "@/components/features/status-bar"
 import { ImportDialog } from "@/components/features/import-dialog"
 import { AddPatientDialog } from "@/components/features/add-patient-dialog"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
+import { BoardFilterBar } from "@/components/features/board-filter-bar"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { EMPTY_BOARD_FILTERS, filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
-import { Loader2, ShieldCheck, Search, X, AlertTriangle, RefreshCw, Filter } from "lucide-react"
+import { Loader2, ShieldCheck, AlertTriangle, RefreshCw, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminBoardPage() {
   const { data: patients, isLoading, error, refetch } = usePatients()
+  const { data: vas } = useListVas()
   const moveStage = useMoveStage()
   const { order: stageOrder, labels: stageLabels, hints: stageHints } = useStageMeta()
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedStageFilter, setSelectedStageFilter] = useState<string | null>(null)
-  const [filterMode, setFilterMode] = useState<"all" | "stale" | "flagged">("all")
+  const [filters, setFilters] = useState<BoardFilters>(EMPTY_BOARD_FILTERS)
   const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
 
-  // Filter patients by search query, stage, and status
+  // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
     if (!patients) return []
-
-    return patients.filter((p) => {
-      const matchesSearch = searchQuery === "" ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStage = selectedStageFilter === null || p.stage === selectedStageFilter
-
-      // Calculate stale status
-      const isFinal = p.stage === "reconciled"
-      const isStale = !isFinal && (Date.now() - new Date(p.updatedAt).getTime()) / (1000 * 60 * 60) > 48
-
-      let matchesFilter = true
-      if (filterMode === "stale") matchesFilter = isStale
-      if (filterMode === "flagged") matchesFilter = p.isFlagged
-
-      return matchesSearch && matchesStage && matchesFilter
-    })
-  }, [patients, searchQuery, selectedStageFilter, filterMode])
+    return filterPatients(patients, filters)
+  }, [patients, filters])
 
   const groupedPatients = useMemo(() => {
     let result = filteredPatients.reduce(
@@ -135,94 +120,15 @@ export default function AdminBoardPage() {
         </div>
       </div>
 
-      {/* - Search & Filter Bar - */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 pb-3 border-b border-[#E5E7EB]">
-        {/* Priority Filters */}
-        <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
-          <button
-            onClick={() => setFilterMode("all")}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
-              filterMode === "all"
-                ? "bg-[#036638] text-white shadow-sm"
-                : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#036638] hover:text-[#036638]"
-            )}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilterMode("stale")}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
-              filterMode === "stale"
-                ? "bg-amber-500 text-white shadow-sm"
-                : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-amber-500 hover:text-amber-500"
-            )}
-          >
-            Stale
-          </button>
-          <button
-            onClick={() => setFilterMode("flagged")}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
-              filterMode === "flagged"
-                ? "bg-red-500 text-white shadow-sm"
-                : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-red-500 hover:text-red-500"
-            )}
-          >
-            Flagged
-          </button>
-        </div>
-
-        {/* Stage Filter Buttons */}
-        <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
-          <button
-            onClick={() => setSelectedStageFilter(null)}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
-              selectedStageFilter === null
-                ? "bg-[#036638] text-white shadow-sm"
-                : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#036638] hover:text-[#036638]"
-            )}
-          >
-            All Stages
-          </button>
-          {stageOrder.slice(0, 3).map((stage) => (
-            <button
-              key={stage}
-              onClick={() => setSelectedStageFilter(stage)}
-              className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap",
-                selectedStageFilter === stage
-                  ? "bg-[#036638] text-white shadow-sm"
-                  : "bg-white border border-[#E5E7EB] text-[#6B7280] hover:border-[#036638] hover:text-[#036638]"
-              )}
-              title={stageLabels[stage]}
-            >
-              {stageLabels[stage]}
-            </button>
-          ))}
-        </div>
-
-        {/* Search Input */}
-        <div className="w-full sm:w-64 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-[#F3F4F6] rounded"
-            >
-              <X className="w-4 h-4 text-[#9CA3AF]" />
-            </button>
-          )}
-        </div>
+      {/* - Global Filter Bar (search, status, date ranges — applies to all stages) - */}
+      <div className="mb-4">
+        <BoardFilterBar
+          filters={filters}
+          onChange={setFilters}
+          vas={vas}
+          total={patients?.length ?? 0}
+          resultCount={filteredPatients.length}
+        />
       </div>
 
       {/* - Kanban Board - */}

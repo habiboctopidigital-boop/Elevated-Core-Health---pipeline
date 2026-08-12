@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { isToday, isYesterday, format } from "date-fns"
 import {
   Search,
@@ -13,23 +13,38 @@ import {
   Square,
   UserCog,
   UserCheck,
+  UserPlus,
+  UserMinus,
+  UserX,
   MessageSquare,
   Flag,
   FlagOff,
   ShieldCheck,
-  UserPlus,
   Pencil,
   Lock,
   Unlock,
   Activity,
   ChevronDown,
+  LogIn,
+  LogOut,
+  KeyRound,
+  ShieldAlert,
+  Image as ImageIcon,
+  FileDown,
+  Settings2,
+  Workflow,
+  ListChecks,
+  Plug,
+  Unplug,
+  CalendarClock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { useAllUsers } from "@/hooks/query/useUsers"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { useAuth } from "@/hooks/auth/useAuth"
 import { PatientModal } from "@/components/features/patient-modal"
-import type { ActivityLog, UserRole } from "@/types"
+import type { ActivityCategory, ActivityLog, UserRole } from "@/types"
 import { cn } from "@/lib/utils"
 import { isAdminOrAbove } from "@/lib/roles"
 
@@ -47,9 +62,61 @@ const ACTION_META: Record<string, { label: string; icon: typeof Activity; color:
   "status.update": { label: "Status", icon: RefreshCw, color: "#D97706" },
   "lock.set": { label: "Locked", icon: Lock, color: "#D97706" },
   "lock.clear": { label: "Unlocked", icon: Unlock, color: "#16A34A" },
+  "appointment.update": { label: "Appointment", icon: CalendarClock, color: "#D97706" },
+  "auth.login": { label: "Login", icon: LogIn, color: "#2563EB" },
+  "auth.login_failed": { label: "Failed Login", icon: ShieldAlert, color: "#DC2626" },
+  "auth.logout": { label: "Logout", icon: LogOut, color: "#2563EB" },
+  "auth.password_change": { label: "Password Changed", icon: KeyRound, color: "#2563EB" },
+  "auth.password_reset_requested": { label: "Reset Requested", icon: KeyRound, color: "#2563EB" },
+  "auth.password_reset_completed": { label: "Password Reset", icon: KeyRound, color: "#2563EB" },
+  "profile.update": { label: "Profile Updated", icon: Pencil, color: "#7C3AED" },
+  "profile.avatar_update": { label: "Avatar Changed", icon: ImageIcon, color: "#7C3AED" },
+  "user_management.user_created": { label: "User Created", icon: UserPlus, color: "#0891B2" },
+  "user_management.user_updated": { label: "User Updated", icon: UserCog, color: "#0891B2" },
+  "user_management.user_deleted": { label: "User Deleted", icon: UserMinus, color: "#DC2626" },
+  "user_management.user_activated": { label: "User Activated", icon: UserCheck, color: "#16A34A" },
+  "user_management.user_deactivated": { label: "User Deactivated", icon: UserX, color: "#D97706" },
+  "report.exported": { label: "Report Exported", icon: FileDown, color: "#0F9B8E" },
+  "system.setting_updated": { label: "Settings", icon: Settings2, color: "#6B7280" },
+  "system.stage_created": { label: "Stage Created", icon: Workflow, color: "#6B7280" },
+  "system.stage_updated": { label: "Stage Updated", icon: Workflow, color: "#6B7280" },
+  "system.stage_reordered": { label: "Stages Reordered", icon: Workflow, color: "#6B7280" },
+  "system.stage_deleted": { label: "Stage Deleted", icon: Workflow, color: "#6B7280" },
+  "system.checklist_item_created": { label: "Checklist Added", icon: ListChecks, color: "#6B7280" },
+  "system.checklist_item_updated": { label: "Checklist Updated", icon: ListChecks, color: "#6B7280" },
+  "system.checklist_item_deleted": { label: "Checklist Removed", icon: ListChecks, color: "#6B7280" },
+  "system.eligibility_rule_created": { label: "Eligibility Rule", icon: ShieldCheck, color: "#6B7280" },
+  "system.eligibility_rule_updated": { label: "Eligibility Rule", icon: ShieldCheck, color: "#6B7280" },
+  "system.eligibility_rule_deleted": { label: "Eligibility Rule", icon: ShieldCheck, color: "#6B7280" },
+  "system.crm_connected": { label: "CRM Connected", icon: Plug, color: "#6B7280" },
+  "system.crm_disconnected": { label: "CRM Disconnected", icon: Unplug, color: "#6B7280" },
+  "system.crm_permission_updated": { label: "CRM Permission", icon: Plug, color: "#6B7280" },
 }
 
 const ACTION_OPTIONS = Object.entries(ACTION_META).map(([value, meta]) => ({ value, label: meta.label }))
+
+const CATEGORY_META: Record<string, { label: string; color: string }> = {
+  auth: { label: "Auth", color: "#2563EB" },
+  profile: { label: "Profile", color: "#7C3AED" },
+  patient: { label: "Patient", color: "#036638" },
+  appointment: { label: "Appointment", color: "#D97706" },
+  user_management: { label: "User Mgmt", color: "#0891B2" },
+  report: { label: "Report", color: "#0F9B8E" },
+  system: { label: "System", color: "#6B7280" },
+}
+
+const CATEGORY_OPTIONS = Object.entries(CATEGORY_META).map(([value, meta]) => ({ value, label: meta.label }))
+
+const ENTITY_OPTIONS = [
+  { value: "patient", label: "Patient" },
+  { value: "user", label: "User" },
+  { value: "stage", label: "Stage" },
+  { value: "checklist_item", label: "Checklist Item" },
+  { value: "eligibility_rule", label: "Eligibility Rule" },
+  { value: "crm_integration", label: "CRM Integration" },
+  { value: "export", label: "Export" },
+  { value: "app_setting", label: "App Setting" },
+]
 
 function actionMeta(action?: string | null) {
   return (action && ACTION_META[action]) || { label: action || "Activity", icon: Activity, color: "#6B7280" }
@@ -126,6 +193,20 @@ function DiffSummary({ log, stageLabels }: { log: ActivityLog; stageLabels: Reco
     )
   }
 
+  if (log.action === "report.exported" && next) {
+    const count = Number(next.recordCount ?? 0)
+    const formatStr = next.format ? String(next.format).toUpperCase() : ""
+    const scope = next.scope ? String(next.scope) : ""
+    return (
+      <div className="mt-1.5 text-[11px] text-[#6B7280]">
+        <span className="font-semibold text-[#036638]">{count.toLocaleString()}</span> record
+        {count === 1 ? "" : "s"}
+        {formatStr ? ` as ${formatStr}` : ""}
+        {scope && <span className="text-[#9CA3AF]"> · {scope}</span>}
+      </div>
+    )
+  }
+
   // Generic fallback: show up to 3 changed keys as prev -> new chips
   if (prev && next) {
     const keys = Array.from(new Set([...Object.keys(prev), ...Object.keys(next)])).slice(0, 3)
@@ -154,10 +235,18 @@ function DiffSummary({ log, stageLabels }: { log: ActivityLog; stageLabels: Reco
 }
 
 export function HandoffLog() {
+  const { user } = useAuth()
+  const isAdmin = isAdminOrAbove(user?.role)
+
   const [search, setSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [typeFilter, setTypeFilter] = useState<string>("")
+  const [categoryFilter, setCategoryFilter] = useState<string>("")
   const [actionFilter, setActionFilter] = useState<string>("")
   const [actorFilter, setActorFilter] = useState<string>("")
+  const [roleFilter, setRoleFilter] = useState<string>("")
+  const [entityFilter, setEntityFilter] = useState<string>("")
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
   const [page, setPage] = useState(1)
@@ -170,9 +259,13 @@ export function HandoffLog() {
   const { data, isLoading, isError, error, refetch, isFetching } = useActivityLog({
     page,
     limit: 30,
+    ...(debouncedSearch ? { q: debouncedSearch } : {}),
     ...(typeFilter ? { type: typeFilter } : {}),
+    ...(categoryFilter ? { category: categoryFilter } : {}),
     ...(actionFilter ? { action: actionFilter } : {}),
     ...(actorFilter ? { actorId: actorFilter } : {}),
+    ...(roleFilter ? { role: roleFilter } : {}),
+    ...(entityFilter ? { entityType: entityFilter } : {}),
     ...(startDate ? { startDate } : {}),
     ...(endDate ? { endDate } : {}),
   })
@@ -187,14 +280,9 @@ export function HandoffLog() {
   const totalPages = data?.totalPages || 1
   const total = data?.total ?? 0
 
-  const filteredLogs = useMemo(
-    () => logs.filter((log) => !search || log.patient?.name?.toLowerCase().includes(search.toLowerCase())),
-    [logs, search],
-  )
-
   const grouped = useMemo(() => {
     const groups: { label: string; items: ActivityLog[] }[] = []
-    for (const log of filteredLogs) {
+    for (const log of logs) {
       const label = dayGroupLabel(log.createdAt)
       const last = groups[groups.length - 1]
       if (last && last.label === label) {
@@ -204,17 +292,52 @@ export function HandoffLog() {
       }
     }
     return groups
-  }, [filteredLogs])
+  }, [logs])
 
-  const activeFilterCount = [typeFilter, actionFilter, actorFilter, startDate, endDate].filter(Boolean).length
+  // Admin (D5): only VAs + self are selectable in the actor filter — other
+  // admins' rows are invisible server-side, so listing them would only ever
+  // produce empty results. Super Admin sees every user.
+  const userOptions = useMemo(() => {
+    if (!users) return []
+    if (user?.role === "super_admin") return users
+    return users.filter((u) => u.role === "va" || u.id === user?.id)
+  }, [users, user])
+
+  const activeFilterCount = [
+    typeFilter,
+    categoryFilter,
+    actionFilter,
+    actorFilter,
+    roleFilter,
+    entityFilter,
+    startDate,
+    endDate,
+  ].filter(Boolean).length
 
   const clearFilters = () => {
+    // Cancel any pending debounce so a just-typed search can't resurrect
+    // itself after the user has cleared everything.
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    setSearch("")
+    setDebouncedSearch("")
     setTypeFilter("")
+    setCategoryFilter("")
     setActionFilter("")
     setActorFilter("")
+    setRoleFilter("")
+    setEntityFilter("")
     setStartDate("")
     setEndDate("")
     setPage(1)
+  }
+
+  const applySearch = (value: string) => {
+    setSearch(value)
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(value)
+      setPage(1)
+    }, 400)
   }
 
   return (
@@ -226,7 +349,7 @@ export function HandoffLog() {
             {isFetching && !isLoading && <Loader2 className="w-3.5 h-3.5 text-[#65BD6C] animate-spin" />}
           </h1>
           <p className="text-sm text-[#6B7280] mt-0.5">
-            Every stage move, checklist change, assignment, and flag - who did it, when, and what changed
+            Every stage move, checklist change, assignment, flag, login and export - who did it, when, and what changed
           </p>
         </div>
         {total > 0 && (
@@ -243,12 +366,27 @@ export function HandoffLog() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
             <input
               type="text"
-              placeholder="Search by patient name..."
+              placeholder="Search messages, users, patients..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => applySearch(e.target.value)}
               className="w-full h-9 pl-9 pr-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all"
             />
           </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value)
+              setPage(1)
+            }}
+            className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+          >
+            <option value="">All categories</option>
+            {CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
           <select
             value={actionFilter}
             onChange={(e) => {
@@ -295,10 +433,7 @@ export function HandoffLog() {
           </button>
           {(activeFilterCount > 0 || search) && (
             <button
-              onClick={() => {
-                clearFilters()
-                setSearch("")
-              }}
+              onClick={clearFilters}
               className="flex items-center gap-1 text-xs font-medium text-[#6B7280] hover:text-red-600 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
@@ -333,24 +468,65 @@ export function HandoffLog() {
                 className="h-9 px-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
               />
             </div>
+            {isAdmin && (
+              <div className="flex items-center gap-1.5">
+                <label className="text-xs text-[#6B7280] font-medium">User</label>
+                <select
+                  value={actorFilter}
+                  onChange={(e) => {
+                    setActorFilter(e.target.value)
+                    setPage(1)
+                  }}
+                  className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer min-w-[160px]"
+                >
+                  <option value="">All users</option>
+                  {userOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role === "super_admin" ? "Super Admin" : isAdminOrAbove(u.role) ? "Admin" : "VA"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-[#6B7280] font-medium">User</label>
+              <label className="text-xs text-[#6B7280] font-medium">Role</label>
               <select
-                value={actorFilter}
+                value={roleFilter}
                 onChange={(e) => {
-                  setActorFilter(e.target.value)
+                  setRoleFilter(e.target.value)
                   setPage(1)
                 }}
-                className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer min-w-[160px]"
+                className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
               >
-                <option value="">All users</option>
-                {users?.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role === "super_admin" ? "Super Admin" : isAdminOrAbove(u.role) ? "Admin" : "VA"})
+                <option value="">All roles</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="admin">Admin</option>
+                <option value="va">VA</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-[#6B7280] font-medium">Entity</label>
+              <select
+                value={entityFilter}
+                onChange={(e) => {
+                  setEntityFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
+              >
+                <option value="">All entities</option>
+                {ENTITY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
                   </option>
                 ))}
               </select>
             </div>
+            {!isAdmin && (
+              <span className="text-xs text-[#9CA3AF] italic">
+                Your view is limited to your own activity - actor scope is locked.
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -383,7 +559,7 @@ export function HandoffLog() {
               Retry
             </button>
           </div>
-        ) : filteredLogs.length > 0 ? (
+        ) : logs.length > 0 ? (
           <div>
             {grouped.map((group) => (
               <div key={group.label}>
@@ -396,6 +572,7 @@ export function HandoffLog() {
                   {group.items.map((log) => {
                     const meta = actionMeta(log.action)
                     const Icon = meta.icon
+                    const cat = log.category ? CATEGORY_META[log.category] ?? null : null
                     return (
                       <div
                         key={log.id}
@@ -410,7 +587,15 @@ export function HandoffLog() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span>
-                            {roleBadge(log.actor?.role)}
+                            {roleBadge(log.actorRole ?? log.actor?.role)}
+                            {cat && (
+                              <span
+                                className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                                style={{ backgroundColor: `${cat.color}1A`, color: cat.color }}
+                              >
+                                {cat.label}
+                              </span>
+                            )}
                             <span
                               className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
                               style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}
@@ -450,10 +635,7 @@ export function HandoffLog() {
             </p>
             {(activeFilterCount > 0 || search) && (
               <button
-                onClick={() => {
-                  clearFilters()
-                  setSearch("")
-                }}
+                onClick={clearFilters}
                 className="text-xs text-[#036638] hover:underline mt-1 font-medium"
               >
                 Clear filters

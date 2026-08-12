@@ -5,7 +5,12 @@ const publicRoutes = ["/login", "/forgot-password", "/reset-password"]
 const dashboardRoutes = ["/dashboard"]
 const adminRoutes = ["/admin/dashboard"]
 
-export  function proxy(request: NextRequest) {
+// Mirrors lib/roles.ts — kept inline here because middleware runs on the edge
+// runtime and can't share the client module. Admin and Super Admin get the full
+// admin panel; VA stays on its own dashboard.
+const isAdminOrAbove = (role?: string): boolean => role === "admin" || role === "super_admin"
+
+export function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("ech_access_token")?.value
   const { pathname } = request.nextUrl
 
@@ -13,7 +18,7 @@ export  function proxy(request: NextRequest) {
 
   if (publicRoutes.some((route) => pathname === route) && isAuth) {
     const role = request.cookies.get("ech_role")?.value
-    if (role === "admin") {
+    if (isAdminOrAbove(role)) {
       return NextResponse.redirect(new URL("/admin/dashboard", request.url))
     }
     return NextResponse.redirect(new URL("/dashboard", request.url))
@@ -30,7 +35,7 @@ export  function proxy(request: NextRequest) {
 
   if (isAdminRoute && isAuth) {
     const role = request.cookies.get("ech_role")?.value
-    if (role !== "admin") {
+    if (!isAdminOrAbove(role)) {
       return NextResponse.redirect(new URL("/dashboard", request.url))
     }
   }

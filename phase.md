@@ -147,25 +147,29 @@ list endpoint scopes identically instead of each service hand-rolling it.
 
 ---
 
-## Phase 3 — VA Ownership Scoping *(fixes G2, G11)*
+## Phase 3 — VA Ownership Scoping *(fixes G2, G11)* ✅ DONE
 
 *Depends on D2.* Apply `scopeForUser` at every read path a VA can reach:
 
-- `GET /api/patients` — scoped list.
-- `GET /api/patients/:id` — 404 (not 403 — don't confirm existence) on a patient outside scope.
-- `GET /api/dashboard/summary` — stale/flagged counts reflect only the caller's scope.
-- Workload calendar / time-grid endpoints — same.
-- `GET /api/reporting/me` — already self-only; verify it cannot be widened via params.
+- `GET /api/patients` — scoped list. ✅
+- `GET /api/patients/:id` — 404 (not 403 — don't confirm existence) on a patient outside scope. ✅
+- `GET /api/dashboard/summary` — stale/flagged counts reflect only the caller's scope. ✅
+- Workload calendar / time-grid endpoints — same. ✅
+- `GET /api/reporting/me` — already self-only; verify it cannot be widened via params. ✅
 - `GET /api/users` & `/users/vas` — decide exposure (needed to *render* assignment names; return
-  id + name only, never workload counts).
-- Every mutating patient route re-checks ownership **after** loading the row, never trusting the id.
+  id + name only, never workload counts). ✅ (emails dropped from both responses)
+- Every mutating patient route re-checks ownership **after** loading the row, never trusting the id. ✅
+
+Client-side belt-and-braces: the shared `usePatients()` hook now filters to `assignedTo == self |
+null` for VAs, so the board and workload calendar can never render another VA's cards even if a
+stale/leaky response ever got through.
 
 **Exit criteria:** an authenticated VA calling every endpoint with a foreign patient id receives
-403/404; a second VA's patients never appear in any list payload.
+403/404; a second VA's patients never appear in any list payload. ✅
 
 ---
 
-## Phase 4 — System-Wide Audit Coverage *(fixes G4)*
+## Phase 4 — System-Wide Audit Coverage *(fixes G4)* ✅ DONE
 
 *Depends on Phase 1.2.* Extend `audit()` to accept `patientId: null` + category + request context
 (IP/UA), then instrument every event `task.md` §2 names:
@@ -191,14 +195,14 @@ attributed log row each.
 
 ---
 
-## Phase 5 — Activity Log API & UI *(fixes G5)*
+## Phase 5 — Activity Log API & UI *(fixes G5)* ✅ DONE
 
 - Scope `activityLogService.list()` by caller: **VA → own `actorId` only, forced server-side** and
   immune to a client-supplied `actorId`/`patientId`; Admin → per D5; Super Admin → everything.
 - Add filters: category, action, actor, role, date range, target entity, free-text.
 - Log page (`/dashboard/log`, `/admin/dashboard/log`) renders the new categories, prev → new diffs,
-  and role badges; VAs get the filter UI but a locked actor scope.
-- Log export is itself an auditable export event (Phase 4).
+  and role badges; VAs get the filter UI but a locked actor scope. ✅
+- Log export is itself an auditable export event (Phase 4). ✅
 
 ---
 

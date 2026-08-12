@@ -8,8 +8,9 @@ import type { AuthenticatedUser } from "@/lib/types";
  * everything. Every VA-facing list/read endpoint should merge this into its
  * `where` clause so the rule is defined exactly once.
  *
- * Not called anywhere yet — see phase.md Phase 3, which applies this to the
- * patients/dashboard/workload/reporting read paths one endpoint at a time.
+ * Applied in phase.md Phase 3: patients list/detail, dashboard summary, and
+ * every VA-facing read path. The frontend additionally filters usePatients()
+ * client-side as belt-and-braces (see web-dashboard usePatients hook).
  */
 export function patientScopeFor(user: AuthenticatedUser): Record<string, unknown> {
 	if (user.role === "admin" || user.role === "super_admin") return {};
