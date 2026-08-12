@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef } from "react"
 import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { useStageJump } from "@/hooks/useStageJump"
 import { filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
 import { Loader2, GripVertical, Filter } from "lucide-react"
@@ -26,19 +27,10 @@ export function KanbanBoard({
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(initialPatientId ?? null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
-  const [quickJumpStage, setQuickJumpStage] = useState<string | null>(null)
   const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
-  const stageRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const pendingMoves = useRef<Set<string>>(new Set())
-  const jumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Clear the jump-flash timer on unmount so a stale timer can't keep state alive
-  useEffect(() => {
-    return () => {
-      if (jumpTimer.current) clearTimeout(jumpTimer.current)
-    }
-  }, [])
+  const { activeStage: quickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
 
   // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
@@ -174,18 +166,6 @@ export function KanbanBoard({
     )
   }
 
-  // Jump = scroll to the stage with a brief flash highlight only. The flash
-  // clears itself after ~1.2s so no border/ring is left behind (previously the
-  // highlight persisted until reload).
-  const handleQuickJump = (stage: string) => {
-    setQuickJumpStage(stage)
-    if (jumpTimer.current) clearTimeout(jumpTimer.current)
-    jumpTimer.current = setTimeout(() => setQuickJumpStage(null), 1200)
-    setTimeout(() => {
-      stageRefs.current[stage]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
-    }, 0)
-  }
-
   return (
     <>
       {/* Stale-data banner — a background refetch failed but we're still showing the last good board */}
@@ -218,7 +198,7 @@ export function KanbanBoard({
 
       {/* Desktop: Horizontal scroll | Mobile: Vertical stack */}
       <div className="sm:h-[calc(100vh-12rem)] sm:-mx-3 sm:sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin">
-        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-3 p-3 sm:p-6 sm:min-w-max">
+        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-3 sm:p-5 sm:w-[450px]">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
@@ -226,14 +206,12 @@ export function KanbanBoard({
             return (
               <div
                 key={stage}
-                ref={(el) => {
-                  if (el) stageRefs.current[stage] = el
-                }}
+                ref={registerStageRef(stage)}
                 onDragOver={(e) => handleDragOver(e, stage)}
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-full sm:w-[350px] sm:shrink-0 sm:snap-center flex flex-col rounded-xl border transition-all duration-200",
+                  "w-full sm:w-[450px] flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 sm:shrink-0",
                   // Brief self-fading flash (animate-jump-flash clears on its own)
 quickJumpStage === stage && "animate-jump-flash",
                   isOver && !isDisabled

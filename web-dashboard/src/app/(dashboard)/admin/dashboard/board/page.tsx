@@ -7,8 +7,10 @@ import { PatientModal } from "@/components/features/patient-modal"
 import { ImportDialog } from "@/components/features/import-dialog"
 import { AddPatientDialog } from "@/components/features/add-patient-dialog"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
+import { StageJumpBar } from "@/components/features/stage-jump-bar"
 import { BoardFilterBar } from "@/components/features/board-filter-bar"
 import { useStageMeta } from "@/hooks/query/useStages"
+import { useStageJump } from "@/hooks/useStageJump"
 import { EMPTY_BOARD_FILTERS, filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
 import { Loader2, ShieldCheck, AlertTriangle, RefreshCw, Filter } from "lucide-react"
@@ -23,6 +25,7 @@ export default function AdminBoardPage() {
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_BOARD_FILTERS)
   const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
+  const { activeStage: quickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
 
   // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
@@ -55,6 +58,15 @@ export default function AdminBoardPage() {
   const handleMoveStage = (id: string, target: PatientStage) => {
     moveStage.mutate({ id, targetStage: target })
   }
+
+  // Live patient count per stage — feeds the jump-bar pills.
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const stage of stageOrder) {
+      counts[stage] = groupedPatients[stage]?.length ?? 0
+    }
+    return counts
+  }, [groupedPatients, stageOrder])
 
   if (isLoading) {
     return (
@@ -131,15 +143,28 @@ export default function AdminBoardPage() {
         />
       </div>
 
+      {/* - Jump-to-stage bar - */}
+      <StageJumpBar
+        stageOrder={stageOrder}
+        stageLabels={stageLabels}
+        counts={stageCounts}
+        activeStage={quickJumpStage}
+        onJump={handleQuickJump}
+      />
+
       {/* - Kanban Board - */}
-      <div className="sm:h-[calc(100vh-12rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto">
-        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-3 p-0 sm:p-6 sm:min-w-max">
+      <div className="sm:h-[calc(100vh-12rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin">
+        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-0 sm:p-6 sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             return (
               <div
                 key={stage}
-                className="w-full sm:w-72 flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 sm:shrink-0"
+                ref={registerStageRef(stage)}
+                className={cn(
+                  "w-full sm:w-[420px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 transition-all duration-200",
+                  quickJumpStage === stage && "animate-jump-flash",
+                )}
               >
                 <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50 relative">
                   <div className="flex items-center justify-between">
