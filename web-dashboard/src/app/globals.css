@@ -332,3 +332,8 @@
 .ech-calendar .fc-daygrid-day.fc-day-other .fc-daygrid-day-number {
   color: #D1D5DB;
 }
+
+
+button{
+  cursor: pointer;
+}

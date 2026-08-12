@@ -4605,38 +4605,38 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       {patient.name}
                     </h2>
                     {patient.isFlagged && (
-                      <span className="px-2.5 py-1 text-[11px] font-bold bg-red-400/90 text-white rounded-full shadow flex items-center gap-1.5 shrink-0">
+                      <span className="px-2.5 py-1 text-[11px] font-bold bg-red-400/90 text-white rounded-full shadow flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                         <Flag className="w-3.5 h-3.5" fill="white" /> Flagged
                       </span>
                     )}
                     {stale && (
-                      <span className="px-2.5 py-1 text-[11px] font-bold bg-amber-400/90 text-amber-900 rounded-full shadow flex items-center gap-1.5 shrink-0">
+                      <span className="px-2.5 py-1 text-[11px] font-bold bg-amber-400/90 text-amber-900 rounded-full shadow flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                         <AlertTriangle className="w-3.5 h-3.5" /> Stale
                       </span>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="px-3 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-full backdrop-blur-sm">
+                    <span className="px-3 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-full backdrop-blur-sm whitespace-nowrap">
                       {stageLabels[patient.stage]}
                     </span>
                     {patient.assignedTo && vaList ? (
-                      <span className="px-3 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-full backdrop-blur-sm flex items-center gap-1.5">
+                      <span className="px-3 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-full backdrop-blur-sm flex items-center gap-1.5 whitespace-nowrap">
                         <UserCheck className="w-3.5 h-3.5" />
                         {vaList.find(v => v.id === patient.assignedTo)?.name ?? "Assigned"}
                       </span>
                     ) : (
-                      <span className="px-3 py-1.5 bg-red-400/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm flex items-center gap-1.5">
+                      <span className="px-3 py-1.5 bg-red-400/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm flex items-center gap-1.5 whitespace-nowrap">
                         <Flag className="w-3.5 h-3.5" fill="currentColor" /> Unassigned
                       </span>
                     )}
                     {patient.isPrivate && (
-                      <span className="px-3 py-1.5 bg-amber-400/90 text-amber-900 text-xs font-semibold rounded-full backdrop-blur-sm flex items-center gap-1.5">
+                      <span className="px-3 py-1.5 bg-amber-400/90 text-amber-900 text-xs font-semibold rounded-full backdrop-blur-sm flex items-center gap-1.5 whitespace-nowrap">
                         <Lock className="w-3.5 h-3.5" /> Locked
                       </span>
                     )}
                     {patient.status !== "active" && (
                       <span className={cn(
-                        "px-3 py-1.5 text-xs font-semibold rounded-full",
+                        "px-3 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap",
                         patient.status === "completed" ? "bg-emerald-400/90 text-emerald-900" : "bg-red-400/90 text-white"
                       )}>
                         {patient.status === "completed" ? "Completed" : "Cancelled"}
@@ -4862,11 +4862,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       const isClickable = isCurrent ? false : isComplete ? true : isNext ? allComplete : false
                       return (
                         <div key={stage} className="relative flex-1 min-w-[64px] flex flex-col items-center">
-                          {/* Connector into this step — fills once the step is reached */}
+                          {/* Connector into this step — fills once the step is reached.
+                              Stops at the circle EDGES (18px = circle radius), never
+                              reaching under the active step, and the circles sit on a
+                              higher z-layer so the line always passes BELOW them. */}
                           {idx > 0 && (
                             <div
                               className={cn(
-                                "absolute top-[22px] left-[-50%] right-1/2 h-[3px] rounded-full transition-colors duration-500",
+                                "absolute top-[22px] left-[calc(-50%+18px)] right-[calc(50%-18px)] h-[3px] rounded-full transition-colors duration-500",
                                 idx <= currentStageIdx ? color.connector : "bg-gray-200",
                               )}
                             />
@@ -4883,7 +4886,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                             )}
                           >
                             <span className={cn(
-                              "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
+                              "relative z-10 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
                               isCurrent && cn(color.circle, color.ring, "text-white scale-110"),
                               isComplete && !isCurrent && cn(color.circle, "text-white"),
                               !isCurrent && !isComplete && "bg-white border-gray-200 text-gray-400"

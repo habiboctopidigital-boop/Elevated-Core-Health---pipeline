@@ -48,9 +48,13 @@ function timeAgo(dateStr: string): string {
 }
 
 // Attention-state accent bars override the stage color so flagged/stale cards
-// are unmistakable at a glance.
+// are unmistakable at a glance. Unassigned tasks get a distinct lime highlight
+// (green-family, clearly different from the emerald/forest stage shades) so
+// the two VAs instantly spot unclaimed work.
 const FLAG_BAR = "bg-gradient-to-r from-red-400 to-rose-500"
 const STALE_BAR = "bg-gradient-to-r from-amber-400 to-amber-500"
+const UNASSIGNED_BAR = "bg-gradient-to-r from-lime-400 to-lime-500"
+const UNASSIGNED_AVATAR = "bg-gradient-to-br from-lime-400 to-lime-500"
 
 export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragStart, onDragEnd }: PatientCardProps) {
   const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
@@ -68,8 +72,10 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const canMoveStage = true
 
   const stageColor = getStageColor(patient.stage)
-  const accentBar = patient.isFlagged ? FLAG_BAR : stale ? STALE_BAR : stageColor.bar
-  const avatarColor = patient.isFlagged ? FLAG_BAR : stale ? STALE_BAR : stageColor.avatar
+  const isUnassigned = !patient.assignedUser
+  // Highlight priority: flagged > stale > unassigned > stage color
+  const accentBar = patient.isFlagged ? FLAG_BAR : stale ? STALE_BAR : isUnassigned ? UNASSIGNED_BAR : stageColor.bar
+  const avatarColor = patient.isFlagged ? FLAG_BAR : stale ? STALE_BAR : isUnassigned ? UNASSIGNED_AVATAR : stageColor.avatar
 
   // - Checklist progress for this stage (only REQUIRED items gate moves) -
   const stageDefs = checklistDefs?.filter((d) => d.stage === patient.stage) || []
@@ -114,18 +120,22 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h1 className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate">
+              {/* `min-w-0 flex-1` is load-bearing: it lets the name actually
+                  shrink with an ellipsis (flex items won't shrink below their
+                  content otherwise), so the name ALWAYS shows and the badges
+                  wrap below instead of pushing it off the card. */}
+              <h1 className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate min-w-0 flex-1">
                 {patient.name}
               </h1>
               <span className={cn(
-                "text-[9px] font-semibold px-1.5 py-0.5 rounded-full border",
+                "text-[9px] font-semibold px-1.5 py-0.5 rounded-full border whitespace-nowrap shrink-0",
                 stageColor.chipBg,
                 stageColor.chipText,
                 stageColor.chipBorder,
               )}>
                 {stageLabels[patient.stage]}
               </span>
-              <span className="text-[9px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
+              <span className="text-[9px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0">
                 {patient.source === "webhook" ? "Web" : "Manual"}
               </span>
             </div>
@@ -137,7 +147,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         <div className="flex items-center gap-1 flex-shrink-0">
           {patient.isPrivate && (
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-semibold text-amber-700"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-semibold text-amber-700 whitespace-nowrap shrink-0"
               title={
                 patient.privateLockedByUser
                   ? `Locked by ${patient.privateLockedByUser.name}`
@@ -149,25 +159,25 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             </span>
           )}
           {patient.isFlagged && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-[9px] font-semibold text-red-600">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-[9px] font-semibold text-red-600 whitespace-nowrap shrink-0">
               <Flag className="w-2.5 h-2.5" fill="#EF4444" />
               Flagged
             </span>
           )}
           {stale && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-semibold text-amber-600">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[9px] font-semibold text-amber-600 whitespace-nowrap shrink-0">
               <AlertTriangle className="w-2.5 h-2.5" />
               Stale
             </span>
           )}
           {patient.eligibilityStatus === "eligible" && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] font-semibold text-emerald-700">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] font-semibold text-emerald-700 whitespace-nowrap shrink-0">
               <CheckCircle className="w-2.5 h-2.5" />
               Eligible
             </span>
           )}
           {patient.eligibilityStatus === "not_eligible" && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-[9px] font-semibold text-red-600">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-[9px] font-semibold text-red-600 whitespace-nowrap shrink-0">
               <XCircle className="w-2.5 h-2.5" />
               Not Eligible
             </span>
@@ -178,7 +188,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
       {/* - Info chips: appointment + phone + insurance - */}
       <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
         {patient.appointmentDatetime && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-medium text-emerald-700">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-medium text-emerald-700 whitespace-nowrap">
             <Clock className="w-3 h-3" />
             {new Date(patient.appointmentDatetime).toLocaleDateString("en-US", {
               month: "short",
@@ -189,13 +199,13 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
           </span>
         )}
         {patient.phone && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-200 text-[10px] font-medium text-emerald-800">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-200 text-[10px] font-medium text-emerald-800 whitespace-nowrap">
             <Phone className="w-3 h-3" />
             {patient.phone}
           </span>
         )}
         {patient.insuranceProvider && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF7EC] border border-[#65BD6C]/40 text-[10px] font-medium text-[#036638]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF7EC] border border-[#65BD6C]/40 text-[10px] font-medium text-[#036638] whitespace-nowrap">
             <ShieldCheck className="w-3 h-3" />
             {patient.insuranceProvider}
           </span>
@@ -223,10 +233,10 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         </div>
       ) : (
         <div className="flex items-center gap-1.5 mb-2">
-          <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
-            <span className="text-[8px] font-bold text-gray-400">?</span>
+          <div className={cn("w-4 h-4 rounded-full flex items-center justify-center", UNASSIGNED_AVATAR)}>
+            <span className="text-[8px] font-bold text-white">?</span>
           </div>
-          <span className="text-[10px] text-gray-400 italic">Unassigned</span>
+          <span className="text-[10px] font-semibold text-lime-700">Unassigned</span>
         </div>
       )}
 
