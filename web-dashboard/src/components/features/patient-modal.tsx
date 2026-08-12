@@ -1,4 +1,4 @@
-// "use client"
+"use client"
 
 // import { useState, useEffect, useMemo, useRef } from "react"
 // import type { Patient, PatientStage } from "@/types"
@@ -4097,7 +4097,7 @@ import { z } from "zod"
 
 
 
-"use client"
+
 
 import { useState, useEffect, useMemo, useRef } from "react"
 import type { Patient, PatientStage } from "@/types"
@@ -4347,6 +4347,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     reset,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
+    mode: "onTouched",
     resolver: zodResolver(contactSchema),
     defaultValues: {
       firstName: "",
