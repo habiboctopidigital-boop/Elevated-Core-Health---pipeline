@@ -10,6 +10,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Plus, Loader2 } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
@@ -310,34 +317,46 @@ export function AddPatientDialog() {
               </Field>
 
               <Field label="Source is">
-                <select
-                  name="bookingPlatform"
-                  value={formData.bookingPlatform}
-                  onChange={handleInputChange}
-                  className={`${inputClass(false)} appearance-none cursor-pointer`}
+                <Select
+                  value={formData.bookingPlatform ?? ""}
+                  onValueChange={(value) => {
+                    setFormData((f) => ({ ...f, bookingPlatform: value }))
+                    clearFieldError("bookingPlatform")
+                  }}
                 >
-                  {BOOKING_PLATFORMS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className={selectTriggerClass}>
+                    <SelectValue placeholder="Select source..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOOKING_PLATFORMS.map((p) => (
+                      <SelectItem key={p.value} value={p.value}>
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
 
               <Field label="Assign VA">
-                <select
-                  name="assignedTo"
-                  value={formData.assignedTo}
-                  onChange={handleInputChange}
-                  className={`${inputClass(false)} appearance-none cursor-pointer`}
+                <Select
+                  value={formData.assignedTo ?? ""}
+                  onValueChange={(value) => {
+                    setFormData((f) => ({ ...f, assignedTo: value }))
+                    clearFieldError("assignedTo")
+                  }}
                 >
-                  <option value="">Auto-assign (by appointment time)</option>
-                  {vaList?.map((va) => (
-                    <option key={va.id} value={va.id}>
-                      {va.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className={selectTriggerClass}>
+                    <SelectValue placeholder="Auto-assign (by appointment time)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Auto-assign (by appointment time)</SelectItem>
+                    {vaList?.map((va) => (
+                      <SelectItem key={va.id} value={va.id}>
+                        {va.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
 
               <Field label="Payment Type">
@@ -369,18 +388,24 @@ export function AddPatientDialog() {
               </Field>
 
               <Field label="Visit Status" className="sm:col-span-2">
-                <select
-                  name="visitStatus"
-                  value={formData.visitStatus}
-                  onChange={handleInputChange}
-                  className={`${inputClass(false)} appearance-none cursor-pointer`}
+                <Select
+                  value={formData.visitStatus ?? ""}
+                  onValueChange={(value) => {
+                    setFormData((f) => ({ ...f, visitStatus: value }))
+                    clearFieldError("visitStatus")
+                  }}
                 >
-                  {VISIT_STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className={selectTriggerClass}>
+                    <SelectValue placeholder="Select visit status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VISIT_STATUS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
             </div>
           </div>
@@ -444,6 +469,11 @@ export function Field({ label, required, optional, error, className = "", childr
     </div>
   )
 }
+
+// Matches the text inputs (h-10 rounded-lg) so the shadcn selects sit flush
+// in the form — the trigger's chevron makes it obvious these are dropdowns.
+const selectTriggerClass =
+  "w-full h-10 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 hover:border-[#D1D5DB] cursor-pointer"
 
 function inputClass(hasError: boolean) {
   return [

@@ -152,6 +152,15 @@ export const patientsController = {
 		handleServiceResponse(serviceResponse, res);
 	},
 
+	async create(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.create(req.body, req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
 	async updateAppointment(req: Request, res: Response): Promise<void> {
 		if (!req.user) {
 			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);

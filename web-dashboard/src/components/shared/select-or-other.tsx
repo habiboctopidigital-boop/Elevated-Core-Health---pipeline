@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react"
+
 export const OTHER_OPTION = "Other"
 
 /**
@@ -24,27 +26,31 @@ export function SelectOrOther({
 
   return (
     <div className="space-y-1.5">
-      <select
-        value={selectValue}
-        onChange={(e) => {
-          if (e.target.value === OTHER_OPTION) {
-            onOtherModeChange(true)
-            onChange("")
-          } else {
-            onOtherModeChange(false)
-            onChange(e.target.value)
-          }
-        }}
-        className="w-full h-10 sm:h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-        <option value={OTHER_OPTION}>Other (specify)</option>
-      </select>
+      <div className="relative">
+        <select
+          value={selectValue}
+          onChange={(e) => {
+            if (e.target.value === OTHER_OPTION) {
+              onOtherModeChange(true)
+              onChange("")
+            } else {
+              onOtherModeChange(false)
+              onChange(e.target.value)
+            }
+          }}
+          className="w-full h-10 sm:h-9 px-2.5 pr-9 rounded-lg border border-[#E5E7EB] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
+        >
+          <option value="">{placeholder}</option>
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+          <option value={OTHER_OPTION}>Other (specify)</option>
+        </select>
+        {/* Visible chevron so the field reads as a dropdown at a glance */}
+        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] pointer-events-none" />
+      </div>
       {otherMode && (
         <input
           value={value}

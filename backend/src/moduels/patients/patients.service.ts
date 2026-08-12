@@ -16,6 +16,7 @@ import type {
 	ChecklistToggleInput,
 	ClaimInput,
 	ClearFlagInput,
+	CreatePatientInput,
 	FlagInput,
 	IntakeInput,
 	NotesInput,
@@ -120,6 +121,57 @@ function canEditPatient(
 		return false;
 	}
 	return true;
+}
+
+/**
+ * Shared VA auto-assignment for newly created patients (used by both webhook
+ * intake and the authenticated Add Patient form). Priority: explicit VA
+ * selection → webhook vaName match → appointment-time rule (< 12 PM = Jude,
+ * ≥ 12 PM = Amanda). If no rule matches, the patient stays unassigned.
+ */
+async function resolveAutoAssign(
+	input: { assignedTo?: string | null; vaName?: string | null },
+	appointmentDatetime: Date | null,
+): Promise<{ assignedTo: string | null; assignmentMethod: string }> {
+	let assignedTo: string | null = null;
+	let assignmentMethod = "none";
+
+	const vas = await prisma.user.findMany({
+		where: { role: "va" },
+		select: { id: true, name: true },
+	});
+
+	// 0. Explicit assignment (e.g. picked from a dropdown in the Add Patient form)
+	if (input.assignedTo) {
+		const explicitVa = vas.find((va) => va.id === input.assignedTo);
+		if (explicitVa) {
+			assignedTo = explicitVa.id;
+			assignmentMethod = "explicit_selection";
+		}
+	}
+
+	// 1. If vaName provided in webhook, try to find and assign to that VA
+	if (!assignedTo && input.vaName && input.vaName.trim()) {
+		const namedVa = vas.find((va) => va.name?.toLowerCase().includes(input.vaName!.toLowerCase()));
+		if (namedVa) {
+			assignedTo = namedVa.id;
+			assignmentMethod = `webhook_va_name (${input.vaName})`;
+		}
+	}
+
+	// 2. If not assigned yet and appointment time provided, use time-based assignment
+	if (!assignedTo && appointmentDatetime) {
+		const appointmentHour = appointmentDatetime.getHours();
+		const jude = vas.find((va) => va.name?.toLowerCase().includes("jude"));
+		const amanda = vas.find((va) => va.name?.toLowerCase().includes("amanda"));
+
+		assignedTo = appointmentHour < 12 ? (jude?.id ?? null) : (amanda?.id ?? null);
+		if (assignedTo) {
+			assignmentMethod = "appointment_time";
+		}
+	}
+
+	return { assignedTo, assignmentMethod };
 }
 
 const patientInclude = {
@@ -849,44 +901,7 @@ export const patientsService = {
 		const firstStage = await getFirstStageKey();
 
 		// Auto-assign VA: explicit selection wins, then vaName from webhook, then appointment time
-		let assignedTo: string | null = null;
-		let assignmentMethod = "none";
-
-		// Get all VAs
-		const vas = await prisma.user.findMany({
-			where: { role: "va" },
-			select: { id: true, name: true },
-		});
-
-		// 0. Explicit assignment (e.g. picked from a dropdown in the Add Patient form)
-		if (input.assignedTo) {
-			const explicitVa = vas.find((va) => va.id === input.assignedTo);
-			if (explicitVa) {
-				assignedTo = explicitVa.id;
-				assignmentMethod = "explicit_selection";
-			}
-		}
-
-		// 1. If vaName provided in webhook, try to find and assign to that VA
-		if (!assignedTo && input.vaName && input.vaName.trim()) {
-			const namedVa = vas.find((va) => va.name?.toLowerCase().includes(input.vaName!.toLowerCase()));
-			if (namedVa) {
-				assignedTo = namedVa.id;
-				assignmentMethod = `webhook_va_name (${input.vaName})`;
-			}
-		}
-
-		// 2. If not assigned yet and appointment time provided, use time-based assignment
-		if (!assignedTo && appointmentDatetime) {
-			const appointmentHour = appointmentDatetime.getHours();
-			const jude = vas.find((va) => va.name?.toLowerCase().includes("jude"));
-			const amanda = vas.find((va) => va.name?.toLowerCase().includes("amanda"));
-
-			assignedTo = appointmentHour < 12 ? (jude?.id ?? null) : (amanda?.id ?? null);
-			if (assignedTo) {
-				assignmentMethod = "appointment_time";
-			}
-		}
+		const { assignedTo, assignmentMethod } = await resolveAutoAssign(input, appointmentDatetime);
 
 		const patient = await prisma.patient.create({
 			data: {
@@ -946,6 +961,77 @@ export const patientsService = {
 		}
 
 		return ServiceResponse.success("Patient created from webhook intake.", patient, StatusCodes.CREATED);
+	},
+
+	/**
+	 * Manual create from the authenticated Add Patient form. Same intake
+	 * behavior (first stage, auto-assign) but the patient is created by a
+	 * logged-in user — the audit log records WHO added it.
+	 */
+	async create(input: CreatePatientInput, user: AuthenticatedUser) {
+		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
+		const firstStage = await getFirstStageKey();
+
+		// Auto-assign VA: explicit selection wins, then appointment time
+		const { assignedTo, assignmentMethod } = await resolveAutoAssign(input, appointmentDatetime);
+
+		const patient = await prisma.patient.create({
+			data: {
+				name: input.name,
+				email: input.email ?? null,
+				phone: input.phone ?? null,
+				location: input.location ?? null,
+				stage: firstStage,
+				appointmentDatetime,
+				bookingPlatform: input.bookingPlatform ?? null,
+				problemDescription: input.problemDescription ?? null,
+				paymentMethod: input.paymentMethod ?? null,
+				insuranceProvider: input.insuranceProvider ?? null,
+				visitStatus: input.visitStatus ?? undefined,
+				source: "manual",
+				checklistState: {},
+				notes: null,
+				assignedTo,
+				updatedById: user.id,
+			},
+		});
+
+		const assignmentNote = assignedTo ? ` - Assigned via ${assignmentMethod}` : "";
+		await audit({
+			patientId: patient.id,
+			user,
+			action: "patient.create",
+			entityType: "patient",
+			entityId: patient.id,
+			newValue: { source: "manual", assignedTo, assignmentMethod },
+			message: `Added patient "${patient.name}"${assignmentNote}`,
+		});
+
+		// Keep parity with webhook intake: notify the VAs a new patient landed.
+		try {
+			const vas = await prisma.user.findMany({ where: { role: "va" }, select: { email: true } });
+			const vaEmails = vas.map((v) => v.email).filter(Boolean) as string[];
+			if (vaEmails.length > 0) {
+				const appointmentStr = appointmentDatetime
+					? appointmentDatetime.toLocaleDateString("en-US", {
+							weekday: "short",
+							month: "short",
+							day: "numeric",
+							year: "numeric",
+							hour: "numeric",
+							minute: "2-digit",
+						})
+					: undefined;
+				await emailService.notifyNewPatient(patient.name, patient.id, vaEmails, {
+					appointment: appointmentStr,
+					platform: input.bookingPlatform ?? "manual",
+				});
+			}
+		} catch (err) {
+			logger.error({ err, patientId: patient.id }, "Failed to send new patient notification emails");
+		}
+
+		return ServiceResponse.success("Patient created.", patient, StatusCodes.CREATED);
 	},
 
 	async updateAppointment(id: string, input: UpdateAppointmentInput, user: AuthenticatedUser) {

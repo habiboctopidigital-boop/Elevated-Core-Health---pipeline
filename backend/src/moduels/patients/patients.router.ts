@@ -11,6 +11,7 @@ import {
 	ChecklistToggleSchema,
 	ClaimSchema,
 	ClearFlagSchema,
+	CreatePatientSchema,
 	FlagSchema,
 	IntakeSchema,
 	NotesSchema,
@@ -42,6 +43,8 @@ patientsPublicRouter.post(
 patientsRouter.use(requireAuth);
 
 patientsRouter.get("/", patientsController.list);
+// Manual create — authenticated user is recorded as the audit author.
+patientsRouter.post("/", validateRequest(CreatePatientSchema), patientsController.create);
 patientsRouter.get("/checklist-items", patientsController.listChecklistItems);
 patientsRouter.get("/:id", patientsController.getById);
 patientsRouter.patch("/:id/stage", validateRequest(StageMoveSchema), patientsController.moveStage);

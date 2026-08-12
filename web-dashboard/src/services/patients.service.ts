@@ -189,10 +189,9 @@ export const PatientsService = {
     problemDescription?: string | null
   }): Promise<Patient> {
     const { data } = await axiosInstance.post<ApiResponse<Patient>>(
-      API_ENDPOINTS.PATIENTS_INTAKE_TEST,
+      API_ENDPOINTS.PATIENTS,
       input,
     )
-    
     return data.data
   },
 
