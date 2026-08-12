@@ -8,8 +8,30 @@ datasource db {
 }
 
 enum UserRole {
+  super_admin
   admin
   va
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+/**
+ * Coarse grouping for activity_log rows, additive alongside the existing
+ * `type` (auto|manual) column — lets the log UI filter "what kind of thing
+ * happened" (auth, profile, user management, ...) independent of whether it
+ * was a system or human action. Existing rows are backfilled to `patient`.
+ */
+enum ActivityCategory {
+  auth
+  profile
+  patient
+  appointment
+  user_management
+  report
+  system
 }
 
 enum ChecklistStatus {
@@ -66,88 +88,94 @@ model Stage {
 }
 
 model User {
-  id                   String    @id @default(uuid())
+  id                   String     @id @default(uuid())
   name                 String
-  email                String    @unique
-  passwordHash         String    @map("password_hash")
-  role                 UserRole  @default(va)
+  email                String     @unique
+  passwordHash         String     @map("password_hash")
+  role                 UserRole   @default(va)
+  status               UserStatus @default(active)
   shift                String?
-  avatar               String?   @map("avatar_url")
-  passwordResetToken   String?   @map("password_reset_token")
-  passwordResetExpires DateTime? @map("password_reset_expires")
-  createdAt            DateTime  @default(now()) @map("created_at")
+  avatar               String?    @map("avatar_url")
+  passwordResetToken   String?    @map("password_reset_token")
+  passwordResetExpires DateTime?  @map("password_reset_expires")
+  lastLoginAt          DateTime?  @map("last_login_at")
+  createdById          String?    @map("created_by")
+  createdAt            DateTime   @default(now()) @map("created_at")
 
-  assignedPatients     Patient[]     @relation("PatientAssignedTo")
-  flaggedPatients      Patient[]     @relation("PatientFlaggedBy")
-  flagClearedPatients  Patient[]     @relation("PatientFlagClearedBy")
-  flagsRaised         PatientFlag[] @relation("FlagRaisedBy")
-  flagsCleared        PatientFlag[] @relation("FlagClearedBy")
-  updatedPatients      Patient[]     @relation("PatientUpdatedBy")
-  cancelledPatients    Patient[]     @relation("PatientCancelledBy")
-  privateLockedPatients Patient[]    @relation("PatientPrivateLockedBy")
-  refreshTokens        RefreshToken[]
-  activityLogs         ActivityLog[] @relation("ActivityLogActor")
-  importBatches        ImportBatch[] @relation("ImportBatchImportedBy")
-  crmIntegrations      CrmIntegration[]
-  appSettingsUpdated   AppSetting[]
+  assignedPatients      Patient[]        @relation("PatientAssignedTo")
+  flaggedPatients       Patient[]        @relation("PatientFlaggedBy")
+  flagClearedPatients   Patient[]        @relation("PatientFlagClearedBy")
+  flagsRaised           PatientFlag[]    @relation("FlagRaisedBy")
+  flagsCleared          PatientFlag[]    @relation("FlagClearedBy")
+  updatedPatients       Patient[]        @relation("PatientUpdatedBy")
+  cancelledPatients     Patient[]        @relation("PatientCancelledBy")
+  privateLockedPatients Patient[]        @relation("PatientPrivateLockedBy")
+  refreshTokens         RefreshToken[]
+  activityLogs          ActivityLog[]    @relation("ActivityLogActor")
+  importBatches         ImportBatch[]    @relation("ImportBatchImportedBy")
+  crmIntegrations       CrmIntegration[]
+  appSettingsUpdated    AppSetting[]
+
+  createdByUser User?  @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdUsers  User[] @relation("UserCreatedBy")
 
   @@map("users")
 }
 
 model Patient {
-  id                  String         @id @default(uuid())
-  name                String
-  firstName           String?        @map("first_name")
-  lastName            String?        @map("last_name")
-  location            String?
-  email               String?
-  phone               String?
-  stage               String         @default("onboarding")
-  stageRef            Stage?         @relation(fields: [stage], references: [key], onDelete: Restrict)
-  status              PatientStatus  @default(active)
-  visitStatus         VisitStatus    @default(not_visited) @map("visit_status")
-  assignedTo          String?        @map("assigned_to")
-  notes               String?
-  checklistState      Json           @default("{}") @map("checklist_state")
-  isFlagged           Boolean        @default(false) @map("is_flagged")
-  flagReason          String?        @map("flag_reason")
-  flaggedById         String?        @map("flagged_by")
-  flaggedAt           DateTime?      @map("flagged_at")
-  flagClearedReason   String?        @map("flag_cleared_reason")
-  flagClearedById     String?        @map("flag_cleared_by")
-  flagClearedAt       DateTime?      @map("flag_cleared_at")
-  completedAt         DateTime?      @map("completed_at")
-  cancelledAt         DateTime?      @map("cancelled_at")
-  cancelledById       String?        @map("cancelled_by")
-  cancelledReason     String?        @map("cancelled_reason")
-  source              String         @default("manual")
-  bookingPlatform     String?        @map("booking_platform")
-  appointmentDatetime DateTime?      @map("appointment_datetime")
-  problemDescription  String?        @map("problem_description")
-  paymentMethod       String?        @map("payment_method")
-  insuranceProvider   String?        @map("insurance_provider")
-  paymentDetails      Json?          @map("payment_details")
-  copayAmount         Decimal?       @map("copay_amount") @db.Decimal(10, 2)
-  amountPaid          Decimal?       @map("amount_paid") @db.Decimal(10, 2)
-  eligibilityStatus   EligibilityStatus @default(not_checked) @map("eligibility_status")
-  eligibilityCheckedAt DateTime?     @map("eligibility_checked_at")
-  eligibilityDetails  Json?          @map("eligibility_details")
-  eligibilityReason   String?        @map("eligibility_reason")
-  isPrivate           Boolean        @default(false) @map("is_private")
-  privateLockedById   String?        @map("private_locked_by")
-  privateLockedAt     DateTime?      @map("private_locked_at")
-  importBatchId       String?        @map("import_batch_id")
-  updatedAt           DateTime       @default(now()) @updatedAt @map("updated_at")
-  updatedById         String?        @map("updated_by")
-  createdAt           DateTime       @default(now()) @map("created_at")
+  id                   String            @id @default(uuid())
+  name                 String
+  firstName            String?           @map("first_name")
+  lastName             String?           @map("last_name")
+  location             String?
+  email                String?
+  phone                String?
+  stage                String            @default("onboarding")
+  stageRef             Stage?            @relation(fields: [stage], references: [key], onDelete: Restrict)
+  status               PatientStatus     @default(active)
+  visitStatus          VisitStatus       @default(not_visited) @map("visit_status")
+  assignedTo           String?           @map("assigned_to")
+  notes                String?
+  checklistState       Json              @default("{}") @map("checklist_state")
+  isFlagged            Boolean           @default(false) @map("is_flagged")
+  flagReason           String?           @map("flag_reason")
+  flaggedById          String?           @map("flagged_by")
+  flaggedAt            DateTime?         @map("flagged_at")
+  flagClearedReason    String?           @map("flag_cleared_reason")
+  flagClearedById      String?           @map("flag_cleared_by")
+  flagClearedAt        DateTime?         @map("flag_cleared_at")
+  completedAt          DateTime?         @map("completed_at")
+  cancelledAt          DateTime?         @map("cancelled_at")
+  cancelledById        String?           @map("cancelled_by")
+  cancelledReason      String?           @map("cancelled_reason")
+  source               String            @default("manual")
+  bookingPlatform      String?           @map("booking_platform")
+  appointmentDatetime  DateTime?         @map("appointment_datetime")
+  problemDescription   String?           @map("problem_description")
+  paymentMethod        String?           @map("payment_method")
+  insuranceProvider    String?           @map("insurance_provider")
+  paymentDetails       Json?             @map("payment_details")
+  copayAmount          Decimal?          @map("copay_amount") @db.Decimal(10, 2)
+  amountPaid           Decimal?          @map("amount_paid") @db.Decimal(10, 2)
+  eligibilityStatus    EligibilityStatus @default(not_checked) @map("eligibility_status")
+  eligibilityCheckedAt DateTime?         @map("eligibility_checked_at")
+  eligibilityDetails   Json?             @map("eligibility_details")
+  eligibilityReason    String?           @map("eligibility_reason")
+  isPrivate            Boolean           @default(false) @map("is_private")
+  privateLockedById    String?           @map("private_locked_by")
+  privateLockedAt      DateTime?         @map("private_locked_at")
+  importBatchId        String?           @map("import_batch_id")
+  updatedAt            DateTime          @default(now()) @updatedAt @map("updated_at")
+  updatedById          String?           @map("updated_by")
+  createdAt            DateTime          @default(now()) @map("created_at")
 
-  assignedUser       User?  @relation("PatientAssignedTo", fields: [assignedTo], references: [id])
-  flaggedByUser      User?  @relation("PatientFlaggedBy", fields: [flaggedById], references: [id])
-  flagClearedByUser  User?  @relation("PatientFlagClearedBy", fields: [flagClearedById], references: [id])
-  updatedByUser      User?  @relation("PatientUpdatedBy", fields: [updatedById], references: [id])
-  cancelledByUser    User?  @relation("PatientCancelledBy", fields: [cancelledById], references: [id])
-  privateLockedByUser User? @relation("PatientPrivateLockedBy", fields: [privateLockedById], references: [id])
-  importBatch        ImportBatch? @relation(fields: [importBatchId], references: [id])
+  assignedUser        User?        @relation("PatientAssignedTo", fields: [assignedTo], references: [id])
+  flaggedByUser       User?        @relation("PatientFlaggedBy", fields: [flaggedById], references: [id])
+  flagClearedByUser   User?        @relation("PatientFlagClearedBy", fields: [flagClearedById], references: [id])
+  updatedByUser       User?        @relation("PatientUpdatedBy", fields: [updatedById], references: [id])
+  cancelledByUser     User?        @relation("PatientCancelledBy", fields: [cancelledById], references: [id])
+  privateLockedByUser User?        @relation("PatientPrivateLockedBy", fields: [privateLockedById], references: [id])
+  importBatch         ImportBatch? @relation(fields: [importBatchId], references: [id])
 
   activityLogs ActivityLog[]
   flags        PatientFlag[] @relation("PatientFlags")
@@ -168,16 +196,16 @@ model Patient {
  * here for the modal's flag history (latest flag + count + view-all list).
  */
 model PatientFlag {
-  id           String    @id @default(uuid())
-  patientId    String    @map("patient_id")
-  stage        String
-  type         String    @default("negative")
-  reason       String
-  flaggedById  String    @map("flagged_by")
-  clearedById  String?   @map("cleared_by")
-  clearedReason String?  @map("cleared_reason")
-  clearedAt    DateTime? @map("cleared_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  patientId     String    @map("patient_id")
+  stage         String
+  type          String    @default("negative")
+  reason        String
+  flaggedById   String    @map("flagged_by")
+  clearedById   String?   @map("cleared_by")
+  clearedReason String?   @map("cleared_reason")
+  clearedAt     DateTime? @map("cleared_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   patient       Patient @relation("PatientFlags", fields: [patientId], references: [id], onDelete: Cascade)
   flaggedByUser User    @relation("FlagRaisedBy", fields: [flaggedById], references: [id])
@@ -189,43 +217,63 @@ model PatientFlag {
 }
 
 model ActivityLog {
-  id         String   @id @default(uuid())
-  patientId  String   @map("patient_id")
+  id         String           @id @default(uuid())
+  /**
+   * Nullable — patient-scoped events (the original use case) still set this;
+   * system-wide events (login, user management, exports, ...) leave it null.
+   * onDelete SetNull (was Cascade) so audit history outlives a deleted patient.
+   */
+  patientId  String?          @map("patient_id")
   author     String
   message    String
+  /**
+   * Kept as-is for backward compatibility with existing rows/queries: auto|manual.
+   */
   type       String
-  actorId    String?  @map("actor_id")
-  action     String?  @map("action")
-  entityType String?  @map("entity_type")
-  entityId   String?  @map("entity_id")
-  prevValue  Json?    @map("prev_value")
-  newValue   Json?    @map("new_value")
-  metadata   Json?    @default("{}")
-  createdAt  DateTime @default(now()) @map("created_at")
+  actorId    String?          @map("actor_id")
+  action     String?          @map("action")
+  entityType String?          @map("entity_type")
+  entityId   String?          @map("entity_id")
+  prevValue  Json?            @map("prev_value")
+  newValue   Json?            @map("new_value")
+  metadata   Json?            @default("{}")
+  /**
+   * New, additive grouping — see ActivityCategory. Existing rows backfilled to `patient`.
+   */
+  category   ActivityCategory @default(patient)
+  /**
+   * Denormalised actor snapshot — survives the actor's user row being deleted.
+   */
+  actorRole  String?          @map("actor_role")
+  actorName  String?          @map("actor_name")
+  ipAddress  String?          @map("ip_address")
+  userAgent  String?          @map("user_agent")
+  createdAt  DateTime         @default(now()) @map("created_at")
 
-  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  actor   User?   @relation("ActivityLogActor", fields: [actorId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  actor   User?    @relation("ActivityLogActor", fields: [actorId], references: [id])
 
   @@index([patientId])
   @@index([createdAt])
   @@index([actorId])
   @@index([action])
   @@index([entityId])
+  @@index([category])
   @@map("activity_log")
 }
 
 model ImportBatch {
-  id             String   @id @default(uuid())
-  fileName       String   @map("file_name")
-  fileType       String   @map("file_type")
-  totalRows      Int      @map("total_rows")
-  successCount   Int      @default(0) @map("success_count")
-  failCount      Int      @default(0) @map("fail_count")
-  duplicateCount Int      @default(0) @map("duplicate_count")
-  status         String   @default("completed")
-  errorDetails   Json?    @default("[]") @map("error_details")
-  importedById   String   @map("imported_by")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id             String    @id @default(uuid())
+  fileName       String    @map("file_name")
+  fileType       String    @map("file_type")
+  totalRows      Int       @map("total_rows")
+  successCount   Int       @default(0) @map("success_count")
+  failCount      Int       @default(0) @map("fail_count")
+  duplicateCount Int       @default(0) @map("duplicate_count")
+  status         String    @default("completed")
+  errorDetails   Json?     @default("[]") @map("error_details")
+  importedById   String    @map("imported_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
   completedAt    DateTime? @map("completed_at")
 
   importedByUser User      @relation("ImportBatchImportedBy", fields: [importedById], references: [id])
@@ -285,15 +333,15 @@ model EligibilityRule {
  * preview of the key is stored, never the raw value.
  */
 model CrmIntegration {
-  id            String               @id @default(uuid())
+  id            String              @id @default(uuid())
   provider      String
-  apiKeyLast4   String?              @map("api_key_last4")
-  permission    CrmPermission        @default(read)
-  status        CrmConnectionStatus  @default(disconnected)
-  connectedById String?              @map("connected_by")
-  connectedAt   DateTime?            @map("connected_at")
-  updatedAt     DateTime             @default(now()) @updatedAt @map("updated_at")
-  createdAt     DateTime             @default(now()) @map("created_at")
+  apiKeyLast4   String?             @map("api_key_last4")
+  permission    CrmPermission       @default(read)
+  status        CrmConnectionStatus @default(disconnected)
+  connectedById String?             @map("connected_by")
+  connectedAt   DateTime?           @map("connected_at")
+  updatedAt     DateTime            @default(now()) @updatedAt @map("updated_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
 
   connectedByUser User? @relation(fields: [connectedById], references: [id])
 
@@ -306,10 +354,10 @@ model CrmIntegration {
  * Updated only by admin users via the settings API.
  */
 model AppSetting {
-  key       String   @id
-  value     String
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-  updatedById String? @map("updated_by_id")
+  key         String   @id
+  value       String
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by_id")
 
   updatedByUser User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 

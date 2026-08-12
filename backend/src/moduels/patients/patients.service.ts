@@ -1,8 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 
 import { isChecklistComplete } from "@/config/checklists";
+import { isAdminOrAbove } from "@/config/roles";
 import { getFirstStageKey, getStageOrder } from "@/config/stages";
 import { audit } from "@/lib/audit";
+import { isPatientInScope, patientScopeFor } from "@/lib/scope";
 import type { AuthenticatedUser } from "@/lib/types";
 import { emailService } from "@/services/email.service";
 import { logger } from "@/utils/logger";
@@ -95,15 +97,23 @@ function evaluateRule(
 }
 
 /**
- * Shared-editing rule (Phase 3): board is open by default — admins and any VA
- * can work any patient. The ONLY restriction is a privacy lock set by the
- * assigned VA (or admin); admins always bypass it.
+ * Editing / ownership rule (task.md §7, §17: "Update patient - info - only
+ * assigned va and admin"). admin/super_admin can edit any patient. A VA may
+ * edit only a patient assigned to them, or an unclaimed one (assignedTo
+ * null, so a freshly-booked patient stays workable by any VA until someone
+ * claims it) — never another VA's patient. A privacy lock (set by the
+ * assigned VA or admin) can further restrict even the owner's own teammates
+ * on top of that ownership rule.
  */
 function canEditPatient(
 	patient: { isPrivate: boolean; privateLockedById: string | null; assignedTo: string | null },
 	user: AuthenticatedUser,
 ): boolean {
-	if (user.role === "admin") return true;
+	if (isAdminOrAbove(user.role)) return true;
+
+	// Ownership: a VA may only work a patient assigned to them, or unclaimed.
+	if (patient.assignedTo !== null && patient.assignedTo !== user.id) return false;
+
 	if (patient.isPrivate) {
 		if (patient.assignedTo === user.id) return true;
 		if (patient.privateLockedById && patient.privateLockedById === user.id) return true;
@@ -131,8 +141,14 @@ const patientInclude = {
 } as const;
 
 export const patientsService = {
-	async list(stage?: string) {
-		const where = stage ? { stage } : {};
+	/**
+	 * task.md §17: admin/super_admin see every patient; a VA sees only their
+	 * own assigned patients plus the unassigned pool — never another VA's
+	 * patients. `patientScopeFor` returns `{}` for admin/super_admin, so this
+	 * is a no-op for them.
+	 */
+	async list(stage: string | undefined, user: AuthenticatedUser) {
+		const where = { ...(stage ? { stage } : {}), ...patientScopeFor(user) };
 		const patients = await prisma.patient.findMany({
 			where,
 			orderBy: { updatedAt: "desc" },
@@ -141,7 +157,7 @@ export const patientsService = {
 		return ServiceResponse.success("Patients retrieved.", patients);
 	},
 
-	async getById(id: string) {
+	async getById(id: string, user: AuthenticatedUser) {
 		const patient = await prisma.patient.findUnique({
 			where: { id },
 			include: {
@@ -149,7 +165,9 @@ export const patientsService = {
 				activityLogs: { orderBy: { createdAt: "desc" }, take: 50 },
 			},
 		});
-		if (!patient) {
+		// Out-of-scope patients are reported as 404, not 403 — a VA probing IDs
+		// should not be able to tell "doesn't exist" from "belongs to someone else".
+		if (!patient || !isPatientInScope(patient, user)) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 		return ServiceResponse.success("Patient retrieved.", patient);
@@ -163,7 +181,7 @@ export const patientsService = {
 
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can move it.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can move it.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -239,7 +257,7 @@ export const patientsService = {
 		// Lock-aware: a VA must never self-assign a locked patient to bypass the lock.
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can assign it.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can reassign it.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -276,7 +294,7 @@ export const patientsService = {
 
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can update it.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -323,7 +341,7 @@ export const patientsService = {
 
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can update it.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -389,7 +407,10 @@ export const patientsService = {
 		});
 
 		try {
-			const admin = await prisma.user.findFirst({ where: { role: "admin" }, select: { email: true } });
+			const admin = await prisma.user.findFirst({
+				where: { role: { in: ["admin", "super_admin"] } },
+				select: { email: true },
+			});
 			if (admin) {
 				await emailService.notifyFlagged(patient.name, user.name, input.reason, admin.email);
 			}
@@ -475,7 +496,7 @@ export const patientsService = {
 
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can update it.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -568,7 +589,7 @@ export const patientsService = {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
-		if (user.role !== "admin" && patient.assignedTo !== user.id) {
+		if (!isAdminOrAbove(user.role) && patient.assignedTo !== user.id) {
 			return ServiceResponse.failure(
 				"Only the assigned VA or an admin can lock this patient.",
 				null,
@@ -607,7 +628,8 @@ export const patientsService = {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
-		const canUnlock = user.role === "admin" || patient.assignedTo === user.id || patient.privateLockedById === user.id;
+		const canUnlock =
+			isAdminOrAbove(user.role) || patient.assignedTo === user.id || patient.privateLockedById === user.id;
 		if (!canUnlock) {
 			return ServiceResponse.failure(
 				"Only the assigned VA, the person who locked it, or an admin can unlock this patient.",
@@ -642,7 +664,7 @@ export const patientsService = {
 	},
 
 	async updateStatus(id: string, input: UpdateStatusInput, user: AuthenticatedUser) {
-		if (user.role !== "admin") {
+		if (!isAdminOrAbove(user.role)) {
 			return ServiceResponse.failure("Only admins can change patient status.", null, StatusCodes.FORBIDDEN);
 		}
 
@@ -736,7 +758,7 @@ export const patientsService = {
 
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can run eligibility checks.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can run eligibility checks.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -942,7 +964,7 @@ export const patientsService = {
 
 		if (!canEditPatient(patient, user)) {
 			return ServiceResponse.failure(
-				"This patient is locked by the assigned VA. Only they or an admin can update it.",
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can update it.",
 				null,
 				StatusCodes.FORBIDDEN,
 			);
@@ -996,7 +1018,10 @@ export const patientsService = {
 
 		// Send notification emails
 		try {
-			const admin = await prisma.user.findFirst({ where: { role: "admin" }, select: { email: true } });
+			const admin = await prisma.user.findFirst({
+				where: { role: { in: ["admin", "super_admin"] } },
+				select: { email: true },
+			});
 			if (admin?.email && patient.email) {
 				await emailService.notifyAppointmentChanged(
 					patient.name,

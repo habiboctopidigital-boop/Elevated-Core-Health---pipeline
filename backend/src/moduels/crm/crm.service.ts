@@ -1,3 +1,5 @@
+import { audit, type RequestContext } from "@/lib/audit";
+import type { AuthenticatedUser } from "@/lib/types";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 
@@ -72,7 +74,7 @@ export const crmService = {
 		});
 	},
 
-	async exportContacts(query: Record<string, unknown>) {
+	async exportContacts(query: Record<string, unknown>, actor: AuthenticatedUser, ctx: RequestContext) {
 		const where = buildCrmWhere({
 			search: query.search as string | undefined,
 			status: query.status as string | undefined,
@@ -125,6 +127,18 @@ export const crmService = {
 		]);
 
 		const csv = [headers.map(csvEscape).join(","), ...rows.map((r) => r.map(csvEscape).join(","))].join("\n");
+
+		// task.md §15: every export creates an activity.
+		await audit({
+			user: actor,
+			action: "report.exported",
+			category: "report",
+			entityType: "export",
+			newValue: { reportType: "crm_contacts", scope: JSON.stringify(where), recordCount: contacts.length, format: "csv" },
+			message: `${actor.name} exported ${contacts.length} CRM contact record${contacts.length === 1 ? "" : "s"} as CSV`,
+			ip: ctx.ip,
+			userAgent: ctx.userAgent,
+		});
 
 		return ServiceResponse.success("Contacts exported.", { csv });
 	},

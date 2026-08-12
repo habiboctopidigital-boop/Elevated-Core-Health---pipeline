@@ -4129,6 +4129,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/auth/useAuth"
+import { isAdminOrAbove } from "@/lib/roles"
 import {
   useMoveStage,
   useToggleChecklist,
@@ -4241,7 +4242,7 @@ function getAvatarUrl(patient: Patient): string {
 
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
-  const isAdmin = user?.role === "admin"
+  const isAdmin = isAdminOrAbove(user?.role)
   const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
   const { data: patient, isLoading } = usePatient(patientId || "")
   const { data: logData } = useActivityLog(

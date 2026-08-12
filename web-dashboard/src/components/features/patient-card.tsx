@@ -21,6 +21,7 @@ import { STALE_HOURS } from "@/constants"
 import { useChecklistItems, useListVas, useAssignPatient } from "@/hooks/query/usePatients"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useAuth } from "@/hooks/auth/useAuth"
+import { isAdminOrAbove } from "@/lib/roles"
 
 interface PatientCardProps {
   patient: Patient
@@ -68,7 +69,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const { data: vaList } = useListVas()
   const assignPatient = useAssignPatient()
   // Phase 3 shared editing: board is open - any VA or admin can move any patient.
-  const isAdmin = currentUser?.role === "admin"
+  const isAdmin = isAdminOrAbove(currentUser?.role)
   const canMoveStage = true
 
   const stageColor = getStageColor(patient.stage)

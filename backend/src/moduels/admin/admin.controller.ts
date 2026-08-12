@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 
+import { getRequestContext } from "@/lib/audit";
 import { handleServiceResponse } from "@/utils/httpHandlers";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import { adminService } from "./admin.service";
@@ -14,6 +15,20 @@ function paramKey(req: Request): string {
 	return Array.isArray(key) ? key[0] : key;
 }
 
+/**
+ * Every route on this router runs behind `requireAuth` (see admin.router.ts),
+ * so req.user is always populated by the time a controller method runs. This
+ * guard only satisfies the type checker (req.user is optional on Request) and
+ * should never actually trigger in practice.
+ */
+function requireUser(req: Request, res: Response): req is Request & { user: NonNullable<Request["user"]> } {
+	if (!req.user) {
+		handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+		return false;
+	}
+	return true;
+}
+
 export const adminController = {
 	// Users
 	async listUsers(_req: Request, res: Response): Promise<void> {
@@ -22,17 +37,20 @@ export const adminController = {
 	},
 
 	async createUser(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.createUser(req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.createUser(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async updateUser(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.updateUser(paramId(req), req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.updateUser(paramId(req), req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async deleteUser(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.deleteUser(paramId(req));
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.deleteUser(paramId(req), req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -43,28 +61,33 @@ export const adminController = {
 	},
 
 	async createStage(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.createStage(req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.createStage(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async updateStage(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.updateStage(paramKey(req), req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.updateStage(paramKey(req), req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async reorderStages(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.reorderStages(req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.reorderStages(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async deleteStage(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.deleteStage(paramKey(req));
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.deleteStage(paramKey(req), req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	// Checklist
 	async createChecklistItem(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.createChecklistItem(req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.createChecklistItem(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -74,12 +97,19 @@ export const adminController = {
 	},
 
 	async deleteChecklistItem(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.deleteChecklistItem(paramId(req));
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.deleteChecklistItem(paramId(req), req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async updateChecklistItem(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.updateChecklistItem(paramId(req), req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.updateChecklistItem(
+			paramId(req),
+			req.body,
+			req.user,
+			getRequestContext(req),
+		);
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -90,17 +120,25 @@ export const adminController = {
 	},
 
 	async createEligibilityRule(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.createEligibilityRule(req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.createEligibilityRule(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async updateEligibilityRule(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.updateEligibilityRule(paramId(req), req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.updateEligibilityRule(
+			paramId(req),
+			req.body,
+			req.user,
+			getRequestContext(req),
+		);
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async deleteEligibilityRule(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.deleteEligibilityRule(paramId(req));
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.deleteEligibilityRule(paramId(req), req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -117,21 +155,20 @@ export const adminController = {
 	},
 
 	async connectCrm(req: Request, res: Response): Promise<void> {
-		if (!req.user) {
-			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
-			return;
-		}
-		const serviceResponse = await adminService.connectCrm(req.body, req.user);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.connectCrm(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
-	async disconnectCrm(_req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.disconnectCrm();
+	async disconnectCrm(req: Request, res: Response): Promise<void> {
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.disconnectCrm(req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async updateCrmPermission(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await adminService.updateCrmPermission(req.body);
+		if (!requireUser(req, res)) return;
+		const serviceResponse = await adminService.updateCrmPermission(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 };

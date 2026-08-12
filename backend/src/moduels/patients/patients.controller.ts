@@ -11,13 +11,21 @@ function paramId(req: Request): string {
 
 export const patientsController = {
 	async list(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
 		const stage = req.query.stage as string | undefined;
-		const serviceResponse = await patientsService.list(stage);
+		const serviceResponse = await patientsService.list(stage, req.user);
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async getById(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await patientsService.getById(paramId(req));
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const serviceResponse = await patientsService.getById(paramId(req), req.user);
 		handleServiceResponse(serviceResponse, res);
 	},
 

@@ -1,12 +1,13 @@
 import type { Request, Response } from "express";
 
+import { getRequestContext } from "@/lib/audit";
 import { handleServiceResponse } from "@/utils/httpHandlers";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import { authService } from "./auth.service";
 
 export const authController = {
 	async login(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await authService.login(req.body);
+		const serviceResponse = await authService.login(req.body, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -31,7 +32,7 @@ export const authController = {
 			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
 			return;
 		}
-		const serviceResponse = await authService.updateProfile(userId, req.body);
+		const serviceResponse = await authService.updateProfile(userId, req.body, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -45,7 +46,7 @@ export const authController = {
 			handleServiceResponse(ServiceResponse.failure("No image file was provided.", null, 400), res);
 			return;
 		}
-		const serviceResponse = await authService.uploadAvatar(userId, req.file);
+		const serviceResponse = await authService.uploadAvatar(userId, req.file, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -55,17 +56,17 @@ export const authController = {
 			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
 			return;
 		}
-		const serviceResponse = await authService.changePassword(userId, req.body);
+		const serviceResponse = await authService.changePassword(userId, req.body, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async forgotPassword(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await authService.forgotPassword(req.body);
+		const serviceResponse = await authService.forgotPassword(req.body, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
 	async resetPassword(req: Request, res: Response): Promise<void> {
-		const serviceResponse = await authService.resetPassword(req.body);
+		const serviceResponse = await authService.resetPassword(req.body, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 
@@ -75,7 +76,7 @@ export const authController = {
 			handleServiceResponse(ServiceResponse.success("Signed out successfully.", null), res);
 			return;
 		}
-		const serviceResponse = await authService.logout(refreshToken);
+		const serviceResponse = await authService.logout(refreshToken, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 };

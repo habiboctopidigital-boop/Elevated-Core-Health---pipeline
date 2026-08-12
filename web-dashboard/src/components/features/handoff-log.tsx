@@ -29,8 +29,9 @@ import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { useAllUsers } from "@/hooks/query/useUsers"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { PatientModal } from "@/components/features/patient-modal"
-import type { ActivityLog } from "@/types"
+import type { ActivityLog, UserRole } from "@/types"
 import { cn } from "@/lib/utils"
+import { isAdminOrAbove } from "@/lib/roles"
 
 const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string }> = {
   "stage.move": { label: "Stage Move", icon: ArrowRightLeft, color: "#036638" },
@@ -67,7 +68,7 @@ function dayGroupLabel(dateStr: string): string {
 
 function roleBadge(role?: string | null) {
   if (!role) return null
-  const isAdmin = role === "admin"
+  const isAdmin = isAdminOrAbove(role as UserRole)
   return (
     <span
       className={cn(
@@ -75,7 +76,7 @@ function roleBadge(role?: string | null) {
         isAdmin ? "bg-[#036638]/10 text-[#036638]" : "bg-[#EBF7EC] text-[#3E9C4A]",
       )}
     >
-      {isAdmin ? "Admin" : "VA"}
+      {role === "super_admin" ? "Super Admin" : isAdmin ? "Admin" : "VA"}
     </span>
   )
 }
@@ -345,7 +346,7 @@ export function HandoffLog() {
                 <option value="">All users</option>
                 {users?.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.name} ({u.role === "admin" ? "Admin" : "VA"})
+                    {u.name} ({u.role === "super_admin" ? "Super Admin" : isAdminOrAbove(u.role) ? "Admin" : "VA"})
                   </option>
                 ))}
               </select>

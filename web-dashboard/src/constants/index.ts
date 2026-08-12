@@ -61,6 +61,7 @@ export const API_ENDPOINTS = {
     ADMIN: "/reporting/admin",
     ME: "/reporting/me",
     VA: (id: string) => `/reporting/va/${id}`,
+    EXPORT_LOG: "/reporting/export-log",
   },
   PATIENT_CHECK_ELIGIBILITY: (id: string) => `/patients/${id}/check-eligibility`,
   ACTIVITY_LOG: "/activity-log",

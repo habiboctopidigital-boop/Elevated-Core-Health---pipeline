@@ -9,6 +9,7 @@ import { AuthService } from "@/services/auth.service"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { QUERY_KEYS } from "@/constants"
 import { config } from "@/config"
+import { isAdminOrAbove } from "@/lib/roles"
 import type { User } from "@/types"
 
 export function useAuth() {
@@ -39,7 +40,7 @@ export function useAuth() {
         Cookies.set("ech_role", data.user.role, { expires: 7, sameSite: "Lax" })
         dispatch(setUser(data.user))
 
-        if (data.user.role === "admin") {
+        if (isAdminOrAbove(data.user.role)) {
           router.push("/admin/dashboard")
         } else {
           router.push("/dashboard")

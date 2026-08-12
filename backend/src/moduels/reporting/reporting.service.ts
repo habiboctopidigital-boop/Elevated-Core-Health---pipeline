@@ -1,8 +1,11 @@
 import { StatusCodes } from "http-status-codes";
 
 import { getFinalStageKeys } from "@/config/stages";
+import { audit, type RequestContext } from "@/lib/audit";
+import type { AuthenticatedUser } from "@/lib/types";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
+import type { ExportLogInput } from "./reporting.validation";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const STALE_MS = 48 * 60 * 60 * 1000;
@@ -236,5 +239,32 @@ export const reportingService = {
 				monthly: bucketSeries(logs, "month", 6),
 			},
 		});
+	},
+
+	/**
+	 * task.md §15: every export creates an activity — user, role, report type,
+	 * scope, record count, format, timestamp. For client-generated exports
+	 * (e.g. the workload calendar's CSV, built in-browser from data already
+	 * fetched) this is the only server-side signal that an export happened at
+	 * all, so the frontend calls this right after triggering the download.
+	 */
+	async logExport(input: ExportLogInput, actor: AuthenticatedUser, ctx: RequestContext) {
+		await audit({
+			user: actor,
+			action: "report.exported",
+			category: "report",
+			entityType: "export",
+			newValue: {
+				reportType: input.reportType,
+				scope: input.scope ?? null,
+				recordCount: input.recordCount,
+				format: input.format,
+			},
+			message: `${actor.name} exported ${input.recordCount} ${input.reportType} record${input.recordCount === 1 ? "" : "s"} as ${input.format.toUpperCase()}`,
+			ip: ctx.ip,
+			userAgent: ctx.userAgent,
+		});
+
+		return ServiceResponse.success("Export logged.", null);
 	},
 };

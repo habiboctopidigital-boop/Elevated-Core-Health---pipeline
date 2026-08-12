@@ -45,7 +45,9 @@ patientsRouter.get("/", patientsController.list);
 patientsRouter.get("/checklist-items", patientsController.listChecklistItems);
 patientsRouter.get("/:id", patientsController.getById);
 patientsRouter.patch("/:id/stage", validateRequest(StageMoveSchema), patientsController.moveStage);
-patientsRouter.patch("/:id/assign", validateRequest(AssignSchema), patientsController.assign);
+// Reassigning a patient to an arbitrary user is admin/super_admin only (task.md §17: "Reassign patients" — VA: No).
+// A VA claiming an unassigned patient for themselves is a separate, narrower action — see POST /:id/claim below.
+patientsRouter.patch("/:id/assign", requireRole("admin"), validateRequest(AssignSchema), patientsController.assign);
 patientsRouter.patch("/:id", validateRequest(UpdatePatientSchema), patientsController.updatePatient);
 patientsRouter.post("/:id/lock", patientsController.lockPatient);
 patientsRouter.post("/:id/unlock", patientsController.unlockPatient);

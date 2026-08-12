@@ -1,7 +1,9 @@
 import { Router } from "express";
 
 import { requireAuth, requireRole } from "@/middlewares/auth";
+import { validateRequest } from "@/utils/httpHandlers";
 import { reportingController } from "./reporting.controller";
+import { ExportLogSchema } from "./reporting.validation";
 
 export const reportingRouter: Router = Router();
 
@@ -15,3 +17,7 @@ reportingRouter.get("/va/:id", requireRole("admin"), reportingController.getVaRe
 
 // Current user's own report (VAs see only themselves)
 reportingRouter.get("/me", reportingController.getMyReport);
+
+// Records a client-generated export as an activity (task.md §15) — any
+// authenticated user, since a VA can export their own scoped workload view.
+reportingRouter.post("/export-log", validateRequest(ExportLogSchema), reportingController.logExport);

@@ -1,3 +1,5 @@
+import { audit, type RequestContext } from "@/lib/audit";
+import type { AuthenticatedUser } from "@/lib/types";
 import { prisma } from "@/utils/prisma";
 import { ServiceResponse } from "@/utils/serviceResponse";
 
@@ -6,6 +8,8 @@ interface SettingValue {
   value: string;
   updatedAt: Date;
 }
+
+const noContext: RequestContext = { ip: null, userAgent: null };
 
 class SettingsService {
   /**
@@ -41,7 +45,7 @@ class SettingsService {
   /**
    * Update a setting value
    */
-  async updateSetting(key: string, value: string, userId: string) {
+  async updateSetting(key: string, value: string, actor: AuthenticatedUser, ctx: RequestContext = noContext) {
     try {
       // Validate known settings
       if (key === "stale_threshold_hours") {
@@ -55,19 +59,36 @@ class SettingsService {
         }
       }
 
+      const previous = await prisma.appSetting.findUnique({ where: { key } });
+
       const setting = await prisma.appSetting.upsert({
         where: { key },
         update: {
           value,
-          updatedById: userId,
+          updatedById: actor.id,
           updatedAt: new Date(),
         },
         create: {
           key,
           value,
-          updatedById: userId,
+          updatedById: actor.id,
         },
       });
+
+      if (previous?.value !== value) {
+        await audit({
+          user: actor,
+          action: "system.setting_updated",
+          category: "system",
+          entityType: "app_setting",
+          entityId: key,
+          prevValue: { value: previous?.value ?? null },
+          newValue: { value },
+          message: `${actor.name} updated setting "${key}" to "${value}"`,
+          ip: ctx.ip,
+          userAgent: ctx.userAgent,
+        });
+      }
 
       return ServiceResponse.success(
         { key: setting.key, value: setting.value, updatedAt: setting.updatedAt } as unknown as string,

@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/auth/useAuth"
+import { isAdminOrAbove } from "@/lib/roles"
 import { SplashLoader } from "@/components/ui/splash-loader"
 
 interface AuthRedirectProps {
@@ -28,7 +29,7 @@ export function AuthRedirect({ children }: AuthRedirectProps) {
     }
 
     const isAdminRoute = pathname.startsWith("/admin")
-    const isUserAdmin = user.role === "admin"
+    const isUserAdmin = isAdminOrAbove(user.role)
 
     // Admin user on VA dashboard - redirect to admin
     if (!isAdminRoute && isUserAdmin && !publicRoutes.includes(pathname)) {

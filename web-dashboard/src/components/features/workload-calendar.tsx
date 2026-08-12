@@ -31,6 +31,7 @@ import { PatientModal } from "@/components/features/patient-modal"
 import { WorkloadTimeGrid, type TimeGridEvent } from "@/components/features/workload-time-grid"
 import type { Patient } from "@/types"
 import { cn } from "@/lib/utils"
+import { isAdminOrAbove } from "@/lib/roles"
 
 type ViewKey = "dayGridMonth" | "timeGridWeek" | "timeGridDay" | "listWeek"
 
@@ -87,7 +88,7 @@ function downloadCsv(filename: string, rows: string[][]) {
 
 export function WorkloadCalendar() {
   const { user } = useAuth()
-  const isAdmin = user?.role === "admin"
+  const isAdmin = isAdminOrAbove(user?.role)
   const { data: patients, isLoading, isError, error, refetch, isFetching } = usePatients()
   const { data: vaList } = useListVas()
   const { order: stageOrder, labels: stageLabels } = useStageMeta()

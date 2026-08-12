@@ -5,6 +5,9 @@ export const CreateUserSchema = z.object({
 		name: z.string().trim().min(1).max(100),
 		email: z.string().trim().toLowerCase().email(),
 		password: z.string().min(8).max(128),
+		// super_admin is deliberately not assignable here — it's a protected,
+		// out-of-band-managed tier (task.md §5, §11), never created via the
+		// ordinary user-management form.
 		role: z.enum(["admin", "va"]),
 		shift: z.enum(["morning", "evening"]).nullable().optional(),
 	}),
@@ -17,6 +20,7 @@ export const UpdateUserSchema = z.object({
 		password: z.string().min(8).max(128).optional(),
 		role: z.enum(["admin", "va"]).optional(),
 		shift: z.enum(["morning", "evening"]).nullable().optional(),
+		status: z.enum(["active", "inactive"]).optional(),
 	}),
 });
 

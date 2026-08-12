@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "va"
+export type UserRole = "super_admin" | "admin" | "va"
 
 // Stages are DB-driven now - a stage key is just a stable string slug
 // (e.g. "onboarding"). The API returns the full list via GET /stages.
@@ -16,11 +16,15 @@ export interface PipelineStage {
   updatedAt?: string
 }
 
+export type UserStatus = "active" | "inactive"
+
 export interface User {
   id: string
   name: string
   email: string
   role: UserRole
+  status?: UserStatus
+  lastLoginAt?: string | null
   shift?: string | null
   avatar?: string | null
   createdAt?: string

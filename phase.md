@@ -26,6 +26,27 @@ supplied by the client.
 
 ---
 
+## Guiding Principle — Additive, Non-Breaking
+
+**Nothing that works today gets torn out.** The existing activity tracking, the `audit()` helper and
+its 16 call sites, `type: auto|manual`, the patient-card handoff log, `requireRole("admin")`, the
+privacy-lock rule — all of it stays and keeps behaving identically. New requirements are satisfied by
+**extending** these, not replacing them:
+
+| Existing | What happens to it |
+|---|---|
+| `audit()` signature | Unchanged and still valid. New params (`category`, `ip`, `userAgent`, `patientId: null`) are **optional additions** — every current call site compiles and behaves the same |
+| `ActivityLog.type` (`auto` \| `manual`) | **Kept as-is.** A separate new `category` column is added alongside it, rather than widening `type` and breaking existing rows and the log UI |
+| `ActivityLog.patientId` | Stays, and stays populated for patient events. Only becomes *nullable* so non-patient events (login, export) can also be recorded |
+| `requireRole("admin")` | Stays working. `requireMinRole()` is added alongside; routes migrate to it gradually, and `admin` keeps every ability it has today |
+| Handoff log UI | Keeps rendering exactly what it renders now; new categories are additional rows, not a redesign |
+| `canEditPatient()` / privacy lock | Preserved as-is, with the ownership check layered around it |
+
+Rule of thumb for every phase: **existing rows stay valid, existing calls stay valid, existing
+screens keep working.** Any migration must be safe to apply to the live database with data in it.
+
+---
+
 ## Current State Audit
 
 ### Already in place (build on, don't rebuild)
@@ -65,7 +86,7 @@ start, but each is genuinely yours to call.
 
 | # | Question | Why it matters | Proposed default |
 |---|---|---|---|
-| D1 | **Who is the Super Admin?** Is Donna promoted to Super Admin (leaving "Admin" for future staff), or is Super Admin a separate developer/agency-level account above her? | Determines the seed, and whether Donna loses or keeps abilities | Donna becomes Super Admin; `admin` becomes a delegatable tier below her |
+| D1 | **Who is the Super Admin?** | Determines the seed, and whether Donna loses or keeps abilities | ✅ **Confirmed** — Donna's existing account is promoted to `super_admin`; `admin` becomes a delegatable tier below her for future staff |
 | D2 | **Does VA scoping override the shared-handoff model?** The board is *intentionally* open today (`patients.service.ts:97-101`), and CLAUDE.md's core premise is two VAs on different shifts covering for each other. §17 reverses this. | Jude and Amanda will no longer see each other's cards — handoff gets harder | Apply §17 as written; add an admin-visible "unassigned pool" both VAs share |
 | D3 | **What does "Based on permission" mean** in the §17 matrix (VA rows: edit appointment date, add patient, update patient)? A real per-user permission-flags system, or simply "the assigned VA may, others may not"? | A flags system is a whole extra subsystem (schema + admin UI + middleware); assigned-VA-only is ~a day | Assigned-VA-only for now; a `UserPermission` flags table is deferred to a later phase if you want true granularity |
 | D4 | **Admin → "Add Admin: Restricted", "Delete VA: Yes/permission"** — can an Admin create another Admin at all? Can an Admin delete a VA unconditionally? | Directly encodes the authorization matrix | Admin **cannot** create or delete Admins; Admin **can** create and delete VAs |
@@ -75,7 +96,7 @@ start, but each is genuinely yours to call.
 
 ---
 
-## Phase 1 — Data Model Foundation
+## Phase 1 — Data Model Foundation ✅ DONE
 
 *Nothing else can be built correctly until the schema can represent three roles and non-patient
 events. This phase is pure migration + regeneration, no behaviour change.*
@@ -91,8 +112,10 @@ events. This phase is pure migration + regeneration, no behaviour change.*
 **1.2 Decouple the activity log from patients** *(fixes G3)*
 - `ActivityLog.patientId` → **nullable**, FK `onDelete: SetNull` (audit rows must outlive the patient).
 - Add columns: `actorRole`, `actorName` (denormalised — survives user deletion), `ipAddress`,
-  `userAgent`, and widen `type` from `auto|manual` to an `ActivityCategory` enum:
+  `userAgent`, and a **new, additional** `category` enum column — `type` (`auto|manual`) is untouched
+  so every existing row and every existing query against it keeps working:
   `auth | profile | patient | appointment | user_management | report | system`.
+  Existing rows backfill `category = 'patient'` (they're all patient-card events today).
 - Index `(actorId, createdAt)` and `(category, createdAt)` for the log filters.
 
 **1.3 Extend `User` for the management screen** *(fixes G8)*
@@ -103,7 +126,7 @@ zero behaviour change visible in the UI.
 
 ---
 
-## Phase 2 — Authorization Core
+## Phase 2 — Authorization Core ✅ DONE
 
 *One place that answers "may this user do this to this resource?" — so no route has to reinvent it.*
 

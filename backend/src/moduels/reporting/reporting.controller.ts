@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
+import { getRequestContext } from "@/lib/audit";
 import { handleServiceResponse } from "@/utils/httpHandlers";
 import { ServiceResponse } from "@/utils/serviceResponse";
 import { reportingService } from "./reporting.service";
@@ -27,6 +28,15 @@ export const reportingController = {
 
 	async getVaReport(req: Request, res: Response): Promise<void> {
 		const serviceResponse = await reportingService.getVaReport(paramId(req));
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async logExport(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Unauthorized.", null, StatusCodes.UNAUTHORIZED), res);
+			return;
+		}
+		const serviceResponse = await reportingService.logExport(req.body, req.user, getRequestContext(req));
 		handleServiceResponse(serviceResponse, res);
 	},
 };
