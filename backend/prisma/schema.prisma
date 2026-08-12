@@ -80,6 +80,8 @@ model User {
   assignedPatients     Patient[]     @relation("PatientAssignedTo")
   flaggedPatients      Patient[]     @relation("PatientFlaggedBy")
   flagClearedPatients  Patient[]     @relation("PatientFlagClearedBy")
+  flagsRaised         PatientFlag[] @relation("FlagRaisedBy")
+  flagsCleared        PatientFlag[] @relation("FlagClearedBy")
   updatedPatients      Patient[]     @relation("PatientUpdatedBy")
   cancelledPatients    Patient[]     @relation("PatientCancelledBy")
   privateLockedPatients Patient[]    @relation("PatientPrivateLockedBy")
@@ -148,6 +150,7 @@ model Patient {
   importBatch        ImportBatch? @relation(fields: [importBatchId], references: [id])
 
   activityLogs ActivityLog[]
+  flags        PatientFlag[] @relation("PatientFlags")
 
   @@index([stage])
   @@index([isFlagged])
@@ -156,6 +159,33 @@ model Patient {
   @@index([appointmentDatetime])
   @@index([isPrivate])
   @@map("patients")
+}
+
+/**
+ * Full flag history for a patient (multiple flags allowed). The patient row
+ * keeps its single "currently flagged" snapshot (isFlagged/flagReason) so the
+ * board badge and stale logic stay cheap — each raise/clear also writes a row
+ * here for the modal's flag history (latest flag + count + view-all list).
+ */
+model PatientFlag {
+  id           String    @id @default(uuid())
+  patientId    String    @map("patient_id")
+  stage        String
+  type         String    @default("negative")
+  reason       String
+  flaggedById  String    @map("flagged_by")
+  clearedById  String?   @map("cleared_by")
+  clearedReason String?  @map("cleared_reason")
+  clearedAt    DateTime? @map("cleared_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  patient       Patient @relation("PatientFlags", fields: [patientId], references: [id], onDelete: Cascade)
+  flaggedByUser User    @relation("FlagRaisedBy", fields: [flaggedById], references: [id])
+  clearedByUser User?   @relation("FlagClearedBy", fields: [clearedById], references: [id])
+
+  @@index([patientId])
+  @@index([stage])
+  @@map("patient_flags")
 }
 
 model ActivityLog {

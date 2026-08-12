@@ -30,6 +30,8 @@ export type ChecklistStatus = "required" | "optional"
 
 export type EligibilityStatus = "not_checked" | "eligible" | "not_eligible"
 
+export type PatientFlagType = "positive" | "negative"
+
 export type PatientStatus = "active" | "completed" | "cancelled"
 
 export type VisitStatus = "not_visited" | "arrived" | "no_show" | "rescheduled"
@@ -59,6 +61,19 @@ export interface EligibilityDetails {
   evaluatedRules?: number
 }
 
+export interface PatientFlag {
+  id: string
+  patientId: string
+  stage: PatientStage
+  type: PatientFlagType
+  reason: string
+  flaggedByUser?: Pick<User, "id" | "name"> | null
+  clearedByUser?: Pick<User, "id" | "name"> | null
+  clearedReason?: string | null
+  clearedAt?: string | null
+  createdAt: string
+}
+
 export interface Patient {
   id: string
   name: string
@@ -81,6 +96,7 @@ export interface Patient {
   flagClearedReason?: string | null
   flagClearedByUser?: Pick<User, "id" | "name"> | null
   flagClearedAt?: string | null
+  flags?: PatientFlag[]
   completedAt?: string | null
   cancelledAt?: string | null
   cancelledReason?: string | null

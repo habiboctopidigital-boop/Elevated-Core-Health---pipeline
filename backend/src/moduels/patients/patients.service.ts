@@ -118,6 +118,16 @@ const patientInclude = {
 	flagClearedByUser: { select: { id: true, name: true } },
 	cancelledByUser: { select: { id: true, name: true } },
 	privateLockedByUser: { select: { id: true, name: true } },
+	// Full flag history (newest first). The patient row keeps its single
+	// "currently flagged" snapshot for cheap board badges; this array feeds
+	// the modal's latest-flag + count + view-all list.
+	flags: {
+		orderBy: { createdAt: "desc" },
+		include: {
+			flaggedByUser: { select: { id: true, name: true } },
+			clearedByUser: { select: { id: true, name: true } },
+		},
+	},
 } as const;
 
 export const patientsService = {
@@ -356,6 +366,17 @@ export const patientsService = {
 			},
 		});
 
+		// Write the flag into history (kept in sync with the patient snapshot).
+		await prisma.patientFlag.create({
+			data: {
+				patientId: id,
+				stage: patient.stage,
+				type: input.type ?? "negative",
+				reason: input.reason,
+				flaggedById: user.id,
+			},
+		});
+
 		await audit({
 			patientId: id,
 			user,
@@ -400,6 +421,16 @@ export const patientsService = {
 				flagClearedAt: new Date(),
 				updatedAt: new Date(),
 				updatedById: user.id,
+			},
+		});
+
+		// Mark the most recent open flag record as cleared in history.
+		await prisma.patientFlag.updateMany({
+			where: { patientId: id, clearedAt: null },
+			data: {
+				clearedById: user.id,
+				clearedReason: input.clearReason,
+				clearedAt: new Date(),
 			},
 		});
 

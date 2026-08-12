@@ -167,10 +167,18 @@ export function useUpdateNotes() {
 export function useFlagPatient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      PatientsService.flag(id, reason),
-    onSuccess: () => {
+    mutationFn: ({
+      id,
+      reason,
+      type,
+    }: {
+      id: string
+      reason: string
+      type?: "positive" | "negative"
+    }) => PatientsService.flag(id, reason, type),
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.SUMMARY })
       toast.success("Patient flagged for Donna")
     },
@@ -185,8 +193,9 @@ export function useClearFlag() {
   return useMutation({
     mutationFn: ({ id, clearReason }: { id: string; clearReason: string }) =>
       PatientsService.clearFlag(id, clearReason),
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.SUMMARY })
       toast.success("Flag cleared")
     },

@@ -29,6 +29,8 @@ export const NotesSchema = z.object({
 export const FlagSchema = z.object({
 	body: z.object({
 		reason: z.string().min(1, "Reason is required").max(500, "Reason must be at most 500 characters"),
+		// Positive = note for the record; negative = alert for Donna.
+		type: z.enum(["positive", "negative"]).optional().default("negative"),
 	}),
 });
 

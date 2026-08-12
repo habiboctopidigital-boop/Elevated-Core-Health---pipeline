@@ -4271,6 +4271,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const currentState = patient?.checklistState?.[patient.stage] || {}
 
+  // Flag history array (newest first) + derived counts for the header badges.
+  const flagHistory = patient?.flags ?? []
+  const latestFlag = flagHistory[0] ?? null
+  const flagTotalCount = flagHistory.length
+  const flagStageCount = flagHistory.filter((f) => f.stage === patient?.stage).length
+
   const requiredItems = currentStageItems.filter((item) => item.status === "required")
   const totalItems = requiredItems.length
   const completedItems = requiredItems.filter(
@@ -4288,7 +4294,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [showFlagPopup, setShowFlagPopup] = useState(false)
   const [newFlagReason, setNewFlagReason] = useState("")
   const [newFlagType, setNewFlagType] = useState<"positive" | "negative">("positive")
-  const [showAllFlags, setShowAllFlags] = useState(false)
   const [clearReason, setClearReason] = useState("")
   const [showClearInput, setShowClearInput] = useState(false)
   const [savingNotes, setSavingNotes] = useState(false)
@@ -4397,6 +4402,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     await clearFlag.mutateAsync({ id: patient.id, clearReason })
     setShowClearInput(false)
     setClearReason("")
+  }
+
+  // "View All Flags" smooth-scrolls to the full history section at the bottom
+  // of the modal (the section itself is always rendered when flags exist).
+  const flagHistoryRef = useRef<HTMLDivElement | null>(null)
+  const scrollToFlagHistory = () => {
+    flagHistoryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
   const handleMoveStage = async (target: PatientStage) => {
@@ -4643,16 +4655,37 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       </span>
                     )}
                   </div>
-                  {/* Flag info inside header */}
-                  {patient.isFlagged && patient.flagReason && (
+                  {/* Flag info inside header — latest flag from the array + counts */}
+                  {patient.isFlagged && (latestFlag ?? patient.flagReason) && (
                     <div className="mt-4 p-3 rounded-xl bg-red-500/20 border border-red-300/30 backdrop-blur-sm">
-                      <p className="text-xs font-bold text-white mb-1 flex items-center gap-1.5">
-                        <Flag className="w-3.5 h-3.5" fill="white" /> Flag Reason
-                      </p>
-                      <p className="text-sm text-white/90">{patient.flagReason}</p>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Flag className="w-3.5 h-3.5" fill="white" /> Flag Reason
+                        </p>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-white/20 text-white rounded-full whitespace-nowrap">
+                            {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""}
+                          </span>
+                          {flagStageCount > 0 && (
+                            <span className="px-2 py-0.5 text-[10px] font-bold bg-white/20 text-white rounded-full whitespace-nowrap">
+                              {flagStageCount} on this stage
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-white/90">{latestFlag?.reason ?? patient.flagReason}</p>
                       <p className="text-[11px] text-white/70 mt-1">
-                        by {patient.flaggedByUser?.name} · {timeAgo(patient.flaggedAt?.toString() || '')}
+                        by {latestFlag?.flaggedByUser?.name ?? patient.flaggedByUser?.name} ·{' '}
+                        {timeAgo((latestFlag?.createdAt ?? patient.flaggedAt?.toString()) || "")}
                       </p>
+                      {flagTotalCount > 1 && (
+                        <button
+                          onClick={scrollToFlagHistory}
+                          className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-white underline underline-offset-2 hover:text-red-100 transition-colors"
+                        >
+                          View All Flags ({flagTotalCount}) <ChevronDown className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   )}
                   {patient.flagClearedReason && (
@@ -5220,6 +5253,70 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
                 </div>
 
+                {/* Flag History — every flag on this patient, newest first */}
+                {flagTotalCount > 0 && (
+                  <div ref={flagHistoryRef} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm scroll-mt-4">
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                        <Flag className="w-5 h-5 text-red-500" /> Flag History
+                      </h4>
+                      <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                        {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} · {flagStageCount} on this stage
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {flagHistory.length > 0 ? (
+                        flagHistory.map((flag) => (
+                          <div
+                            key={flag.id}
+                            className={cn(
+                              "rounded-xl border p-3",
+                              flag.type === "positive"
+                                ? "bg-emerald-50/60 border-emerald-200"
+                                : "bg-red-50/60 border-red-200",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                flag.type === "positive"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "bg-red-100 text-red-600",
+                              )}>
+                                {flag.type === "positive" ? "✅ Positive" : "⚠️ Alert"}
+                              </span>
+                              <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+                                {new Date(flag.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-800 mt-2">{flag.reason}</p>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
+                              <span className="text-gray-500">
+                                by <span className="font-semibold text-gray-700">
+                                  {flag.flaggedByUser?.name ?? "Unknown"}
+                                </span>
+                                {stageLabels[flag.stage] ? ` · ${stageLabels[flag.stage]}` : ""}
+                              </span>
+                              {flag.clearedAt ? (
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">
+                                  ✓ Cleared by {flag.clearedByUser?.name ?? "Unknown"}
+                                  {flag.clearedReason ? ` — ${flag.clearedReason}` : ""}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-red-100 text-red-600 font-semibold rounded-full whitespace-nowrap">
+                                  Open
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-400 italic">No flags raised yet</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Activity Log */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
                   <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4">
@@ -5288,7 +5385,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <button
                     onClick={async () => {
                       if (patient && newFlagReason.trim()) {
-                        await flagPatient.mutateAsync({ id: patient.id, reason: newFlagReason })
+                        await flagPatient.mutateAsync({ id: patient.id, reason: newFlagReason, type: newFlagType })
                         setShowFlagPopup(false)
                         setNewFlagReason("")
                         setNewFlagType("positive")

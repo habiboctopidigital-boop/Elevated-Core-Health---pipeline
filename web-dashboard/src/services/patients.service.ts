@@ -51,10 +51,14 @@ export const PatientsService = {
     return data.data
   },
 
-  async flag(id: string, reason: string): Promise<Patient> {
+  async flag(
+    id: string,
+    reason: string,
+    type: "positive" | "negative" = "negative",
+  ): Promise<Patient> {
     const { data } = await axiosInstance.post<ApiResponse<Patient>>(
       `${API_ENDPOINTS.PATIENTS}/${id}/flag`,
-      { reason },
+      { reason, type },
     )
     return data.data
   },
