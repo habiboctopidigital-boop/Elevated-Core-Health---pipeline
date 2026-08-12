@@ -54,6 +54,9 @@
 // import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
 // import { cn } from "@/lib/utils"
 // import { toast } from "sonner"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 
 // interface PatientModalProps {
 //   patientId: string | null
@@ -4240,6 +4243,40 @@ function getAvatarUrl(patient: Patient): string {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=059669,0d9488,047857,10b981&fontFamily=Helvetica&fontWeight=600`
 }
 
+// ---------------------------------------------------------------------------
+// Patient contact info validation (react-hook-form + zod)
+// ---------------------------------------------------------------------------
+const contactSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+  phone: z
+    .string()
+    .trim()
+    .min(1, "Phone is required")
+    .refine((v) => /^[+()\-.\s\d]{7,20}$/.test(v), {
+      message: "Enter a valid phone number",
+    }),
+  location: z.string().trim().max(120, "Location is too long").optional().or(z.literal("")),
+  copayAmount: z.string().trim().optional().or(z.literal("")),
+  amountPaid: z.string().trim().optional().or(z.literal("")),
+})
+
+type ContactFormValues = z.infer<typeof contactSchema>
+
+// Split a stored full name into first + last so patients created via the
+// webhook/intake (name only, no separate first/last) still render both fields.
+function splitPatientName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { firstName: "", lastName: "" }
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" }
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") }
+}
+
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
   const isAdmin = isAdminOrAbove(user?.role)
@@ -4304,16 +4341,36 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [insuranceProviderOther, setInsuranceProviderOther] = useState(false)
   const [visitStatus, setVisitStatus] = useState("not_visited")
   const [avatarError, setAvatarError] = useState(false)
-  const [contactForm, setContactForm] = useState({
-    firstName: "",
-    lastName: "",
-    location: "",
-    phone: "",
-    email: "",
-    copayAmount: "",
-    amountPaid: "",
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ContactFormValues>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      location: "",
+      phone: "",
+      email: "",
+      copayAmount: "",
+      amountPaid: "",
+    },
   })
-  const [savingContact, setSavingContact] = useState(false)
+
+  const contactInputClass = (hasError: boolean) =>
+    cn(
+      "w-full px-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2 transition-colors",
+      hasError
+        ? "border-red-300 bg-red-50/30 focus:border-red-400 focus:ring-red-200"
+        : "border-gray-200 focus:border-emerald-400 focus:ring-emerald-400/30",
+    )
+  const contactLabelClass = (hasError: boolean) =>
+    cn(
+      "text-[10px] font-bold uppercase tracking-wider block mb-1",
+      hasError ? "text-red-600" : "text-gray-500",
+    )
   const [cancelReason, setCancelReason] = useState("")
   const [showCancelInput, setShowCancelInput] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState(false)
@@ -4345,9 +4402,11 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
     setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
     setVisitStatus(patient?.visitStatus ?? "not_visited")
-    setContactForm({
-      firstName: patient?.firstName ?? "",
-      lastName: patient?.lastName ?? "",
+    const fullName = `${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`.trim() || patient?.name || ""
+    const { firstName, lastName } = splitPatientName(fullName)
+    reset({
+      firstName,
+      lastName,
       location: patient?.location ?? "",
       phone: patient?.phone ?? "",
       email: patient?.email ?? "",
@@ -4426,24 +4485,22 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     await claimPatient.mutateAsync({ id: patient.id, userId: user.id })
   }
 
-  const handleSaveContact = async () => {
+  const onSaveContact = handleSubmit(async (values) => {
     if (!patient) return
-    setSavingContact(true)
     await updatePatient.mutateAsync({
       id: patient.id,
-      firstName: contactForm.firstName.trim() || null,
-      lastName: contactForm.lastName.trim() || null,
-      location: contactForm.location.trim() || null,
-      phone: contactForm.phone.trim() || null,
-      email: contactForm.email.trim() || null,
-      copayAmount: contactForm.copayAmount.trim() || null,
-      amountPaid: contactForm.amountPaid.trim() || null,
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      location: values.location?.trim() || null,
+      phone: values.phone.trim(),
+      email: values.email.trim(),
+      copayAmount: values.copayAmount?.trim() || null,
+      amountPaid: values.amountPaid?.trim() || null,
       paymentMethod: paymentMethod.trim() || null,
       insuranceProvider: insuranceProvider.trim() || null,
       visitStatus,
     })
-    setSavingContact(false)
-  }
+  })
 
   const handleCancelPatient = async () => {
     if (!patient) return
@@ -5186,9 +5243,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4 gap-2">
                     <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Contact & Payment</h4>
-                    <Button size="sm" onClick={handleSaveContact} disabled={savingContact}
+                    <Button size="sm" onClick={onSaveContact} disabled={isSubmitting}
                       className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow shrink-0">
-                      {savingContact ? "Saving..." : "Save"}
+                      {isSubmitting ? "Saving..." : "Save"}
                     </Button>
                   </div>
 
@@ -5223,18 +5280,38 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(["firstName","lastName","location","phone","email","copayAmount","amountPaid"] as const).map(key => (
-                      <div key={key}>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
-                        </label>
-                        <input
-                          value={contactForm[key]}
-                          onChange={e => setContactForm(f => ({...f, [key]: e.target.value}))}
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-400 transition-colors"
-                        />
-                      </div>
-                    ))}
+                    <div>
+                      <label className={contactLabelClass(!!errors.firstName)}>First Name <span className="text-red-500">*</span></label>
+                      <input {...register("firstName")} aria-invalid={!!errors.firstName} className={contactInputClass(!!errors.firstName)} />
+                      {errors.firstName && <p className="text-[11px] text-red-500 mt-1">{errors.firstName.message}</p>}
+                    </div>
+                    <div>
+                      <label className={contactLabelClass(!!errors.lastName)}>Last Name <span className="text-red-500">*</span></label>
+                      <input {...register("lastName")} aria-invalid={!!errors.lastName} className={contactInputClass(!!errors.lastName)} />
+                      {errors.lastName && <p className="text-[11px] text-red-500 mt-1">{errors.lastName.message}</p>}
+                    </div>
+                    <div>
+                      <label className={contactLabelClass(false)}>Location</label>
+                      <input {...register("location")} className={contactInputClass(false)} />
+                    </div>
+                    <div>
+                      <label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-red-500">*</span></label>
+                      <input {...register("phone")} aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />
+                      {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone.message}</p>}
+                    </div>
+                    <div>
+                      <label className={contactLabelClass(!!errors.email)}>Email <span className="text-red-500">*</span></label>
+                      <input type="email" {...register("email")} aria-invalid={!!errors.email} className={contactInputClass(!!errors.email)} />
+                      {errors.email && <p className="text-[11px] text-red-500 mt-1">{errors.email.message}</p>}
+                    </div>
+                    <div>
+                      <label className={contactLabelClass(false)}>Copay Amount</label>
+                      <input {...register("copayAmount")} className={contactInputClass(false)} />
+                    </div>
+                    <div>
+                      <label className={contactLabelClass(false)}>Amount Paid</label>
+                      <input {...register("amountPaid")} className={contactInputClass(false)} />
+                    </div>
                     <div>
                       <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Payment Type</label>
                       <SelectOrOther value={paymentMethod} onChange={setPaymentMethod} otherMode={paymentMethodOther}
