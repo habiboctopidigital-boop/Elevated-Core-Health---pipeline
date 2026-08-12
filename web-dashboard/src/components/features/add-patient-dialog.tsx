@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Loader2 } from "lucide-react"
+import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { useListVas } from "@/hooks/query/usePatients"
@@ -307,12 +308,13 @@ export function AddPatientDialog() {
               </Field>
 
               <Field label="Appointment Date & Time" optional>
-                <input
-                  type="datetime-local"
-                  name="appointmentDatetime"
-                  value={formData.appointmentDatetime}
-                  onChange={handleInputChange}
-                  className={inputClass(false)}
+                <DateTimePicker
+                  value={formData.appointmentDatetime ?? ""}
+                  onChange={(iso) => {
+                    setFormData((f) => ({ ...f, appointmentDatetime: iso }))
+                    clearFieldError("appointmentDatetime")
+                  }}
+                  placeholder="Pick a date & time"
                 />
               </Field>
 
