@@ -442,7 +442,7 @@ export const patientsService = {
 			entityId: id,
 			prevValue: { isFlagged: true },
 			newValue: { isFlagged: false, reason: input.clearReason },
-			message: `Flag cleared — ${input.clearReason}`,
+			message: `Flag cleared - ${input.clearReason}`,
 		});
 
 		// Email the original flagger with Donna's feedback
@@ -595,7 +595,7 @@ export const patientsService = {
 			entityId: id,
 			prevValue: { isPrivate: false },
 			newValue: { isPrivate: true },
-			message: "Locked patient — only the assigned VA or an admin can edit",
+			message: "Locked patient - only the assigned VA or an admin can edit",
 		});
 
 		return ServiceResponse.success("Patient locked.", updated);
@@ -635,7 +635,7 @@ export const patientsService = {
 			entityId: id,
 			prevValue: { isPrivate: true },
 			newValue: { isPrivate: false },
-			message: "Unlocked patient — open for all VAs again",
+			message: "Unlocked patient - open for all VAs again",
 		});
 
 		return ServiceResponse.success("Patient unlocked.", updated);
@@ -673,7 +673,7 @@ export const patientsService = {
 			entityId: id,
 			prevValue: { status: patient.status },
 			newValue: { status: input.status, reason: input.reason ?? null },
-			message: `Status changed from ${patient.status} to ${input.status}${input.reason ? ` — ${input.reason}` : ""}`,
+			message: `Status changed from ${patient.status} to ${input.status}${input.reason ? ` - ${input.reason}` : ""}`,
 		});
 
 		return ServiceResponse.success("Status updated.", updated);
@@ -812,7 +812,7 @@ export const patientsService = {
 			entityId: id,
 			prevValue: { eligibilityStatus: patient.eligibilityStatus },
 			newValue: { eligibilityStatus: status, reason },
-			message: `Eligibility check completed — ${status === "eligible" ? "Eligible" : "Not Eligible"}${reason ? ` (${reason})` : ""}`,
+			message: `Eligibility check completed - ${status === "eligible" ? "Eligible" : "Not Eligible"}${reason ? ` (${reason})` : ""}`,
 			type: "auto",
 		});
 
@@ -889,7 +889,7 @@ export const patientsService = {
 
 		const platformLabel = input.bookingPlatform ?? "email";
 		const assignmentNote = assignedTo
-			? ` — Auto-assigned via ${assignmentMethod}`
+			? ` - Auto-assigned via ${assignmentMethod}`
 			: "";
 		await audit({
 			patientId: patient.id,
@@ -981,7 +981,7 @@ export const patientsService = {
 		});
 
 		const autoAssignmentNote = newAssignedTo && !patient.assignedTo
-			? ` — Auto-assigned based on appointment time`
+			? ` - Auto-assigned based on appointment time`
 			: "";
 		await audit({
 			patientId: id,

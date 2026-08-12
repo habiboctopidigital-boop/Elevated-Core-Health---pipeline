@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Loader2, ShieldCheck, RotateCcw, CheckCircle2, XCircle } from "lucide-react"
+import { Loader2, ShieldCheck, RotateCcw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import { useCheckEligibility } from "@/hooks/query/usePatients"
 import { SelectOrOther } from "@/components/shared/select-or-other"
 import { INSURANCE_PROVIDER_OPTIONS, VOB_LABELS } from "@/lib/patient-options"
@@ -143,10 +143,10 @@ export function EligibilityCheckDialog({ patient, open, onClose }: EligibilityCh
           {phase === "form" && (
             <>
               <div className="mb-4 flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5">
-                <span className="text-amber-600 text-sm leading-6">⚠️</span>
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <p className="text-xs text-amber-800">
                   <span className="font-semibold">Demo mode.</span> These are sample
-                  fields — enter anything to run the check. The result comes back
+                  fields. Enter anything to run the check. The result comes back
                   from the backend.
                 </p>
               </div>
@@ -245,7 +245,7 @@ export function EligibilityCheckDialog({ patient, open, onClose }: EligibilityCh
                 <div>
                   <h4 className="text-lg font-bold text-emerald-900">Patient is Eligible</h4>
                   <p className="text-sm text-emerald-700 mt-0.5">
-                    Eligibility check completed — coverage verified.
+                    Eligibility check completed - coverage verified.
                   </p>
                   {result.eligibilityCheckedAt && (
                     <p className="text-[11px] text-emerald-600/80 mt-1.5">

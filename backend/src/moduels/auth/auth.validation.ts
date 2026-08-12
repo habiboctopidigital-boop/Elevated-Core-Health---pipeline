@@ -22,7 +22,7 @@ export const UpdateProfileSchema = z.object({
 			name: z.string().trim().min(1, "Name is required").max(200, "Name is too long").optional(),
 			email: z.string().trim().toLowerCase().email("A valid email address is required").optional(),
 		})
-		.strict("Unrecognized field — only name and email can be updated here."),
+		.strict("Unrecognized field - only name and email can be updated here."),
 });
 
 export const ChangePasswordSchema = z.object({

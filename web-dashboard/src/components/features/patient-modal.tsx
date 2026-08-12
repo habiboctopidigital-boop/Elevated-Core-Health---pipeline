@@ -4675,7 +4675,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       </div>
                       <p className="text-sm text-white/90">{latestFlag?.reason ?? patient.flagReason}</p>
                       <p className="text-[11px] text-white/70 mt-1">
-                        by {latestFlag?.flaggedByUser?.name ?? patient.flaggedByUser?.name} ·{' '}
+                        by {latestFlag?.flaggedByUser?.name ?? patient.flaggedByUser?.name} -{' '}
                         {timeAgo((latestFlag?.createdAt ?? patient.flaggedAt?.toString()) || "")}
                       </p>
                       {flagTotalCount > 1 && (
@@ -5261,7 +5261,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         <Flag className="w-5 h-5 text-red-500" /> Flag History
                       </h4>
                       <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                        {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} · {flagStageCount} on this stage
+                        {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} | {flagStageCount} on this stage
                       </span>
                     </div>
                     <div className="space-y-3">
@@ -5283,7 +5283,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                   ? "bg-emerald-100 text-emerald-700"
                                   : "bg-red-100 text-red-600",
                               )}>
-                                {flag.type === "positive" ? "✅ Positive" : "⚠️ Alert"}
+                                {flag.type === "positive" ? "Positive" : "Alert"}
                               </span>
                               <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
                                 {new Date(flag.createdAt).toLocaleString()}
@@ -5295,12 +5295,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                 by <span className="font-semibold text-gray-700">
                                   {flag.flaggedByUser?.name ?? "Unknown"}
                                 </span>
-                                {stageLabels[flag.stage] ? ` · ${stageLabels[flag.stage]}` : ""}
+                                {stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}
                               </span>
                               {flag.clearedAt ? (
                                 <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">
-                                  ✓ Cleared by {flag.clearedByUser?.name ?? "Unknown"}
-                                  {flag.clearedReason ? ` — ${flag.clearedReason}` : ""}
+                                  Cleared by {flag.clearedByUser?.name ?? "Unknown"}
+                                  {flag.clearedReason ? ` - ${flag.clearedReason}` : ""}
                                 </span>
                               ) : (
                                 <span className="px-2 py-0.5 bg-red-100 text-red-600 font-semibold rounded-full whitespace-nowrap">
@@ -5328,7 +5328,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         <span className="text-gray-400 whitespace-nowrap font-medium">{new Date(log.createdAt).toLocaleDateString()}</span>
                         <div>
                           <span className="font-semibold text-gray-700">{log.author}</span>
-                          <span className="text-gray-600 ml-1">· {log.message}</span>
+                          <span className="text-gray-600 ml-1">- {log.message}</span>
                         </div>
                       </div>
                     )) : <p className="text-sm text-gray-400 italic">No activity yet</p>}
@@ -5365,12 +5365,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="flagType" value="positive" checked={newFlagType === "positive"}
                         onChange={e => setNewFlagType(e.target.value as "positive"|"negative")} className="w-4 h-4 accent-emerald-600" />
-                      <span className="text-sm font-medium">✅ Positive Note</span>
+                      <span className="text-sm font-medium">Positive Note</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="flagType" value="negative" checked={newFlagType === "negative"}
                         onChange={e => setNewFlagType(e.target.value as "positive"|"negative")} className="w-4 h-4 accent-red-600" />
-                      <span className="text-sm font-medium">⚠️ Alert/Issue</span>
+                      <span className="text-sm font-medium">Alert/Issue</span>
                     </label>
                   </div>
                 </div>

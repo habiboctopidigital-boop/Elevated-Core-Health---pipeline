@@ -185,7 +185,7 @@ export function KanbanBoard({
       {/* Stale-data banner — a background refetch failed but we're still showing the last good board */}
       {error && patients && (
         <div className="mb-3 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
-          Couldn&apos;t refresh the board just now — showing the last loaded data. It&apos;ll retry automatically.
+          Couldn&apos;t refresh the board just now - showing the last loaded data. It&apos;ll retry automatically.
         </div>
       )}
 

@@ -148,7 +148,7 @@ export const importService = {
 
 					if (!name && !email && !phone) {
 						fail++;
-						errors.push({ row: i + 1, message: "Row has no name, email or phone — skipped" });
+						errors.push({ row: i + 1, message: "Row has no name, email or phone - skipped" });
 						continue;
 					}
 

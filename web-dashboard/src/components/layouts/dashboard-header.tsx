@@ -15,6 +15,11 @@ import {
   Moon,
   Sun,
   ChevronDown,
+  Flag,
+  Clock,
+  UserPlus,
+  CheckCircle2,
+  Info,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -55,19 +60,20 @@ export function DashboardHeader() {
   }
 
   const getNotificationIcon = (type: string) => {
+    const className = "w-4 h-4"
     switch (type) {
       case "flag":
-        return "🚩"
+        return <Flag className={className} />
       case "stale":
-        return "⏱️"
+        return <Clock className={className} />
       case "assignment":
-        return "👤"
+        return <UserPlus className={className} />
       case "onboarding":
-        return "➕"
+        return <User className={className} />
       case "success":
-        return "✅"
+        return <CheckCircle2 className={className} />
       default:
-        return "ℹ️"
+        return <Info className={className} />
     }
   }
 
@@ -152,7 +158,7 @@ export function DashboardHeader() {
                         )}
                       >
                         <div className="flex gap-3">
-                          <span className="text-lg flex-shrink-0">
+                          <span className="flex-shrink-0 text-[#036638] mt-0.5">
                             {getNotificationIcon(notif.type)}
                           </span>
                           <div className="flex-1 min-w-0">

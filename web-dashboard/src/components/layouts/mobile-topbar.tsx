@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Menu, User } from "lucide-react"
+import { Bell, LogOut, Menu, User, Flag, Clock, UserPlus, CheckCircle2, Info } from "lucide-react"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { ROUTES } from "@/constants"
@@ -13,19 +13,20 @@ interface MobileTopbarProps {
 }
 
 function getNotificationIcon(type: string) {
+  const className = "w-4 h-4"
   switch (type) {
     case "flag":
-      return "🚩"
+      return <Flag className={className} />
     case "stale":
-      return "⏱️"
+      return <Clock className={className} />
     case "assignment":
-      return "👤"
+      return <UserPlus className={className} />
     case "onboarding":
-      return "➕"
+      return <User className={className} />
     case "success":
-      return "✅"
+      return <CheckCircle2 className={className} />
     default:
-      return "ℹ️"
+      return <Info className={className} />
   }
 }
 
@@ -122,7 +123,7 @@ export function MobileTopbar({ onMenuClick }: MobileTopbarProps) {
                     )}
                   >
                     <div className="flex gap-3">
-                      <span className="text-base shrink-0">{getNotificationIcon(notif.type)}</span>
+                      <span className="shrink-0 text-[#036638] mt-0.5">{getNotificationIcon(notif.type)}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-[#1A1B1E] font-medium break-words">
                           {notif.message}

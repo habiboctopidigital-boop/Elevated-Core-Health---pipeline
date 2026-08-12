@@ -91,7 +91,7 @@ type SendEmailParams = {
 
 async function sendResend(params: SendEmailParams): Promise<void> {
 	if (!env.RESEND_API_KEY) {
-		logger.warn({ to: params.to, subject: params.subject }, "RESEND_API_KEY not set — skipping email");
+		logger.warn({ to: params.to, subject: params.subject }, "RESEND_API_KEY not set - skipping email");
 		return;
 	}
 
@@ -213,7 +213,7 @@ ${buttonHtml(resetUrl, "Reset Password")}
 </p>
 `);
 
-		await sendResend({ to: email, subject: "Password Reset — Elevated Core Health", html });
+		await sendResend({ to: email, subject: "Password Reset - Elevated Core Health", html });
 	},
 
 	/**

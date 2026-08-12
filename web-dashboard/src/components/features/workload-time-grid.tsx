@@ -253,7 +253,7 @@ function EventCard({
   const { patient } = event
   const time = format(event.start, "h:mm a")
   const assignee = patient.assignedUser?.name ?? "Unassigned"
-  const tooltip = `${patient.name} — ${time} — ${assignee}`
+  const tooltip = `${patient.name} - ${time} - ${assignee}`
 
   return (
     <button

@@ -361,7 +361,7 @@ export function WorkloadCalendar() {
     <div className="space-y-4">
       {isError && patients && (
         <div className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
-          Couldn&apos;t refresh the calendar just now — showing the last loaded data. It&apos;ll retry automatically.
+          Couldn&apos;t refresh the calendar just now - showing the last loaded data. It&apos;ll retry automatically.
         </div>
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
