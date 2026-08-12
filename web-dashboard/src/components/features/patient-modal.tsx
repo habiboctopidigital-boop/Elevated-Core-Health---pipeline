@@ -4519,9 +4519,43 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
         {isLoading || !patient ? (
           <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
             {isLoading ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-                <p className="text-sm font-semibold text-gray-700">Loading patient details...</p>
+              <div className="flex flex-col items-center gap-5">
+                {/* Premium logo loader — ECH logo inside a spinning gradient
+                    ring with a soft pulsing glow (works on the white modal). */}
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+                  {/* Spinning gradient ring */}
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#65BD6C] border-r-[#036638] animate-spin" />
+                  {/* Soft pulsing glow behind the logo */}
+                  <div className="absolute inset-2 rounded-full bg-gradient-to-br from-[#EBF7EC] to-[#036638]/10 blur-md animate-pulse" />
+                  {/* Subtle inner ring */}
+                  <div className="absolute inset-3 rounded-full border border-[#65BD6C]/30" />
+                  {/* Logo */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/logo.png"
+                      alt="Elevated Core Health"
+                      className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
+                    />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-[#1A1B1E]">Loading patient details...</p>
+                  <p className="text-[11px] text-[#6B7280] mt-1">
+                    Elevated <span className="text-[#036638] font-semibold">Core Health</span>
+                  </p>
+                </div>
+                {/* Loading dots */}
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-[#65BD6C] rounded-full animate-bounce" />
+                  <span
+                    className="w-1.5 h-1.5 bg-[#65BD6C] rounded-full animate-bounce"
+                    style={{ animationDelay: "0.15s" }}
+                  />
+                  <span
+                    className="w-1.5 h-1.5 bg-[#65BD6C] rounded-full animate-bounce"
+                    style={{ animationDelay: "0.3s" }}
+                  />
+                </div>
               </div>
             ) : (
               <p className="text-sm text-gray-500">Patient not found</p>
