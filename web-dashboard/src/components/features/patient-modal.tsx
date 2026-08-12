@@ -4139,7 +4139,6 @@ import {
   useAssignPatient,
   useChecklistItems,
   useListVas,
-  useCheckEligibility,
   useUpdatePatient,
   useLockPatient,
   useUnlockPatient,
@@ -4149,7 +4148,8 @@ import {
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { SelectOrOther } from "@/components/shared/select-or-other"
-import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
+import { EligibilityCheckDialog } from "./eligibility-check-dialog"
+import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS, VOB_LABELS } from "@/lib/patient-options"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -4245,21 +4245,6 @@ function getInitials(name: string | null | undefined): string {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase()
 }
 
-const VOB_LABELS: Array<[string, string]> = [
-  ["coverage", "Coverage"],
-  ["payer", "Payer"],
-  ["memberId", "Member ID"],
-  ["groupNumber", "Group Number"],
-  ["copay", "Copay"],
-  ["coinsurance", "Coinsurance"],
-  ["deductible", "Deductible"],
-  ["deductibleMet", "Deductible Met"],
-  ["outOfPocketMax", "Out-of-Pocket Max"],
-  ["authorizationRequired", "Authorization"],
-  ["visitsCoveredPerYear", "Visits / Year"],
-  ["checkDate", "Checked"],
-]
-
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
   const isAdmin = user?.role === "admin"
@@ -4333,7 +4318,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [showCancelInput, setShowCancelInput] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState(false)
   const [newAppointmentDatetime, setNewAppointmentDatetime] = useState("")
-  const checkEligibility = useCheckEligibility()
+  const [showEligibilityCheck, setShowEligibilityCheck] = useState(false)
   const updateAppointment = useUpdateAppointment()
 
   const [bulkPending, setBulkPending] = useState(false)
@@ -4388,13 +4373,15 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open && !assigning) {
+      // Don't close the whole modal when Escape is used inside a child dialog
+      // (e.g. the eligibility check) — let that dialog handle its own Escape.
+      if (e.key === "Escape" && open && !assigning && !showEligibilityCheck) {
         onClose()
       }
     }
     window.addEventListener("keydown", handleEscape)
     return () => window.removeEventListener("keydown", handleEscape)
-  }, [open, onClose, assigning])
+  }, [open, onClose, assigning, showEligibilityCheck])
 
   const handleSaveNotes = async () => {
     if (!patient) return
@@ -4429,15 +4416,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const handleClaim = async () => {
     if (!patient || !user) return
     await claimPatient.mutateAsync({ id: patient.id, userId: user.id })
-  }
-
-  const handleCheckEligibility = async () => {
-    if (!patient) return
-    await checkEligibility.mutateAsync({
-      id: patient.id,
-      paymentMethod: paymentMethod.trim() || null,
-      insuranceProvider: insuranceProvider.trim() || null,
-    })
   }
 
   const handleSaveContact = async () => {
@@ -4551,12 +4529,23 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
           </div>
         ) : (
           <>
-            {/* Premium Green Header */}
-            <div className="relative bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-700 px-5 sm:px-7 py-6 sm:py-8 flex items-start justify-between gap-3 overflow-hidden shadow-lg">
-              {/* Decorative blobs */}
-              <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-emerald-400/20 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute top-0 right-0 w-full h-full opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/40 via-transparent to-transparent pointer-events-none" />
+            {/* Premium Green Header.
+                `shrink-0` is load-bearing: this is a flex item of a
+                `max-h-[92vh]` column, so without it the flexbox algorithm
+                compresses the header to make room for the long scrolling body
+                — which is what was slicing the badges and the close button off
+                at the bottom edge. */}
+            <div className="relative shrink-0 bg-gradient-to-br min-h-[230px] max-h-fit flex flex-col gap-y-5 from-emerald-700 via-emerald-600 to-teal-700 px-5 sm:px-7 py-6 sm:py-8  gap-3 shadow-lg">
+              {/* Decorative blobs get their own clipped layer. The header
+                  itself must NOT be `overflow-hidden` — that's what turned any
+                  compression into visibly chopped-off content instead of the
+                  header simply growing to fit. */}
+            <div className="flex items-start justify-between">
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-emerald-400/20 rounded-full blur-2xl" />
+                <div className="absolute top-0 right-0 w-full h-full opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/40 via-transparent to-transparent" />
+              </div>
 
               <div className="relative z-10 flex-1 min-w-0 flex items-start gap-3 sm:gap-4">
                 {/* Patient avatar. The remote initials avatar is only a nicety —
@@ -4668,10 +4657,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300">
-              <div className="p-4 sm:p-6 space-y-5">
-                {/* Quick Actions – colorful cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Appointment Card */}
                   <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border border-blue-100 p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-2">
@@ -4726,24 +4712,32 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     )}
                   </div>
 
-                  {/* Eligibility Card */}
+                  {/* Eligibility Card — shows a badge for the current status and
+                      opens the eligibility-check dialog (demo dummy fields) via
+                      the Check Eligibility button. */}
                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100 p-4 shadow-sm hover:shadow-md transition-shadow">
-                    <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2">Eligibility</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Eligibility</h4>
+                      {patient.eligibilityStatus === "eligible" && patient.eligibilityCheckedAt && (
+                        <span className="text-[10px] font-medium text-emerald-600/70">
+                          Checked {timeAgo(patient.eligibilityCheckedAt)}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className={cn(
-                        "text-sm font-semibold",
-                        patient.eligibilityStatus === "eligible" ? "text-emerald-700" :
-                        patient.eligibilityStatus === "not_eligible" ? "text-red-600" : "text-gray-500"
+                        "px-2.5 py-1 text-xs font-bold rounded-full border shadow-sm shrink-0",
+                        patient.eligibilityStatus === "eligible"
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                          : "bg-red-100 text-red-700 border-red-200",
                       )}>
-                        {patient.eligibilityStatus === "eligible" ? "Eligible" :
-                         patient.eligibilityStatus === "not_eligible" ? "Not Eligible" : "Not Checked"}
+                        {patient.eligibilityStatus === "eligible" ? "Eligibility" : "Not Eligibility"}
                       </span>
                       <button
-                        onClick={handleCheckEligibility}
-                        disabled={checkEligibility.isPending}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 shadow transition-colors shrink-0"
+                        onClick={() => setShowEligibilityCheck(true)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow transition-colors shrink-0"
                       >
-                        {checkEligibility.isPending ? "Checking..." : "Check"}
+                        Check Eligibility
                       </button>
                     </div>
                   </div>
@@ -4785,6 +4779,19 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     )}
                   </div>
                 </div>
+
+
+              
+            </div>
+
+            {/* `min-h-0` lets this pane actually shrink and scroll. Without it
+                a flex item's automatic minimum size is its content height, so
+                the body refused to shrink and the overflow was taken out of
+                the header instead. */}
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300">
+              <div className="p-4 sm:p-6 space-y-5">
+                {/* Quick Actions – colorful cards */}
+                
 
                 {/* Colorful Stage Pipeline */}
                 <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
@@ -5241,6 +5248,15 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Eligibility Check dialog (demo dummy fields) */}
+        {patient && (
+          <EligibilityCheckDialog
+            patient={patient}
+            open={showEligibilityCheck}
+            onClose={() => setShowEligibilityCheck(false)}
+          />
         )}
       </div>
     </div>

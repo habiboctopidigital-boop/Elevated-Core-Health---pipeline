@@ -122,7 +122,8 @@ export function AddPatientDialog() {
       // Merge the server-created patient straight into every cached patients
       // list synchronously, so the board updates instantly and never renders
       // an empty/transitional state while waiting on a background refetch.
-      const cachedPatientLists = queryClient.getQueriesData<Patient[]>({
+ 
+       const cachedPatientLists = queryClient.getQueriesData<Patient[]>({
         queryKey: QUERY_KEYS.PATIENTS.ALL,
       })
       for (const [key, old] of cachedPatientLists) {

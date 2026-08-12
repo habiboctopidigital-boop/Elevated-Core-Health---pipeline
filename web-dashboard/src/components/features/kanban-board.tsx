@@ -4,9 +4,10 @@ import { useState, useCallback, useRef } from "react"
 import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
+import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { useStageMeta } from "@/hooks/query/useStages"
 import type { Patient, PatientStage } from "@/types"
-import { Loader2, GripVertical } from "lucide-react"
+import { Loader2, GripVertical, Filter } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useMemo } from "react"
@@ -27,6 +28,8 @@ export function KanbanBoard({
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [quickJumpStage, setQuickJumpStage] = useState<string | null>(null)
+  const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
+  const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const pendingMoves = useRef<Set<string>>(new Set())
 
@@ -42,15 +45,32 @@ export function KanbanBoard({
     })
   }, [patients, searchQuery, stageFilter])
 
-  const groupedPatients =
-    filteredPatients.reduce(
+  const groupedPatients = useMemo(() => {
+    const result = filteredPatients.reduce(
       (acc, p) => {
         if (!acc[p.stage]) acc[p.stage] = []
         acc[p.stage].push(p)
         return acc
       },
       {} as Record<string, Patient[]>,
-    ) || {}
+    )
+
+    // Apply per-stage filters if they exist (mirrors the admin board). The
+    // snapshot is intersected with the live stage patients so a card that has
+    // since been moved/deleted (e.g. via drag-and-drop) can't ghost in the
+    // filtered column and render in two stages at once.
+    if (Object.keys(stageFilters).length > 0) {
+      Object.keys(result).forEach((stage) => {
+        if (stageFilters[stage]) {
+          result[stage] = stageFilters[stage].filter((p) =>
+            filteredPatients.some((live) => live.id === p.id),
+          )
+        }
+      })
+    }
+
+    return result
+  }, [filteredPatients, stageFilters])
 
   const handleDragStart = useCallback((e: React.DragEvent, patientId: string) => {
     setDraggingId(patientId)
@@ -214,7 +234,7 @@ export function KanbanBoard({
                     : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",
                 )}
               >
-                <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50">
+                <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50 relative">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-[#036638] truncate">
@@ -224,10 +244,40 @@ export function KanbanBoard({
                         {stageHints[stage]}
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center shrink-0 border border-[#E5E7EB]">
-                      {stagePatients.length}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setOpenStageFilterPopup(openStageFilterPopup === stage ? null : stage)}
+                        className={cn(
+                          "p-1.5 rounded-lg transition-all cursor-pointer",
+                          openStageFilterPopup === stage
+                            ? "bg-[#036638]/15 text-[#036638]"
+                            : "text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280]"
+                        )}
+                        title="Filter and sort"
+                      >
+                        <Filter className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center border border-[#E5E7EB]">
+                        {stagePatients.length}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Stage Filter Popup */}
+                  <StageFilterPopup
+                    stage={stageLabels[stage]}
+                    patients={filteredPatients.filter(p => p.stage === stage)}
+                    onFilterChange={(filtered) => {
+                      setStageFilters(prev => ({
+                        ...prev,
+                        [stage]: filtered
+                      }))
+                    }}
+                    isOpen={openStageFilterPopup === stage}
+                    onOpenChange={(open) => {
+                      if (!open) setOpenStageFilterPopup(null)
+                    }}
+                  />
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
