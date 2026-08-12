@@ -337,3 +337,130 @@
 button{
   cursor: pointer;
 }
+
+/* ============================================================
+   Premium Toasts (sonner) - Elevated Core Health branding
+   ============================================================ */
+
+/* Toast card: frosted glass, brand-green tinted shadow, rounded */
+.ech-toast {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px !important;
+  border: 1px solid rgba(3, 102, 56, 0.10) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 24px -6px rgba(3, 102, 56, 0.14),
+    0 20px 48px -12px rgba(3, 102, 56, 0.18) !important;
+  padding: 14px 16px 14px 18px !important;
+  gap: 12px !important;
+  align-items: flex-start !important;
+}
+
+/* Brand gradient accent bar on the left edge, colored per type.
+   Higher specificity than sonner's own [data-swiping=true]::before /
+   [data-removed=true]::before removal overlays so the bar never glitches
+   during the dismiss animation. */
+[data-sonner-toast].ech-toast::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #65bd6c, #036638);
+}
+[data-sonner-toast].ech-toast-success::before {
+  background: linear-gradient(180deg, #65bd6c, #036638);
+}
+[data-sonner-toast].ech-toast-error::before {
+  background: linear-gradient(180deg, #f87171, #dc2626);
+}
+[data-sonner-toast].ech-toast-warning::before {
+  background: linear-gradient(180deg, #fbbf24, #d97706);
+}
+[data-sonner-toast].ech-toast-info::before {
+  background: linear-gradient(180deg, #34d399, #0d9488);
+}
+[data-sonner-toast].ech-toast-loading::before {
+  background: linear-gradient(180deg, #65bd6c, #036638);
+}
+
+/* Icon: brand-green dot; red/amber only for alert types */
+.ech-toast-icon {
+  color: #036638 !important;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ech-toast-error .ech-toast-icon {
+  color: #dc2626 !important;
+}
+.ech-toast-warning .ech-toast-icon {
+  color: #d97706 !important;
+}
+.ech-toast-info .ech-toast-icon {
+  color: #0d9488 !important;
+}
+
+/* Title & description */
+.ech-toast-title {
+  font-family: var(--font-space), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #1a1b1e;
+  letter-spacing: -0.01em;
+}
+.ech-toast-description {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #6b7280;
+  margin-top: 1px;
+}
+
+/* Close button: soft green circle that fills on hover */
+.ech-toast-close {
+  border-radius: 9999px !important;
+  background: rgba(3, 102, 56, 0.08) !important;
+  border: 1px solid rgba(3, 102, 56, 0.15) !important;
+  color: #036638 !important;
+  transition: all 0.2s ease;
+}
+.ech-toast-close:hover {
+  background: #036638 !important;
+  border-color: #036638 !important;
+  color: #ffffff !important;
+  transform: scale(1.05);
+}
+
+/* Action / cancel buttons keep the green gradient action style.
+   Sonner renders the action button with data-action and the cancel button
+   with data-cancel (both carry data-button), so target each explicitly. */
+.ech-toast [data-button] {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+.ech-toast [data-button][data-action] {
+  background: linear-gradient(135deg, #036638, #02503a) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(3, 102, 56, 0.28);
+}
+.ech-toast [data-button][data-action]:hover {
+  filter: brightness(1.1);
+}
+.ech-toast [data-button][data-cancel] {
+  background: rgba(3, 102, 56, 0.08) !important;
+  color: #036638 !important;
+  box-shadow: none !important;
+}

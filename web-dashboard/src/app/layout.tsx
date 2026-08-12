@@ -13,6 +13,14 @@ import QueryProvider from "@/providers/QueryProvider"
 import ThemeProvider from "@/providers/ThemeProvider"
 import { NotificationsProvider } from "@/providers/NotificationsProvider"
 import { Toaster } from "sonner"
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Info,
+  Loader2,
+  X,
+} from "lucide-react"
 
 export const metadata = {
   title: "Elevated Core Health - Patient Pipeline Portal",
@@ -33,21 +41,35 @@ export default function RootLayout({
               <NotificationsProvider>
                 {children}
               </NotificationsProvider>
-              <Toaster 
-                position="top-right" 
+              <Toaster
+                position="top-right"
+                gap={12}
+                offset={20}
+                visibleToasts={4}
+                closeButton
+                icons={{
+                  success: <CheckCircle2 className="w-5 h-5" strokeWidth={2.25} />,
+                  error: <XCircle className="w-5 h-5" strokeWidth={2.25} />,
+                  warning: <AlertTriangle className="w-5 h-5" strokeWidth={2.25} />,
+                  info: <Info className="w-5 h-5" strokeWidth={2.25} />,
+                  loading: <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.25} />,
+                  close: <X className="w-3.5 h-3.5" strokeWidth={2.5} />,
+                }}
                 toastOptions={{
-                  className: "group toast group-[.toaster]:bg-white/80 group-[.toaster]:backdrop-blur-xl group-[.toaster]:border-white/40 group-[.toaster]:shadow-[0_8px_30px_rgb(0,0,0,0.12)] group-[.toaster]:rounded-2xl border border-gray-200/50",
+                  duration: 4000,
                   classNames: {
-                    title: "font-space font-bold text-[15px]",
-                    description: "font-sans text-sm text-gray-600",
-                    actionButton: "group-[.toast]:bg-[#036638] group-[.toast]:text-white group-[.toast]:rounded-lg group-[.toast]:font-semibold",
-                    cancelButton: "group-[.toast]:bg-gray-100 group-[.toast]:text-gray-700 group-[.toast]:rounded-lg",
-                    success: "group-[.toaster]:bg-emerald-50/90 group-[.toaster]:border-emerald-200/60 group-[.toaster]:text-emerald-950",
-                    error: "group-[.toaster]:bg-rose-50/90 group-[.toaster]:border-rose-200/60 group-[.toaster]:text-rose-950",
-                    warning: "group-[.toaster]:bg-amber-50/90 group-[.toaster]:border-amber-200/60 group-[.toaster]:text-amber-950",
-                    info: "group-[.toaster]:bg-blue-50/90 group-[.toaster]:border-blue-200/60 group-[.toaster]:text-blue-950",
-                  }
-                }} 
+                    toast: "ech-toast",
+                    title: "ech-toast-title",
+                    description: "ech-toast-description",
+                    closeButton: "ech-toast-close",
+                    icon: "ech-toast-icon",
+                    success: "ech-toast-success",
+                    error: "ech-toast-error",
+                    warning: "ech-toast-warning",
+                    info: "ech-toast-info",
+                    loading: "ech-toast-loading",
+                  },
+                }}
               />
             </ThemeProvider>
           </QueryProvider>
