@@ -4150,7 +4150,8 @@ import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { SelectOrOther } from "@/components/shared/select-or-other"
 import { EligibilityCheckDialog } from "./eligibility-check-dialog"
 import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS, VOB_LABELS } from "@/lib/patient-options"
-import { cn } from "@/lib/utils"
+import { getStageColor } from "@/lib/stage-colors"
+import { cn, getInitials } from "@/lib/utils"
 import { toast } from "sonner"
 
 interface PatientModalProps {
@@ -4236,13 +4237,6 @@ function getAvatarUrl(patient: Patient): string {
   if (existing) return existing
   const seed = encodeURIComponent(patient.name?.trim() || "Patient")
   return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=059669,0d9488,047857,10b981&fontFamily=Helvetica&fontWeight=600`
-}
-
-/** Local initials fallback for when the remote avatar image can't be loaded. */
-function getInitials(name: string | null | undefined): string {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return "?"
-  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase()
 }
 
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
@@ -4506,6 +4500,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     !(stageByKey.get(patient.stage)?.isFinal ?? false) &&
     (Date.now() - new Date(patient.updatedAt).getTime()) / (1000 * 60 * 60) >
       STALE_HOURS
+
+  // Current position in the pipeline (drives the timeline + progress header)
+  const currentStageIdx = patient ? stageOrder.indexOf(patient.stage) : -1
 
   if (!open) return null
 
@@ -4827,51 +4824,80 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 {/* Quick Actions – colorful cards */}
                 
 
-                {/* Colorful Stage Pipeline */}
-                <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
-                  <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Pipeline Stage
-                  </h4>
-                  {/* `overflow-x-auto` also clips vertically, which sliced the
-                      current step's `ring-2` off at the top and bottom — the
-                      inner padding gives the ring room to draw. */}
-                  <div className="flex w-full overflow-x-auto gap-1 p-1">
+                {/* Colorful Stage Pipeline — connected timeline with per-stage colors */}
+                <div className="bg-gradient-to-br from-white to-emerald-50/40 rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Pipeline Stage
+                    </h4>
+                    <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-[#036638]/10 text-[#036638] border border-[#036638]/20 whitespace-nowrap">
+                      {currentStageIdx >= 0
+                        ? `Stage ${currentStageIdx + 1} of ${stageOrder.length}`
+                        : stageLabels[patient.stage]}
+                    </span>
+                  </div>
+
+                  {/* Journey progress bar */}
+                  <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-4">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 transition-all duration-500 rounded-full"
+                      style={{
+                        width: currentStageIdx >= 0
+                          ? `${((currentStageIdx + 1) / stageOrder.length) * 100}%`
+                          : "0%",
+                      }}
+                    />
+                  </div>
+
+                  {/* `overflow-x-auto` also clips vertically, which slices the
+                      current step's ring off at the top and bottom — the inner
+                      padding gives the ring room to draw. */}
+                  <div className="flex w-full overflow-x-auto gap-1 p-1.5 pt-2">
                     {stageOrder.map((stage, idx) => {
-                      const currentIdx = stageOrder.indexOf(patient.stage)
-                      const isComplete = idx < currentIdx
+                      const color = getStageColor(stage)
+                      const isComplete = idx < currentStageIdx
                       const isCurrent = stage === patient.stage
-                      const isNext = idx === currentIdx + 1
+                      const isNext = idx === currentStageIdx + 1
                       const isClickable = isCurrent ? false : isComplete ? true : isNext ? allComplete : false
                       return (
-                        <button
-                          key={stage}
-                          onClick={() => isClickable && handleMoveStage(stage)}
-                          disabled={!isClickable}
-                          className={cn(
-                            "flex-1 min-w-[64px] flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl transition-all",
-                            isCurrent ? "bg-emerald-100 ring-2 ring-emerald-400 shadow-md" : "hover:bg-gray-50",
-                            // The current stage is non-clickable by design, but it must stay
-                            // the most prominent step — only dim the *other* unreachable ones.
-                            isCurrent && "cursor-default",
-                            !isClickable && !isCurrent && "opacity-50 cursor-not-allowed"
+                        <div key={stage} className="relative flex-1 min-w-[64px] flex flex-col items-center">
+                          {/* Connector into this step — fills once the step is reached */}
+                          {idx > 0 && (
+                            <div
+                              className={cn(
+                                "absolute top-[22px] left-[-50%] right-1/2 h-[3px] rounded-full transition-colors duration-500",
+                                idx <= currentStageIdx ? color.connector : "bg-gray-200",
+                              )}
+                            />
                           )}
-                        >
-                          <span className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 shadow-sm",
-                            isCurrent && "bg-emerald-600 border-emerald-600 text-white",
-                            isComplete && !isCurrent && "bg-emerald-400 border-emerald-400 text-white",
-                            !isCurrent && !isComplete && "bg-white border-gray-200 text-gray-400"
-                          )}>
-                            {isComplete ? <Check className="w-4 h-4" /> : idx + 1}
-                          </span>
-                          <span className={cn(
-                            "text-[10px] font-semibold text-center leading-tight",
-                            isCurrent ? "text-emerald-800" : "text-gray-500"
-                          )}>
-                            {stageLabels[stage]}
-                          </span>
-                        </button>
+                          <button
+                            onClick={() => isClickable && handleMoveStage(stage)}
+                            disabled={!isClickable}
+                            className={cn(
+                              "relative w-full flex flex-col items-center gap-1.5 py-1 px-1 rounded-xl transition-all",
+                              // The current stage is non-clickable by design, but it must stay
+                              // the most prominent step — only dim the *other* unreachable ones.
+                              isCurrent && "cursor-default",
+                              !isClickable && !isCurrent && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            <span className={cn(
+                              "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300",
+                              isCurrent && cn(color.circle, color.ring, "text-white scale-110"),
+                              isComplete && !isCurrent && cn(color.circle, "text-white"),
+                              !isCurrent && !isComplete && "bg-white border-gray-200 text-gray-400"
+                            )}>
+                              {isComplete ? <Check className="w-4 h-4" /> : idx + 1}
+                            </span>
+                            <span className={cn(
+                              "text-[10px] font-semibold text-center leading-tight",
+                              isCurrent ? color.label : "text-gray-500"
+                            )}>
+                              {stageLabels[stage]}
+                            </span>
+                          </button>
+                        </div>
                       )
                     })}
                   </div>

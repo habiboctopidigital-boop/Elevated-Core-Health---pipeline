@@ -1,8 +1,22 @@
 "use client"
 
 import type { Patient, PatientStage } from "@/types"
-import { AlertTriangle, Flag, Clock, ArrowLeft, ArrowRight, CheckSquare, Square, Lock, Phone, CheckCircle, XCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
+import {
+  AlertTriangle,
+  Flag,
+  Clock,
+  ArrowLeft,
+  ArrowRight,
+  CheckSquare,
+  Square,
+  Lock,
+  Phone,
+  CheckCircle,
+  XCircle,
+  ShieldCheck,
+} from "lucide-react"
+import { cn, getInitials } from "@/lib/utils"
+import { getStageColor, getVaColor } from "@/lib/stage-colors"
 import { STALE_HOURS } from "@/constants"
 import { useChecklistItems, useListVas, useAssignPatient } from "@/hooks/query/usePatients"
 import { useStageMeta } from "@/hooks/query/useStages"
@@ -33,6 +47,11 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`
 }
 
+// Attention-state accent bars override the stage color so flagged/stale cards
+// are unmistakable at a glance.
+const FLAG_BAR = "bg-gradient-to-r from-red-400 to-rose-500"
+const STALE_BAR = "bg-gradient-to-r from-amber-400 to-amber-500"
+
 export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragStart, onDragEnd }: PatientCardProps) {
   const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
   const isFinalStage = stageByKey.get(patient.stage)?.isFinal ?? false
@@ -47,6 +66,10 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   // Phase 3 shared editing: board is open - any VA or admin can move any patient.
   const isAdmin = currentUser?.role === "admin"
   const canMoveStage = true
+
+  const stageColor = getStageColor(patient.stage)
+  const accentBar = patient.isFlagged ? FLAG_BAR : stale ? STALE_BAR : stageColor.bar
+  const avatarColor = patient.isFlagged ? FLAG_BAR : stale ? STALE_BAR : stageColor.avatar
 
   // - Checklist progress for this stage (only REQUIRED items gate moves) -
   const stageDefs = checklistDefs?.filter((d) => d.stage === patient.stage) || []
@@ -64,36 +87,52 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={cn(
-        "bg-white rounded-lg border p-3.5 transition-all duration-150 relative",
+        "relative bg-white rounded-lg border p-3.5 transition-all duration-150 overflow-hidden",
         canMoveStage ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
-        "hover:shadow-md hover:border-[#65BD6C]/40 hover:-translate-y-0.5",
+        "hover:shadow-md hover:shadow-emerald-500/15 hover:-translate-y-0.5",
         "active:shadow-sm active:translate-y-0",
-        stale
+        stale && !patient.isFlagged
           ? "border-amber-300 shadow-[0_0_0_1px_#FDE68A]"
           : "border-[#E5E7EB]",
-        patient.isFlagged && "bg-[#F0F9F5] border-[#036638] border-l-[3px] shadow-[0_0_0_1px_#036638]/20",
+        patient.isFlagged && "bg-red-50/60 border-red-200 border-l-[3px] border-l-red-400 shadow-[0_0_0_1px_rgba(248,113,113,0.25)]",
         isDragging && "opacity-50 scale-95 shadow-lg rotate-2",
       )}
     >
-      {/* - Header: Name + badges - */}
+      {/* - Colored top accent bar (stage color; red/amber for attention states) - */}
+      <div className={cn("absolute top-0 left-0 right-0 h-[3px] pointer-events-none", accentBar)} />
+
+      {/* - Header: avatar + name + badges - */}
       <div className="flex items-start justify-between mb-2 gap-2">
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <h1 className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate">
-              {patient.name}
-            </h1>
-            {/* {patient.bookingPlatform && (
-              <span className="text-[9px] font-medium text-[#6B7280] bg-[#F3F4F6] px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                {patient.bookingPlatform}
-              </span>
-            )} */}
-            <span className="text-[9px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
-              {patient.source === "webhook" ? "Web" : "Manual"}
-            </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className={cn(
+              "w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-sm",
+              avatarColor,
+            )}
+          >
+            {getInitials(patient.name)}
           </div>
-          {patient.email && (
-            <p className="text-[11px] text-[#6B7280] truncate mt-0.5">{patient.email}</p>
-          )}
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h1 className="text-sm font-semibold text-[#1A1B1E] leading-tight truncate">
+                {patient.name}
+              </h1>
+              <span className={cn(
+                "text-[9px] font-semibold px-1.5 py-0.5 rounded-full border",
+                stageColor.chipBg,
+                stageColor.chipText,
+                stageColor.chipBorder,
+              )}>
+                {stageLabels[patient.stage]}
+              </span>
+              <span className="text-[9px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full">
+                {patient.source === "webhook" ? "Web" : "Manual"}
+              </span>
+            </div>
+            {patient.email && (
+              <p className="text-[11px] text-[#6B7280] truncate mt-0.5">{patient.email}</p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {patient.isPrivate && (
@@ -110,8 +149,8 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             </span>
           )}
           {patient.isFlagged && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#036638]/10 border border-[#036638]/20 text-[9px] font-semibold text-[#036638]">
-              <Flag className="w-2.5 h-2.5" fill="#036638" />
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-[9px] font-semibold text-red-600">
+              <Flag className="w-2.5 h-2.5" fill="#EF4444" />
               Flagged
             </span>
           )}
@@ -136,10 +175,10 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
         </div>
       </div>
 
-      {/* - Info row: appointment + phone - */}
-      <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+      {/* - Info chips: appointment + phone + insurance - */}
+      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
         {patient.appointmentDatetime && (
-          <p className="text-[11px] text-[#6B7280] flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-medium text-emerald-700">
             <Clock className="w-3 h-3" />
             {new Date(patient.appointmentDatetime).toLocaleDateString("en-US", {
               month: "short",
@@ -147,21 +186,34 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
               hour: "numeric",
               minute: "2-digit",
             })}
-          </p>
+          </span>
         )}
         {patient.phone && (
-          <p className="text-[11px] text-[#6B7280] flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-200 text-[10px] font-medium text-emerald-800">
             <Phone className="w-3 h-3" />
             {patient.phone}
-          </p>
+          </span>
+        )}
+        {patient.insuranceProvider && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#EBF7EC] border border-[#65BD6C]/40 text-[10px] font-medium text-[#036638]">
+            <ShieldCheck className="w-3 h-3" />
+            {patient.insuranceProvider}
+          </span>
         )}
       </div>
 
       {/* - Assigned user - */}
       {patient.assignedUser ? (
         <div className="flex items-center gap-1.5 mb-2">
-          <div className="w-4 h-4 rounded-full bg-[#036638]/10 flex items-center justify-center">
-            <span className="text-[8px] font-bold text-[#036638]">
+          {/* VA avatar — Jude (forest) vs Amanda (bright emerald) so the two
+              VAs are instantly distinguishable. */}
+          <div
+            className={cn(
+              "w-4 h-4 rounded-full flex items-center justify-center",
+              getVaColor(patient.assignedUser.name),
+            )}
+          >
+            <span className="text-[8px] font-bold text-white">
               {patient.assignedUser.name.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -190,11 +242,18 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
               )}
               Required
             </span>
-            <span className={cn(
-              "text-[10px] font-bold",
-              allComplete ? "text-emerald-600" : "text-[#036638]"
-            )}>
-              {completedCount}/{totalCount}
+            <span className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-[#6B7280]">
+                {completedCount}/{totalCount}
+              </span>
+              <span className={cn(
+                "text-[10px] font-bold px-1.5 py-0.5 rounded-md border",
+                allComplete
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-[#EBF7EC] text-[#036638] border-[#036638]/20",
+              )}>
+                {progressPct}%
+              </span>
             </span>
           </div>
           {/* Progress bar */}
@@ -202,7 +261,9 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
-                allComplete ? "bg-emerald-500" : "bg-[#036638]"
+                allComplete
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-500"
+                  : "bg-gradient-to-r from-[#036638] to-emerald-500",
               )}
               style={{ width: `${progressPct}%` }}
             />
@@ -212,7 +273,13 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             {stageDefs.map((item) => {
               const checked = stageState[item.id] === true
               return (
-                <div key={item.id} className="flex items-center gap-1.5">
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded px-1 py-px",
+                    checked && "bg-emerald-50/60",
+                  )}
+                >
                   {checked ? (
                     <CheckSquare className="w-3 h-3 text-emerald-500 flex-shrink-0" />
                   ) : (
@@ -220,7 +287,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   )}
                   <span className={cn(
                     "text-[10px] leading-tight truncate",
-                    checked ? "text-gray-400 line-through" : "text-[#1A1B1E]"
+                    checked ? "text-gray-400 line-through" : "text-[#1A1B1E]",
                   )}>
                     {item.label}
                   </span>
@@ -257,7 +324,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   onMoveStage(patient.id, stageOrder[currentIdx - 1])
                 }}
                 className="flex items-center gap-0.5 px-2 py-1.5 sm:px-1.5 sm:py-0.5 min-h-[36px] sm:min-h-0 rounded text-[10px] font-medium
-                  text-[#6B7280] hover:bg-gray-100 hover:text-[#1A1B1E] active:bg-gray-200 transition-colors"
+                  text-[#6B7280] border border-[#E5E7EB] bg-white hover:bg-gray-50 hover:text-[#1A1B1E] active:bg-gray-100 transition-colors"
                 title={`Move back to ${stageLabels[stageOrder[currentIdx - 1]]}`}
               >
                 <ArrowLeft className="w-3 h-3" />
@@ -273,10 +340,10 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   onMoveStage(patient.id, stageOrder[currentIdx + 1])
                 }}
                 className={cn(
-                  "flex items-center gap-0.5 px-2.5 py-1.5 sm:px-2 sm:py-0.5 min-h-[36px] sm:min-h-0 rounded text-[10px] font-medium transition-colors",
+                  "flex items-center gap-0.5 px-2.5 py-1.5 sm:px-2 sm:py-0.5 min-h-[36px] sm:min-h-0 rounded text-[10px] font-semibold transition-all",
                   allComplete
-                    ? "bg-[#036638] text-white hover:bg-[#025030] active:bg-[#014a29]"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 active:from-emerald-800 active:to-teal-800 shadow-sm shadow-emerald-500/30"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed",
                 )}
                 title={
                   allComplete
