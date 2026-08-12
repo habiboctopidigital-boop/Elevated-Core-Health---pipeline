@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
-  Calendar,
   Check,
   Clock,
   Flag,
@@ -11,6 +10,7 @@ import {
   UserRound,
   Users,
   X,
+  SlidersHorizontal,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -20,6 +20,14 @@ import {
   type BoardFilters,
 } from "@/lib/board-filters"
 import type { VaUser } from "@/types"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { DateRangePicker } from "@/components/features/date-range-picker"
 
 interface BoardFilterBarProps {
   /** Applied filters — what the board actually renders with. */
@@ -40,46 +48,71 @@ const MODE_OPTIONS: Array<{
   active: string
   hover: string
 }> = [
-  { value: "all", label: "All", icon: Users, active: "bg-[#036638] text-white shadow-sm", hover: "hover:text-[#036638]" },
-  { value: "stale", label: "Stale", icon: Clock, active: "bg-amber-500 text-white shadow-sm", hover: "hover:text-amber-600" },
-  { value: "flagged", label: "Flagged", icon: Flag, active: "bg-red-500 text-white shadow-sm", hover: "hover:text-red-600" },
+  {
+    value: "all",
+    label: "All",
+    icon: Users,
+    active: "bg-gradient-to-r from-[#036638] to-emerald-600 text-white shadow-sm shadow-emerald-500/25",
+    hover: "hover:text-[#036638]",
+  },
+  {
+    value: "stale",
+    label: "Stale",
+    icon: Clock,
+    active: "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm shadow-amber-500/25",
+    hover: "hover:text-amber-600",
+  },
+  {
+    value: "flagged",
+    label: "Flagged",
+    icon: Flag,
+    active: "bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-sm shadow-red-500/25",
+    hover: "hover:text-red-600",
+  },
 ]
 
-// The delayed (Apply-gated) portion of BoardFilters — kept as a Pick so the
-// draft shape can never drift from the applied filter shape.
-type DateDraft = Pick<
-  BoardFilters,
-  "appointmentFrom" | "appointmentTo" | "createdFrom" | "createdTo" | "assignedTo"
->
+// The delayed (Apply-gated) portion of BoardFilters — only the two date ranges
+// wait for Apply now; search, status and VA apply instantly.
+type DateDraft = Pick<BoardFilters, "appointmentFrom" | "appointmentTo" | "createdFrom" | "createdTo">
 
-export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: BoardFilterBarProps) {
-  // Draft values for the delayed filters (VA + dates) — they only reach the
-  // board when "Apply" is clicked. Search and status apply instantly.
-  const [draft, setDraft] = useState<DateDraft>({
+function pickDateDraft(filters: BoardFilters): DateDraft {
+  return {
     appointmentFrom: filters.appointmentFrom,
     appointmentTo: filters.appointmentTo,
     createdFrom: filters.createdFrom,
     createdTo: filters.createdTo,
-    assignedTo: filters.assignedTo,
-  })
+  }
+}
+
+export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: BoardFilterBarProps) {
+  // Draft values for the delayed date filters — they only reach the board
+  // when "Apply" is clicked. Search, status and VA apply instantly.
+  const [draft, setDraft] = useState<DateDraft>(() => pickDateDraft(filters))
+
+  // Keep the draft in sync with externally-driven filter changes (e.g. a page
+  // level reset) — but never clobber a pending, unapplied draft.
+  useEffect(() => {
+    setDraft((prev) => {
+      const dirty =
+        prev.appointmentFrom !== filters.appointmentFrom ||
+        prev.appointmentTo !== filters.appointmentTo ||
+        prev.createdFrom !== filters.createdFrom ||
+        prev.createdTo !== filters.createdTo
+      return dirty ? prev : pickDateDraft(filters)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.appointmentFrom, filters.appointmentTo, filters.createdFrom, filters.createdTo])
 
   const patchDraft = (next: Partial<DateDraft>) => setDraft((prev) => ({ ...prev, ...next }))
 
-  const draftDirty =
-    draft.assignedTo !== filters.assignedTo ||
-    draft.appointmentFrom !== filters.appointmentFrom ||
-    draft.appointmentTo !== filters.appointmentTo ||
-    draft.createdFrom !== filters.createdFrom ||
-    draft.createdTo !== filters.createdTo
-
   const apptPending = draft.appointmentFrom !== filters.appointmentFrom || draft.appointmentTo !== filters.appointmentTo
   const createdPending = draft.createdFrom !== filters.createdFrom || draft.createdTo !== filters.createdTo
-  const vaPending = draft.assignedTo !== filters.assignedTo
+  const datesDirty = apptPending || createdPending
 
   const applyDraft = () => onChange({ ...filters, ...draft })
 
   const resetAll = () => {
-    setDraft({ appointmentFrom: "", appointmentTo: "", createdFrom: "", createdTo: "", assignedTo: "" })
+    setDraft({ appointmentFrom: "", appointmentTo: "", createdFrom: "", createdTo: "" })
     onChange({ ...EMPTY_BOARD_FILTERS })
   }
 
@@ -87,17 +120,17 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
   const showCount = total !== undefined && resultCount !== undefined
 
   return (
-    <div className="rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-3 py-2.5">
-        {/* Search — instant */}
-        <div className="relative w-full sm:w-56 sm:flex-1 sm:max-w-xs">
+    <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
+        {/* - Search — instant - */}
+        <div className="relative flex-1 min-w-[200px] max-w-[340px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] pointer-events-none" />
           <input
             type="text"
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
-            placeholder="Search by name..."
-            className="w-full pl-9 pr-8 py-2 text-sm border border-[#E5E7EB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-shadow"
+            placeholder="Search patient name..."
+            className="w-full h-10 pl-9 pr-8 text-sm border border-[#E5E7EB] rounded-xl bg-[#F8FAF9] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 focus:bg-white transition-all"
           />
           {filters.search && (
             <button
@@ -110,10 +143,10 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
           )}
         </div>
 
-        <div className="hidden lg:block h-6 w-px bg-[#E5E7EB]" />
+        <div className="hidden xl:block h-6 w-px bg-[#E5E7EB]" />
 
-        {/* Status — instant */}
-        <div className="flex items-center gap-1 rounded-lg bg-[#F3F4F6] p-1">
+        {/* - Status segmented — instant - */}
+        <div className="flex items-center gap-0.5 rounded-full bg-[#F3FAF4] border border-[#E5E7EB]/60 p-1">
           {MODE_OPTIONS.map((opt) => {
             const Icon = opt.icon
             const isActive = filters.mode === opt.value
@@ -122,7 +155,7 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
                 key={opt.value}
                 onClick={() => onChange({ ...filters, mode: opt.value })}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer whitespace-nowrap",
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer whitespace-nowrap",
                   isActive ? opt.active : cn("text-[#6B7280]", opt.hover),
                 )}
               >
@@ -133,48 +166,52 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
           })}
         </div>
 
-        {/* VA-wise filter — admin board only, applied on Apply */}
+        {/* - VA filter — admin board only, instant - */}
         {vas && (
-          <>
-            <div className="hidden lg:block h-6 w-px bg-[#E5E7EB]" />
-            <div className="relative">
-              <div className="flex items-center gap-1.5 mb-1">
-                <UserRound className="w-3 h-3 text-[#9CA3AF]" />
-                <span className={cn("text-[10px] font-bold uppercase tracking-wider", vaPending ? "text-amber-600" : "text-[#6B7280]")}>
-                  VA
-                </span>
-              </div>
-              <select
-                value={draft.assignedTo}
-                onChange={(e) => patchDraft({ assignedTo: e.target.value })}
-                className="w-36 px-2.5 py-1.5 text-xs border border-[#E5E7EB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] cursor-pointer"
+          <div className="flex items-center gap-2">
+            {/* Radix Select disallows empty-string item values, so "all" is a
+                sentinel mapped to assignedTo="" in onChange. */}
+            <Select
+              value={filters.assignedTo || "all"}
+              onValueChange={(v) =>
+                onChange({ ...filters, assignedTo: v === "all" ? "" : v })
+              }
+            >
+              <SelectTrigger
+                className="w-[150px] h-10 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25"
+                title="Filter by assigned VA"
               >
-                <option value="">All VAs</option>
+                <UserRound className="w-3.5 h-3.5 text-[#036638] shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl shadow-lg">
+                <SelectItem value="all" className="text-xs cursor-pointer">
+                  All VAs
+                </SelectItem>
                 {vas.map((va) => (
-                  <option key={va.id} value={va.id}>
+                  <SelectItem key={va.id} value={va.id} className="text-xs cursor-pointer">
                     {va.name}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-              {vaPending && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500" />}
-            </div>
-          </>
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
-        <div className="hidden lg:block h-6 w-px bg-[#E5E7EB]" />
+        <div className="hidden xl:block h-6 w-px bg-[#E5E7EB]" />
 
-        {/* Date fields — inline, applied on Apply */}
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-          <InlineDateField
-            label="Appointment Date"
+        {/* - Date ranges — Apply-gated - */}
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangePicker
+            label="Appointment"
             pending={apptPending}
             from={draft.appointmentFrom}
             to={draft.appointmentTo}
             onFrom={(v) => patchDraft({ appointmentFrom: v })}
             onTo={(v) => patchDraft({ appointmentTo: v })}
           />
-          <InlineDateField
-            label="Created Date"
+          <DateRangePicker
+            label="Created"
             pending={createdPending}
             from={draft.createdFrom}
             to={draft.createdTo}
@@ -183,84 +220,38 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
           />
         </div>
 
-        {/* Apply — commits the draft VA + date filters */}
-        {draftDirty && (
+        {/* - Apply — commits the pending date ranges only - */}
+        {datesDirty && (
           <button
             onClick={applyDraft}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#036638] text-white rounded-lg hover:bg-[#025030] shadow-sm transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 h-10 px-4 text-xs font-bold bg-gradient-to-r from-[#036638] to-emerald-600 text-white rounded-xl hover:from-[#025030] hover:to-emerald-700 shadow-sm shadow-emerald-500/30 transition-all cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
             Apply
           </button>
         )}
 
-        {/* Reset all */}
+        {/* - Reset all - */}
         {activeCount > 0 && (
           <button
             onClick={resetAll}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#6B7280] rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center gap-1.5 h-10 px-3 text-xs font-semibold text-[#6B7280] rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap"
+            title="Clear all filters"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset
-            <span className="text-[10px] font-bold bg-[#F3F4F6] rounded-full w-4 h-4 flex items-center justify-center">
+            <span className="text-[10px] font-bold bg-[#F3F4F6] rounded-full w-5 h-5 flex items-center justify-center">
               {activeCount}
             </span>
           </button>
         )}
 
         {showCount && (
-          <span className="ml-auto text-[11px] font-medium text-[#6B7280] hidden sm:inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#65BD6C]" />
-            Showing {resultCount} of {total}
+          <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] hidden sm:inline-flex whitespace-nowrap">
+            <SlidersHorizontal className="w-3 h-3 text-[#65BD6C]" />
+            Showing <span className="font-bold text-[#036638]">{resultCount}</span> of {total}
           </span>
         )}
-      </div>
-    </div>
-  )
-}
-
-function InlineDateField({
-  label,
-  pending,
-  from,
-  to,
-  onFrom,
-  onTo,
-}: {
-  label: string
-  pending: boolean
-  from: string
-  to: string
-  onFrom: (value: string) => void
-  onTo: (value: string) => void
-}) {
-  const isActive = Boolean(from || to)
-  return (
-    <div>
-      <label
-        className={cn(
-          "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors",
-          pending ? "text-amber-600" : isActive ? "text-[#036638]" : "text-[#6B7280]",
-        )}
-      >
-        <Calendar className="w-3 h-3" />
-        {label}
-        {pending && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-      </label>
-      <div className="flex items-center gap-1.5">
-        <input
-          type="date"
-          value={from}
-          onChange={(e) => onFrom(e.target.value)}
-          className="w-36 px-2.5 py-1.5 text-xs border border-[#E5E7EB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638]"
-        />
-        <span className="text-[#9CA3AF] text-xs shrink-0">→</span>
-        <input
-          type="date"
-          value={to}
-          onChange={(e) => onTo(e.target.value)}
-          className="w-36 px-2.5 py-1.5 text-xs border border-[#E5E7EB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638]"
-        />
       </div>
     </div>
   )
