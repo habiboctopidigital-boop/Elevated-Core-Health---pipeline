@@ -214,6 +214,31 @@
     border-radius: 3px;
   }
 
+  /* Thick brand-green scrollbars for the pipeline stage columns */
+  .scrollbar-brand {
+    scrollbar-width: auto;
+    scrollbar-color: #65BD6C #EBF7EC;
+  }
+  .scrollbar-brand::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scrollbar-brand::-webkit-scrollbar-track {
+    background: #EBF7EC;
+    border-radius: 6px;
+  }
+  .scrollbar-brand::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom right, #65BD6C, #036638);
+    border-radius: 6px;
+    border: 2px solid #EBF7EC;
+  }
+  .scrollbar-brand::-webkit-scrollbar-thumb:hover {
+    background: #036638;
+  }
+  .scrollbar-brand::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   /* Glass surfaces - light variant for content on the #F4F5F7 page bg */
   .glass {
     background: rgba(255, 255, 255, 0.7);

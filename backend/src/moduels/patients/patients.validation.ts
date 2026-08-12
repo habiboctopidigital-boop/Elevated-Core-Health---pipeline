@@ -119,7 +119,30 @@ export type ChecklistToggleInput = z.infer<typeof ChecklistToggleSchema>["body"]
 export type NotesInput = z.infer<typeof NotesSchema>["body"];
 export type FlagInput = z.infer<typeof FlagSchema>["body"];
 export type ClearFlagInput = z.infer<typeof ClearFlagSchema>["body"];
+// Manual create from the authenticated Add Patient form — same body shape as
+// the webhook intake (minus webhook-only fields) but the patient is created
+// by a logged-in user, so the audit log records their identity.
+export const CreatePatientSchema = z.object({
+	body: z.object({
+		name: z.string().trim().min(1, "Patient name is required").refine(
+			(name) => name.trim().length > 0,
+			"Patient name cannot be empty"
+		),
+		email: z.string().email().optional().nullable(),
+		phone: z.string().optional().nullable(),
+		location: z.string().trim().max(200).optional().nullable(),
+		appointmentDatetime: z.string().datetime().optional().nullable(),
+		assignedTo: z.string().uuid().optional().nullable(),
+		bookingPlatform: z.enum(["klarity", "zocdoc", "headway", "grow_therapy", "google", "phone", "walk_in"]).optional().nullable(),
+		problemDescription: z.string().max(2000).optional().nullable(),
+		paymentMethod: z.string().max(100).optional().nullable(),
+		insuranceProvider: z.string().max(200).optional().nullable(),
+		visitStatus: z.enum(["not_visited", "arrived", "no_show", "rescheduled"]).optional(),
+	}),
+});
+
 export type IntakeInput = z.infer<typeof IntakeSchema>["body"];
+export type CreatePatientInput = z.infer<typeof CreatePatientSchema>["body"];
 export type ClaimInput = z.infer<typeof ClaimSchema>["body"];
 export type CheckEligibilityInput = z.infer<typeof CheckEligibilitySchema>["body"];
 export type UpdatePatientInput = z.infer<typeof UpdatePatientSchema>["body"];

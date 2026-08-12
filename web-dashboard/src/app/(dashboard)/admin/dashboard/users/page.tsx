@@ -3,11 +3,13 @@
 import { useState } from "react"
 import { useAdminUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/query/useAdmin"
 import { useAuth } from "@/hooks/auth/useAuth"
-import { Loader2, Plus, Pencil, Trash2, Shield, ShieldCheck, AlertTriangle, User as UserIcon } from "lucide-react"
+import { Loader2, Plus, Pencil, Trash2, Shield, ShieldCheck, AlertTriangle, User as UserIcon, Users, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { SettingsNav } from "@/components/features/settings-nav"
+import { PageHeader } from "@/components/shared/page-header"
+import { StatCard } from "@/components/shared/stat-card"
 import type { User } from "@/types"
 import { cn } from "@/lib/utils"
 import { roleLabel } from "@/lib/roles"
@@ -26,6 +28,21 @@ export default function AdminUsersPage() {
   const [typedDeleteText, setTypedDeleteText] = useState("")
 
   const targetUser = confirmDelete ? users?.find((u) => u.id === confirmDelete) ?? null : null
+
+  const vaCount = users?.filter((u) => u.role === "va").length ?? 0
+  const adminCount = users?.filter((u) => u.role === "admin" || u.role === "super_admin").length ?? 0
+
+  const avatarClass = (role: string) =>
+    role === "super_admin"
+      ? "bg-gradient-to-br from-[#FBE7B2] to-amber-400 text-[#7A5C00]"
+      : role === "admin"
+        ? "bg-gradient-to-br from-[#036638] to-[#025030]"
+        : "bg-gradient-to-br from-emerald-400 to-emerald-600"
+
+  const roleBadgeClass = (role: string) =>
+    role === "va"
+      ? "bg-[#EBF7EC] text-[#036638] border-[#65BD6C]/30"
+      : "bg-[#036638]/10 text-[#036638] border-[#036638]/15"
 
   // task.md §10, §11, §17 — the UI mirrors what the backend already enforces:
   // no self-delete, the Super Admin account is protected, and only a Super
@@ -111,97 +128,128 @@ export default function AdminUsersPage() {
   return (
     <>
       {/* Settings Navigation - Top */}
-      <SettingsNav currentPage="users" />
+      {/* <SettingsNav currentPage="users" /> */}
 
-      <div className="space-y-4  max-w-[1600px] mx-auto">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-[#1A1B1E]">User Management</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">
-            Manage the three portal accounts
-          </p>
+      <div className="space-y-4 max-w-[1600px] mx-auto">
+        {/* - Page Header - */}
+        <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] px-4 py-3.5 sm:px-5">
+          <PageHeader
+            breadcrumb="Settings · Users"
+            title="User Management"
+            subtitle="Manage the three portal accounts"
+            icon={Users}
+            count={
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EBF7EC] border border-[#65BD6C]/30 text-[11px] font-bold text-[#036638]">
+                <Users className="w-3 h-3" />
+                {users?.length ?? 0} accounts
+              </span>
+            }
+            actions={
+              <Button
+                onClick={openCreate}
+                className="bg-gradient-to-r from-[#036638] to-[#025030] hover:from-[#025030] hover:to-[#014324] text-white text-xs gap-1.5 shadow-[0_4px_14px_rgba(3,102,56,0.25)]"
+              >
+                <Plus className="w-4 h-4" />
+                Add User
+              </Button>
+            }
+          />
         </div>
-        <Button
-          onClick={openCreate}
-          className="bg-[#036638] hover:bg-[#025030] text-white text-xs gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          Add User
-        </Button>
-      </div>
 
-      <div className="bg-white rounded-xl border border-[#E5E7EB] divide-y divide-[#E5E7EB]/50 overflow-hidden">
-        {users && users.length > 0 ? (
-          users.map((user) => (
-            <div key={user.id} className="flex items-center gap-4 px-5 py-4 hover:bg-[#EBF7EC]/30 transition-colors">
-              <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                user.role === "va" ? "bg-[#EBF7EC]" : "bg-[#036638]",
-              )}>
-                {user.role === "va" ? (
-                  <UserIcon className="w-5 h-5 text-[#036638]" />
-                ) : (
-                  <Shield className="w-5 h-5 text-white" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[#1A1B1E] truncate">{user.name}</p>
-                <p className="text-xs text-[#6B7280]">{user.email}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "text-[10px] font-semibold uppercase px-2 py-0.5 rounded",
-                  user.role === "va"
-                    ? "bg-[#EBF7EC] text-[#036638]"
-                    : "bg-[#036638]/10 text-[#036638]",
+        {/* - Team stats - */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <StatCard label="Total Accounts" value={users?.length ?? 0} icon={Users} />
+          <StatCard label="VA Staff" value={vaCount} icon={UserIcon} />
+          <StatCard label="Admins" value={adminCount} icon={Shield} />
+        </div>
+
+        {/* - User list - */}
+        <div className="bg-white rounded-2xl border border-[#EDEFF2] divide-y divide-[#F3F4F6] overflow-hidden shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
+          {users && users.length > 0 ? (
+            users.map((user) => (
+              <div key={user.id} className="flex flex-wrap items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-[#EBF7EC]/30 transition-colors group">
+                <div className={cn(
+                  "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm shadow-sm",
+                  avatarClass(user.role),
                 )}>
-                  {roleLabel(user.role)}
-                </span>
-                {user.shift && (
-                  <span className="text-[10px] text-[#6B7280] bg-[#F4F5F7] px-2 py-0.5 rounded">
-                    {user.shift}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {user.role === "super_admin" ? (
-                  <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2 py-1.5 rounded-lg bg-[#FBE7B2]/60 text-[#8A6D1D]">
-                    <ShieldCheck className="w-3 h-3" />
-                    Protected
-                  </span>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => openEdit(user)}
-                      className="p-1.5 rounded-lg hover:bg-[#EBF7EC] text-[#6B7280] hover:text-[#036638] transition-colors"
-                      title="Edit user"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    {canDeleteUser(user) && (
-                      <button
-                        onClick={() => {
-                          setConfirmDelete(user.id)
-                          setDeleteStep(1)
-                          setTypedDeleteText("")
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-red-500 transition-colors"
-                        title="Delete user"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  {user.role === "super_admin" ? (
+                    <ShieldCheck className="w-5 h-5" />
+                  ) : (
+                    user.name.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                  <p className="text-sm font-semibold text-[#1A1B1E] truncate flex items-center gap-2">
+                    {user.name}
+                    {user.id === currentUser?.id && (
+                      <span className="text-[9px] font-bold uppercase tracking-wide bg-[#036638]/10 text-[#036638] px-1.5 py-0.5 rounded">
+                        You
+                      </span>
                     )}
-                  </>
-                )}
+                  </p>
+                  <p className="text-xs text-[#6B7280] truncate mt-0.5">{user.email}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={cn(
+                    "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full border",
+                    roleBadgeClass(user.role),
+                  )}>
+                    {user.role === "va" ? (
+                      <UserIcon className="w-3 h-3" />
+                    ) : (
+                      <Shield className="w-3 h-3" />
+                    )}
+                    {roleLabel(user.role)}
+                  </span>
+                  {user.shift && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#6B7280] bg-[#F4F5F7] border border-[#E5E7EB] px-2.5 py-1 rounded-full">
+                      <Clock className="w-3 h-3" />
+                      {user.shift}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {user.role === "super_admin" ? (
+                    <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg bg-[#FBE7B2]/60 text-[#8A6D1D]">
+                      <ShieldCheck className="w-3 h-3" />
+                      Protected
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => openEdit(user)}
+                        className="p-2 rounded-lg border border-transparent hover:border-[#E5E7EB] hover:bg-[#EBF7EC] text-[#6B7280] hover:text-[#036638] transition-colors"
+                        title="Edit user"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      {canDeleteUser(user) && (
+                        <button
+                          onClick={() => {
+                            setConfirmDelete(user.id)
+                            setDeleteStep(1)
+                            setTypedDeleteText("")
+                          }}
+                          className="p-2 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 text-[#6B7280] hover:text-red-500 transition-colors"
+                          title="Delete user"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="text-center py-16">
+              <div className="w-12 h-12 mx-auto rounded-full bg-[#EBF7EC] flex items-center justify-center mb-3">
+                <Users className="w-5 h-5 text-[#036638]" />
+              </div>
+              <p className="text-sm font-medium text-[#6B7280]">No users found</p>
             </div>
-          ))
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-sm text-[#6B7280]">No users found</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
       {/* Delete Confirmation — two steps (task.md §9): warning first, then typed "DELETE" */}
       <Dialog

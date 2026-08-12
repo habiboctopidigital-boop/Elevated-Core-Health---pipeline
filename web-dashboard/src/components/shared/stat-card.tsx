@@ -48,7 +48,7 @@ export function StatCard({ label, value, icon: Icon, accent = "brand", trend, cl
         )}
       </div>
       <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] mt-3.5">{label}</p>
-      <p className="text-2xl font-bold text-[#1A1B1E] mt-1 tracking-tight">{value}</p>
+      <p className="text-2xl font-bold text-[#1A1B1E] mt-1 tracking-tight truncate">{value}</p>
     </Card>
   )
 }

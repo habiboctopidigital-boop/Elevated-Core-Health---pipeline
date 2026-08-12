@@ -9,11 +9,12 @@ import { AddPatientDialog } from "@/components/features/add-patient-dialog"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { StageJumpBar } from "@/components/features/stage-jump-bar"
 import { BoardFilterBar } from "@/components/features/board-filter-bar"
+import { PageHeader } from "@/components/shared/page-header"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useStageJump } from "@/hooks/useStageJump"
 import { EMPTY_BOARD_FILTERS, filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
-import { Loader2, ShieldCheck, AlertTriangle, RefreshCw, Filter } from "lucide-react"
+import { Loader2, ShieldCheck, AlertTriangle, RefreshCw, Filter, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminBoardPage() {
@@ -116,20 +117,25 @@ export default function AdminBoardPage() {
       )}
 
       {/* - Board Header - */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-[#036638]/10 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5 text-[#036638]" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-[#1A1B1E] truncate">Admin Pipeline Board</h1>
-            <p className="text-xs text-[#6B7280] truncate">Full oversight - manage all patient stages</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <AddPatientDialog />
-          <ImportDialog />
-        </div>
+      <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] px-4 py-3.5 sm:px-5 mb-4">
+        <PageHeader
+          breadcrumb="Admin"
+          title="Admin Pipeline Board"
+          subtitle="Full oversight - manage all patient stages"
+          icon={ShieldCheck}
+          count={
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EBF7EC] border border-[#65BD6C]/30 text-[11px] font-bold text-[#036638]">
+              <Users className="w-3 h-3" />
+              {patients?.length ?? 0} patients
+            </span>
+          }
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <AddPatientDialog />
+              <ImportDialog />
+            </div>
+          }
+        />
       </div>
 
       {/* - Global Filter Bar (search, status, date ranges — applies to all stages) - */}
@@ -153,7 +159,7 @@ export default function AdminBoardPage() {
       />
 
       {/* - Kanban Board - */}
-      <div className="sm:h-[calc(100vh-12rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin">
+      <div className="sm:h-[calc(100vh-14rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
         <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-0 sm:p-6 sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
@@ -212,7 +218,7 @@ export default function AdminBoardPage() {
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+                <div className="flex-1 overflow-y-auto scrollbar-brand p-3 space-y-2.5">
                   {stagePatients.length > 0 ? (
                     stagePatients.map((patient) => (
                       <PatientCard

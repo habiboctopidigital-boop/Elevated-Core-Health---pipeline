@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
@@ -198,8 +197,13 @@ export function AddPatientDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button className="bg-[#036638] hover:bg-[#025030] text-white gap-2" size="sm">
-          <Plus className="w-4 h-4" />
+        <Button
+          size="sm"
+          className="h-9 rounded-xl px-4 gap-1.5 bg-gradient-to-r from-[#036638] to-emerald-600 text-white shadow-md shadow-emerald-500/25 hover:from-[#025030] hover:to-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+        >
+          <span className="flex items-center justify-center w-5 h-5 rounded-md bg-white/15">
+            <Plus className="w-3.5 h-3.5" />
+          </span>
           Add Patient
         </Button>
       </DialogTrigger>
@@ -207,17 +211,33 @@ export function AddPatientDialog() {
       {/* Full-screen sheet on mobile (no rounding/margins); centered card from sm up.
           Header + action buttons stay pinned while only the fields scroll, and the
           footer respects iPhone safe-area insets. */}
-      <DialogContent className="flex flex-col h-[100dvh] max-h-[100dvh] w-full max-w-full sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl left-0 top-0 sm:left-1/2 sm:top-1/2 translate-x-0 translate-y-0 sm:translate-x-[-50%] sm:translate-y-[-50%] rounded-none sm:rounded-xl p-0 gap-0 overflow-hidden bg-white sm:bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300">
-        <DialogHeader className="shrink-0 text-left border-b border-[#E5E7EB] px-4 sm:px-6 pt-4 sm:pt-6 pb-3.5 pr-10 sm:pr-14">
-          <DialogTitle className="text-xl sm:text-2xl font-bold text-[#1A1B1E]">Add Patient</DialogTitle>
-          <DialogDescription className="text-sm text-[#6B7280] mt-1">
-            Add a new patient to the pipeline. They&apos;ll start in the Onboarding stage.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        hideAccent
+        closeButtonClassName="bg-white/15 text-white hover:bg-white/25 hover:text-white"
+        className="flex flex-col h-[100dvh] max-h-[100dvh] w-full max-w-full sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl left-0 top-0 sm:left-1/2 sm:top-1/2 translate-x-0 translate-y-0 sm:translate-x-[-50%] sm:translate-y-[-50%] rounded-none sm:rounded-2xl p-0 gap-0 overflow-hidden bg-white sm:bg-white/95 backdrop-blur-md shadow-2xl border-0 animate-in fade-in zoom-in-95 duration-300"
+      >
+        {/* Gradient brand header band */}
+        <div className="shrink-0 relative overflow-hidden bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600 px-4 sm:px-6 pt-5 sm:pt-6 pb-5 sm:pb-6 pr-12 sm:pr-14">
+          {/* Decorative bubbles */}
+          <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
+          <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
+          <div className="absolute right-24 -bottom-16 w-32 h-32 rounded-full bg-black/5 pointer-events-none" />
+          <div className="flex items-start gap-3 relative">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 ring-1 ring-white/20 flex items-center justify-center shrink-0 shadow-lg shadow-black/5">
+              <Plus className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-white tracking-tight">Add Patient</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-emerald-50/90 mt-1">
+                Add a new patient to the pipeline. They&apos;ll start in the Onboarding stage.
+              </DialogDescription>
+            </div>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0" noValidate>
           {/* Scrollable fields */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex-1 min-h-0 overflow-y-auto bg-[#F6F8F7] px-4 sm:px-6 py-4 sm:py-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
               <Field label="First Name" required error={errors.firstName}>
                 <input
@@ -366,20 +386,20 @@ export function AddPatientDialog() {
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 flex flex-col sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pt-3.5 sm:pt-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-[#E5E7EB] bg-white">
+          <div className="shrink-0 flex flex-col sm:flex-row justify-end gap-2.5 px-4 sm:px-6 pt-3.5 sm:pt-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-[#EDEFF2] bg-white">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setOpen(false)}
               disabled={addPatientMutation.isPending}
-              className="w-full sm:w-auto h-11 sm:h-9"
+              className="w-full sm:w-auto h-11 sm:h-9 rounded-xl border border-[#E5E7EB] text-[#6B7280] hover:bg-gray-50 hover:text-[#1A1B1E]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={addPatientMutation.isPending || !formData.firstName.trim() || !formData.lastName.trim()}
-              className="w-full sm:w-auto h-11 sm:h-9 bg-[#036638] hover:bg-[#025030] text-white"
+              className="w-full sm:w-auto h-11 sm:h-9 rounded-xl bg-gradient-to-r from-[#036638] to-emerald-600 hover:from-[#025030] hover:to-emerald-700 text-white shadow-md shadow-emerald-500/25"
             >
               {addPatientMutation.isPending ? (
                 <>
@@ -427,9 +447,9 @@ export function Field({ label, required, optional, error, className = "", childr
 
 function inputClass(hasError: boolean) {
   return [
-    "w-full h-9 px-3 border rounded-lg text-sm focus:outline-none focus:ring-2",
+    "w-full h-10 px-3.5 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 transition-all",
     hasError
       ? "border-red-400 focus:ring-red-300/40"
-      : "border-[#E5E7EB] focus:ring-[#036638]/30",
+      : "border-[#E5E7EB] focus:ring-[#036638]/25 focus:border-[#036638]/50 hover:border-[#D1D5DB]",
   ].join(" ")
 }

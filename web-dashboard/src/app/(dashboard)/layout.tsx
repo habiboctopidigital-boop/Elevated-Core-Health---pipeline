@@ -33,6 +33,16 @@ export default function DashboardLayout({
     }
   }, [isMobileMenuOpen])
 
+  // Keep viewport-centered modals clear of the fixed sidebar: expose its half-
+  // width as a CSS var so portaled dialogs can offset their center to align
+  // with the content area (right of the sidebar) on desktop.
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--ech-sidebar-offset",
+      isCollapsed ? "2.5rem" : "8rem",
+    )
+  }, [isCollapsed])
+
   return (
     <div className="flex min-h-screen bg-[#F4F5F7]">
       {/* Desktop Sidebar */}
@@ -80,7 +90,7 @@ export default function DashboardLayout({
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-6">
-          <div className="relative z-10 max-w-[1440px] mx-auto">
+          <div className="relative z-10 sm:max-w-[1440px] w-screen mx-auto">
             <DashboardWatermark
               position="center"
               opacity={WatermarkOpacity.DASHBOARD_SUBTLE}

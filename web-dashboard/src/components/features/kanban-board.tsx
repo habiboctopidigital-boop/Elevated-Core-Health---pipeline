@@ -197,8 +197,8 @@ export function KanbanBoard({
       </div>
 
       {/* Desktop: Horizontal scroll | Mobile: Vertical stack */}
-      <div className="sm:h-[calc(100vh-12rem)] sm:-mx-3 sm:sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin">
-        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-3 sm:p-5 sm:w-[450px]">
+      <div className="sm:h-[calc(100vh-14rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
+        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-3 sm:p-5 sm:w-[450px] w-full">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
@@ -211,7 +211,7 @@ export function KanbanBoard({
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-full sm:w-[450px] flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 sm:shrink-0",
+                  "w-full flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 sm:shrink-0",
                   // Brief self-fading flash (animate-jump-flash clears on its own)
 quickJumpStage === stage && "animate-jump-flash",
                   isOver && !isDisabled
@@ -265,7 +265,7 @@ quickJumpStage === stage && "animate-jump-flash",
                   />
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+                <div className="flex-1 overflow-y-auto scrollbar-brand p-3 space-y-2.5">
                   {stagePatients.length > 0 ? (
                     stagePatients.map((patient) => {
                       const isPending = pendingMoves.current.has(patient.id)

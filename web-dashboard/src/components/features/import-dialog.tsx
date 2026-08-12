@@ -4,7 +4,6 @@ import { useState, useRef, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
@@ -114,24 +113,32 @@ export function ImportDialog() {
         <Button
           variant="outline"
           size="sm"
-          className=" cursor-pointer gap-1.5 border-[#E5E7EB] text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/20 hover:text-[#036638]"
+          className="cursor-pointer gap-1.5 h-9 rounded-xl border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all"
         >
-          <Upload className="w-3.5 h-3.5" />
+          <Upload className="w-3.5 h-3.5 text-[#036638]" />
           Patients Import
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg gap-0 p-0 overflow-hidden">
-        <DialogHeader className="p-5 pb-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] flex items-center justify-center">
-              <Upload className="w-5 h-5 text-[#036638]" />
+      <DialogContent
+        hideAccent
+        closeButtonClassName="bg-white/15 text-white hover:bg-white/25 hover:text-white"
+        className="sm:max-w-lg gap-0 p-0 overflow-hidden"
+      >
+        {/* Gradient brand header band */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">
+          {/* Decorative bubbles */}
+          <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
+          <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
+          <div className="flex items-start gap-3 relative">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 ring-1 ring-white/20 flex items-center justify-center shrink-0 shadow-lg shadow-black/5">
+              <Upload className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <DialogTitle className="text-base font-bold text-[#1A1B1E]">Import Patients</DialogTitle>
-              <p className="text-xs text-[#6B7280] mt-0.5">Upload .csv, .xlsx, or .xls files</p>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg font-bold text-white tracking-tight">Import Patients</DialogTitle>
+              <p className="text-xs text-emerald-50/90 mt-0.5">Upload .csv, .xlsx, or .xls files</p>
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
         <div className="p-5">
           {state.status === "success" ? (
@@ -145,7 +152,7 @@ export function ImportDialog() {
                 onDragLeave={onDragLeave}
                 onClick={() => inputRef.current?.click()}
                 className={cn(
-                  "relative rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200",
+                  "relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200",
                   state.status === "dragging"
                     ? "border-[#036638] bg-[#EBF7EC] scale-[1.02]"
                     : state.status === "selected" || state.status === "uploading"
@@ -172,13 +179,19 @@ export function ImportDialog() {
                   </div>
                 ) : (
                   <>
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] flex items-center justify-center mx-auto mb-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#EBF7EC] to-[#FBE7B2] ring-1 ring-[#036638]/10 shadow-[var(--shadow-sm)] flex items-center justify-center mx-auto mb-4">
                       <Upload className="w-6 h-6 text-[#036638]" />
                     </div>
                     <p className="text-sm font-semibold text-[#374151]">
-                      {state.status === "dragging" ? "Drop file here" : "Drag & drop or click to browse"}
+                      {state.status === "dragging" ? "Drop file here" : "Drag & drop your file here"}
                     </p>
-                    <p className="text-xs text-[#6B7280] mt-1">.csv, .xlsx, .xls up to 10 MB</p>
+                    <p className="text-xs text-[#6B7280] mt-1.5">.csv, .xlsx, .xls up to 10 MB</p>
+                    {state.status !== "dragging" && (
+                      <span className="inline-flex items-center gap-1.5 mt-4 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#036638] to-emerald-600 text-white text-xs font-semibold shadow-md shadow-emerald-500/25">
+                        <Upload className="w-3 h-3" />
+                        Browse files
+                      </span>
+                    )}
                   </>
                 )}
               </div>
@@ -244,7 +257,7 @@ export function ImportDialog() {
           )}
         </div>
 
-      <div className="px-5 py-3 bg-[#F9FAFB] border-t border-[#E5E7EB] flex items-center gap-4 text-[10px] text-[#6B7280]">
+      <div className="px-5 py-3 bg-[#F8FAF9] border-t border-[#EDEFF2] flex items-center gap-4 text-[10px] text-[#6B7280]">
         <span className="flex items-center gap-1">
           <CheckCircle2 className="w-3 h-3 text-green-500" />
           Max 10 MB

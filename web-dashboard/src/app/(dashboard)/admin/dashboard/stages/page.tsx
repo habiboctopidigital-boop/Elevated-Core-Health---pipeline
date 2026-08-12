@@ -98,7 +98,7 @@ export default function AdminStageSettingsPage() {
   return (
     <>
       {/* Settings Navigation - Top */}
-      <SettingsNav currentPage="stages" />
+      {/* <SettingsNav currentPage="stages" /> */}
 
       <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
         {/* Header */}
