@@ -82,16 +82,67 @@ export function MobileBottomNav() {
   const tabs = useTabs()
   const moreItems = useMoreItems()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [hidden, setHidden] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
+  const lastScrollY = useRef(0)
 
   // Exact match only — startsWith would mark Dashboard active on every
   // /dashboard/* route (board, log, reporting…). Same rule the sidebar uses.
   const isActive = (href: string) => pathname === href
 
-  // Close the more-menu on route change and on outside tap.
+  // Close the more-menu (and always reshow the bar) on route change.
   useEffect(() => {
     setMoreOpen(false)
+    setHidden(false)
+    lastScrollY.current = 0
   }, [pathname])
+
+  // Auto-hide on scroll-down (past 300px), reveal on scroll-up, and re-show
+  // after a moment of no scrolling. Different screens scroll different
+  // elements: the page body on most pages, but the kanban board scrolls in
+  // its own inner containers (overflow-y-auto columns). So we listen in the
+  // CAPTURE phase (scroll events don't bubble) and read the scrollTop of
+  // whichever element actually scrolled, falling back to window.scrollY.
+  useEffect(() => {
+    const HIDE_AFTER_PX = 300
+    const IDLE_MS = 1200
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer)
+        idleTimer = null
+      }
+    }
+
+    const onScroll = (e: Event) => {
+      const target = e.target
+      const currentY =
+        target instanceof HTMLElement ? target.scrollTop : window.scrollY
+      const diff = currentY - lastScrollY.current
+      lastScrollY.current = currentY
+
+      clearIdle()
+      idleTimer = setTimeout(() => {
+        // Stopped scrolling → bring the bar back (premium feel).
+        setHidden(false)
+      }, IDLE_MS)
+
+      if (Math.abs(diff) < 6) return
+      if (diff > 0 && currentY > HIDE_AFTER_PX) {
+        setHidden(true)
+        setMoreOpen(false)
+      } else if (diff < 0) {
+        setHidden(false)
+      }
+    }
+
+    window.addEventListener("scroll", onScroll, true)
+    return () => {
+      window.removeEventListener("scroll", onScroll, true)
+      clearIdle()
+    }
+  }, [])
 
   useEffect(() => {
     if (!moreOpen) return
@@ -109,7 +160,14 @@ export function MobileBottomNav() {
   }, [moreOpen])
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+    <div
+      className={cn(
+        "lg:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] transition-all duration-300 ease-out",
+        hidden
+          ? "translate-y-[calc(100%+0.75rem)] opacity-0 pointer-events-none"
+          : "translate-y-0 opacity-100",
+      )}
+    >
       {/* More menu popover — sits above the bar, anchored right */}
       {moreOpen && (
         <div ref={moreRef} className="absolute right-3 bottom-[calc(100%+0.5rem)] left-3">
@@ -140,8 +198,16 @@ export function MobileBottomNav() {
         </div>
       )}
 
-      {/* The bar */}
-      <div className="relative bg-white/95 backdrop-blur-xl border border-[#E5E7EB]/70 rounded-[1.75rem] shadow-[0_-4px_24px_rgba(0,0,0,0.06),0_10px_32px_rgba(0,0,0,0.10)] pl-1 pr-1.5 py-1.5 flex items-stretch">
+      {/* The bar — frosted glass pill: gradient hairline border, inner top
+          highlight, soft ambient shadow, strong blur over whatever scrolls
+          beneath it. */}
+      <div className="relative rounded-[1.85rem] p-[1px] bg-gradient-to-b from-white via-[#E5E7EB]/90 to-white/40 shadow-[0_-4px_24px_rgba(0,0,0,0.05),0_12px_40px_rgba(0,0,0,0.12)]">
+        <div className="relative bg-white/55 backdrop-blur-2xl backdrop-saturate-150 rounded-[1.8rem] pl-1 pr-1.5 py-2 flex items-stretch overflow-hidden">
+          {/* Inner top highlight — light catches the upper edge of the pill */}
+          <span aria-hidden className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+          {/* Soft brand tint drifting behind the frosted surface */}
+          <span aria-hidden className="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-20 bg-[#65BD6C]/15 blur-3xl rounded-full pointer-events-none" />
+
         {tabs.map((tab) => {
           const Icon = tab.icon
           const active = isActive(tab.href)
@@ -181,6 +247,7 @@ export function MobileBottomNav() {
               strokeWidth={moreOpen ? 2.1 : 1.8}
             />
           </button>
+        </div>
         </div>
       </div>
     </div>
