@@ -1414,68 +1414,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           )}
                         </div>
 
-                        {/* Overview summary mini-cards */}
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Overview Summary</h4>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="bg-[#F3FAF4] rounded-2xl p-3.5">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-wide">
-                                <Calendar className="w-3.5 h-3.5" /> Appointment
-                              </span>
-                              <p className="text-sm font-bold text-gray-800 mt-1.5">
-                                {patient.appointmentDatetime
-                                  ? new Date(patient.appointmentDatetime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                                  : "Not scheduled"}
-                              </p>
-                              {patient.appointmentDatetime && (
-                                <p className="text-xs font-semibold text-emerald-600">
-                                  {new Date(patient.appointmentDatetime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                                </p>
-                              )}
-                            </div>
-                            <div className="bg-[#CC3333]/10 rounded-2xl p-3.5">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#CC3333] uppercase tracking-wide">
-                                <Shield className="w-3.5 h-3.5" /> Eligibility
-                              </span>
-                              <p className={cn("text-sm font-bold mt-1.5", patient.eligibilityStatus === "eligible" ? "text-emerald-600" : "text-[#CC3333]")}>
-                                {patient.eligibilityStatus === "eligible" ? "Eligible" : "Not Eligible"}
-                              </p>
-                              <button
-                                onClick={() => setShowEligibilityCheck(true)}
-                                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#CC3333] bg-[#CC3333]/10 hover:bg-[#CC3333]/15 px-2 py-0.5 rounded-full transition-colors"
-                              >
-                                Check Eligibility <ChevronRight className="w-3 h-3" />
-                              </button>
-                            </div>
-                            <div className="bg-violet-50 rounded-2xl p-3.5">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-violet-600 uppercase tracking-wide">
-                                <User className="w-3.5 h-3.5" /> Assigned To
-                              </span>
-                              <p className="text-sm font-bold text-gray-800 mt-1.5">
-                                {patient.assignedUser ? patient.assignedUser.name : "Unassigned"}
-                              </p>
-                              {(!!vaList && (isAdmin || !patient.assignedUser)) && (
-                                <button
-                                  onClick={() => {
-                                    setActiveTab("overview")
-                                    setShowAssignDropdown(true)
-                                  }}
-                                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 bg-violet-100/70 hover:bg-violet-100 px-2 py-0.5 rounded-full transition-colors"
-                                >
-                                  Change Assignment <ChevronRight className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                            <div className="bg-[#F3FAF4] rounded-2xl p-3.5">
-                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-wide">
-                                <ShieldCheck className="w-3.5 h-3.5" /> Insurance
-                              </span>
-                              <p className="text-sm font-bold text-gray-800 mt-1.5">
-                                {patient.insuranceProvider || "Not on file"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                    
 
                         {/* Notes */}
                         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
@@ -1919,7 +1858,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={() => !assigning && onClose()}
       />
-      <div className="relative w-full max-w-[1400px] max-h-[95dvh] bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-[1400px] h-[95dvh] bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
         {isLoading || !patient ? (
           <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
             {isLoading ? (
@@ -2150,92 +2089,96 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
             {/* Body: Stats Grid + Tabs + Content */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
               
-              {/* Stats Grid (Mobile/Tablet View) */}
-              <div className="shrink-0 px-4 py-4 border-b border-gray-100">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <span className="text-[8px] font-bold text-gray-400 uppercase">Appointment</span>
-                    </div>
-                    {editingAppointment ? (
-                      <div className="space-y-2 mt-1">
-                        <DateTimePicker compact value={newAppointmentDatetime ? new Date(newAppointmentDatetime).toISOString() : ""} onChange={(iso) => setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(iso)))} />
-                        <div className="flex gap-1">
-                          <button onClick={handleUpdateAppointment} disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()} className="flex-1 text-[10px] font-semibold py-1 rounded bg-emerald-600 text-white">Save</button>
-                          <button onClick={() => { setEditingAppointment(false); if (patient.appointmentDatetime) setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(patient.appointmentDatetime))); else setNewAppointmentDatetime(""); }} className="px-2 py-1 text-[10px] font-medium rounded border border-gray-200 text-gray-600">Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-col min-w-0">
-                          <p className="text-xs font-bold text-gray-800 truncate">
-                            {patient.appointmentDatetime ? new Date(patient.appointmentDatetime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not scheduled"}
-                          </p>
-                          {patient.appointmentDatetime && <p className="text-[10px] font-medium text-emerald-600">{new Date(patient.appointmentDatetime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>}
-                        </div>
-                        <button onClick={() => setEditingAppointment(true)} className="p-1 rounded hover:bg-emerald-50 text-emerald-500"><Pencil className="w-3 h-3" /></button>
-                      </div>
-                    )}
+                     {/* Stats Grid (Mobile/Tablet View) */}
+          <div className="shrink-0 px-4 py-2.5 border-b border-gray-100">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              {/* Card 1: Appointment */}
+              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
+                    <Calendar className="w-3.5 h-3.5" />
                   </div>
-
-                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#CC3333]/10 flex items-center justify-center text-[#CC3333]">
-                        <Shield className="w-4 h-4" />
-                      </div>
-                      <span className="text-[8px] font-bold text-gray-400 uppercase">Eligibility</span>
-                    </div>
-                    <p className={cn("text-xs font-bold", patient.eligibilityStatus === "eligible" ? "text-emerald-600" : "text-[#CC3333]")}>
-                      {patient.eligibilityStatus === "eligible" ? "Eligible" : "Not Eligible"}
-                    </p>
-                    <button onClick={() => setShowEligibilityCheck(true)} className="mt-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold text-[#CC3333] bg-[#CC3333]/10 px-2 py-0.5 rounded-full hover:bg-[#CC3333]/15">
-                      Check <ChevronRight className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-
-                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <span className="text-[8px] font-bold text-gray-400 uppercase">Assigned To</span>
-                    </div>
-                    <p className="text-xs font-bold text-gray-800 truncate">{patient.assignedUser ? patient.assignedUser.name : "Unassigned"}</p>
-                    {(!!vaList && (isAdmin || !patient.assignedUser)) && (
-                      <div className="relative mt-1.5">
-                        <button onClick={() => setShowAssignDropdown((v) => !v)} disabled={assigning} className="text-[9px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full flex items-center gap-0.5 hover:bg-violet-100">
-                          {patient.assignedUser ? "Change" : "Assign"} <ChevronRight className="w-2.5 h-2.5" />
-                        </button>
-                        {showAssignDropdown && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setShowAssignDropdown(false)} />
-                            <div className="absolute left-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20 max-h-40 overflow-y-auto">
-                              {assignableVas.length === 0 && <p className="px-3 py-1.5 text-[10px] text-gray-400">No VAs available</p>}
-                              {assignableVas.map((va) => (
-                                <button key={va.id} onClick={() => handleAssignTo(va.id)} className="w-full text-left px-3 py-1.5 text-[10px] font-medium text-gray-700 hover:bg-violet-50">{va.name}</button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {assignFeedback && <p className={cn("text-[9px] mt-1 font-medium", assignFeedback.type === "success" ? "text-emerald-600" : "text-[#CC3333]")}>{assignFeedback.message}</p>}
-                  </div>
-
-                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
-                        <ShieldCheck className="w-4 h-4" />
-                      </div>
-                      <span className="text-[8px] font-bold text-gray-400 uppercase">Insurance</span>
-                    </div>
-                    <p className="text-xs font-bold text-gray-800 truncate">{patient.insuranceProvider || "Not on file"}</p>
-                  </div>
+                  <span className="text-[8px] font-bold text-gray-400 uppercase">Appointment</span>
                 </div>
+                {editingAppointment ? (
+                  <div className="space-y-1.5 mt-1">
+                    <DateTimePicker compact value={newAppointmentDatetime ? new Date(newAppointmentDatetime).toISOString() : ""} onChange={(iso) => setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(iso)))} />
+                    <div className="flex gap-1">
+                      <button onClick={handleUpdateAppointment} disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()} className="flex-1 text-[10px] font-semibold py-1 rounded bg-emerald-600 text-white">Save</button>
+                      <button onClick={() => { setEditingAppointment(false); if (patient.appointmentDatetime) setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(patient.appointmentDatetime))); else setNewAppointmentDatetime(""); }} className="px-2 py-1 text-[10px] font-medium rounded border border-gray-200 text-gray-600">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-xs font-bold text-gray-800 truncate">
+                        {patient.appointmentDatetime ? new Date(patient.appointmentDatetime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not scheduled"}
+                      </p>
+                      {patient.appointmentDatetime && <p className="text-[10px] font-medium text-emerald-600">{new Date(patient.appointmentDatetime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>}
+                    </div>
+                    <button onClick={() => setEditingAppointment(true)} className="p-1 rounded hover:bg-emerald-50 text-emerald-500"><Pencil className="w-3 h-3" /></button>
+                  </div>
+                )}
               </div>
+
+              {/* Card 2: Eligibility */}
+              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#CC3333]/10 flex items-center justify-center text-[#CC3333]">
+                    <Shield className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[8px] font-bold text-gray-400 uppercase">Eligibility</span>
+                </div>
+                <p className={cn("text-xs font-bold", patient.eligibilityStatus === "eligible" ? "text-emerald-600" : "text-[#CC3333]")}>
+                  {patient.eligibilityStatus === "eligible" ? "Eligible" : "Not Eligible"}
+                </p>
+                <button onClick={() => setShowEligibilityCheck(true)} className="mt-1 inline-flex items-center gap-0.5 text-[9px] font-bold text-[#CC3333] bg-[#CC3333]/10 px-2 py-0.5 rounded-full hover:bg-[#CC3333]/15">
+                  Check <ChevronRight className="w-2.5 h-2.5" />
+                </button>
+              </div>
+
+              {/* Card 3: Assigned To */}
+              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[8px] font-bold text-gray-400 uppercase">Assigned To</span>
+                </div>
+                <p className="text-xs font-bold text-gray-800 truncate">{patient.assignedUser ? patient.assignedUser.name : "Unassigned"}</p>
+                {(!!vaList && (isAdmin || !patient.assignedUser)) && (
+                  <div className="relative mt-1">
+                    <button onClick={() => setShowAssignDropdown((v) => !v)} disabled={assigning} className="text-[9px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full flex items-center gap-0.5 hover:bg-violet-100">
+                      {patient.assignedUser ? "Change" : "Assign"} <ChevronRight className="w-2.5 h-2.5" />
+                    </button>
+                    {showAssignDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowAssignDropdown(false)} />
+                        <div className="absolute left-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20 max-h-40 overflow-y-auto">
+                          {assignableVas.length === 0 && <p className="px-3 py-1.5 text-[10px] text-gray-400">No VAs available</p>}
+                          {assignableVas.map((va) => (
+                            <button key={va.id} onClick={() => handleAssignTo(va.id)} className="w-full text-left px-3 py-1.5 text-[10px] font-medium text-gray-700 hover:bg-violet-50">{va.name}</button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                {assignFeedback && <p className={cn("text-[9px] mt-0.5 font-medium", assignFeedback.type === "success" ? "text-emerald-600" : "text-[#CC3333]")}>{assignFeedback.message}</p>}
+              </div>
+
+              {/* Card 4: Insurance */}
+              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[8px] font-bold text-gray-400 uppercase">Insurance</span>
+                </div>
+                <p className="text-xs font-bold text-gray-800 truncate">{patient.insuranceProvider || "Not on file"}</p>
+              </div>
+            </div>
+          </div>
 
               {/* Tabs */}
               <div className="shrink-0 border-b border-gray-100 px-4 sm:px-8 flex gap-4 sm:gap-6 overflow-x-auto scrollbar-thin">
@@ -2262,6 +2205,102 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 {/* OVERVIEW TAB */}
                 {activeTab === "overview" && (
                   <>
+                   {/* Checklist card */}
+                        <div className="relative rounded-2xl border border-blue-100 bg-blue-50/60 p-4 sm:p-5 overflow-hidden">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wide flex items-center gap-2">
+                              <CheckCheck className="w-5 h-5 text-blue-600" />
+                              Checklist
+                            </h4>
+                            {(checklistPending.size > 0 || bulkPending) && <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />}
+                          </div>
+                          {currentStageItems.length > 0 ? (
+                            <>
+                              {totalItems > 0 && (
+                                <div className="mb-4">
+                                  <div className="flex justify-between text-xs text-gray-600 mb-1 font-medium">
+                                    <span>{completedItems} / {totalItems} Completed</span>
+                                    <span className="text-blue-700">{progress}%</span>
+                                  </div>
+                                  <div className="w-full h-2.5 bg-white/80 rounded-full overflow-hidden border border-blue-200">
+                                    <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex gap-2 mb-4">
+                                <Button size="sm" variant="outline" onClick={() => handleBulkChecklist(true)} disabled={checklistBusy}
+                                  className="text-xs gap-1.5 border-blue-300 text-blue-700 hover:bg-[#009650] hover:text-white bg-white font-semibold">
+                                  <CheckCheck className="w-3.5 h-3.5" /> Check All
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleBulkChecklist(false)} disabled={checklistBusy}
+                                  className="text-xs gap-1.5 border-gray-300 text-gray-600 hover:bg-[#9C460C] hover:text-white bg-white font-semibold">
+                                  <ListX className="w-3.5 h-3.5" /> Uncheck All
+                                </Button>
+                              </div>
+                              <div className="space-y-1.5">
+                                {currentStageItems.map((item) => {
+                                  const checked = !!currentState[item.id]
+                                  const isItemPending = checklistPending.has(item.id)
+                                  return (
+                                    <label
+                                      key={item.id}
+                                      className={cn(
+                                        "flex items-start gap-3 p-3 rounded-xl bg-white hover:shadow-md transition-all cursor-pointer border border-gray-100",
+                                        isItemPending && "opacity-70",
+                                        checked && "bg-blue-50/50 border-blue-200",
+                                      )}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        disabled={isItemPending}
+                                        onChange={() => {
+                                          if (isItemPending) return
+                                          setChecklistPending((prev) => new Set(prev).add(item.id))
+                                          toggleChecklist.mutate(
+                                            { id: patient.id, itemId: item.id, checked: !checked },
+                                            {
+                                              onSettled: () =>
+                                                setChecklistPending((prev) => {
+                                                  const next = new Set(prev)
+                                                  next.delete(item.id)
+                                                  return next
+                                                }),
+                                            },
+                                          )
+                                        }}
+                                        className="mt-0.5 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 accent-blue-600"
+                                      />
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className={cn("text-sm font-semibold", checked ? "text-gray-400 line-through" : "text-gray-800")}>
+                                            {item.label}
+                                          </span>
+                                          <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded-full", item.status === "required" ? "bg-[#CC3333]/15 text-[#CC3333]" : "bg-blue-100 text-blue-700")}>
+                                            {item.status}
+                                          </span>
+                                          {isItemPending && <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin" />}
+                                        </div>
+                                        {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                                      </div>
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="relative flex items-center gap-3 rounded-xl bg-white/80 border border-blue-100 px-4 py-4 overflow-hidden">
+                              <ClipboardList className="absolute -right-2 -bottom-2 w-16 h-16 text-blue-500/10 pointer-events-none" />
+                              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                <Check className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-blue-700">No checklist required</p>
+                                <p className="text-xs text-gray-500 mt-0.5">Great! There are no checklist items for this patient.</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                     {(latestFlag ?? patient.flagReason) && patient.isFlagged && (
                       <div className={cn("rounded-2xl border p-4", isAdminFlag(latestFlag) ? "border-amber-200 bg-amber-50/70 border-l-4 border-l-amber-400" : latestFlag?.type === "positive" ? "border-emerald-200 bg-emerald-50/70 border-l-4 border-l-emerald-400" : "border-[#CC3333]/30 bg-[#CC3333]/10 border-l-4 border-l-[#CC3333]/60")}>
                         <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
@@ -2289,6 +2328,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                             <FlagOff className="w-3.5 h-3.5" /> Clear Flag
                           </button>
                         ))}
+
+
+                       
                       </div>
                     )}
 
