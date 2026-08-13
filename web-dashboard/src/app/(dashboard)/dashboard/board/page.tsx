@@ -3,11 +3,10 @@
 import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { KanbanBoard } from "@/components/features/kanban-board"
-import { BoardFilterBar } from "@/components/features/board-filter-bar"
+import { BoardHeaderBar } from "@/components/features/board-header-bar"
 import { StatusBar } from "@/components/features/status-bar"
 import { ImportDialog } from "@/components/features/import-dialog"
 import { AddPatientDialog } from "@/components/features/add-patient-dialog"
-import { PageHeader } from "@/components/shared/page-header"
 import { usePatients } from "@/hooks/query/usePatients"
 import { EMPTY_BOARD_FILTERS, type BoardFilters } from "@/lib/board-filters"
 import { LayoutGrid, Users } from "lucide-react"
@@ -25,12 +24,9 @@ export default function VABoardPage() {
   // the page flows naturally (scrolls) to avoid clipping the board.
   return (
     <div className="flex flex-col h-full overflow-x-hidden lg:h-[calc(100vh-7.5rem)] lg:overflow-hidden no-scrollbar">
-      {/* - Board Header - */}
-      <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] px-4 py-3.5 sm:px-5 mb-4">
-        <PageHeader
-          breadcrumb="Patient Pipeline"
-          title="Patient Pipeline Board"
-          subtitle="Track patients through 7 workflow stages"
+      {/* - Merged Board Header + Filter Bar - */}
+      <div className="mb-4">
+        <BoardHeaderBar
           icon={LayoutGrid}
           count={
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EBF7EC] border border-[#65BD6C]/30 text-[11px] font-bold text-[#036638]">
@@ -45,12 +41,9 @@ export default function VABoardPage() {
               <StatusBar />
             </div>
           }
+          filters={filters}
+          onChange={setFilters}
         />
-      </div>
-
-      {/* - Global Filter Bar (search, status, date ranges — applies to all stages) - */}
-      <div className="mb-4">
-        <BoardFilterBar filters={filters} onChange={setFilters} />
       </div>
 
       {/* - Kanban Board - */}

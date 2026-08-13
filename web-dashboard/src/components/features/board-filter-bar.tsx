@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Check,
   Clock,
@@ -10,7 +10,6 @@ import {
   UserRound,
   Users,
   X,
-  SlidersHorizontal,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -35,10 +34,8 @@ interface BoardFilterBarProps {
   onChange: (filters: BoardFilters) => void
   /** VA list for the VA-wise filter (admin board only). VAs always see only their own cards. */
   vas?: VaUser[]
-  /** Total patients in the unfiltered list — enables the "showing X of Y" line. */
-  total?: number
-  /** Count after filtering — enables the "showing X of Y" line. */
-  resultCount?: number
+  /** Render without the card chrome (border/bg/shadow) — for embedding inside a parent card. */
+  bare?: boolean
 }
 
 const MODE_OPTIONS: Array<{
@@ -77,7 +74,26 @@ function pickDateDraft(filters: BoardFilters): DateDraft {
   }
 }
 
-export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: BoardFilterBarProps) {
+export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFilterBarProps) {
+  // Search starts collapsed to a small icon button — expands on click/typing,
+  // collapses again when empty and blurred. Keeps the merged header compact.
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchBarRef = useRef<HTMLDivElement>(null)
+  const searchExpanded = searchOpen || Boolean(filters.search)
+
+  // Close the floating search when clicking anywhere outside it.
+  useEffect(() => {
+    if (!searchExpanded) return
+    const onDocClick = (e: MouseEvent) => {
+      if (searchBarRef.current && !searchBarRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
+  }, [searchExpanded])
+
   // Draft values for the delayed date filters — they only reach the board
   // when "Apply" is clicked. Search, status and VA apply instantly.
   const [draft, setDraft] = useState<DateDraft>(() => pickDateDraft(filters))
@@ -110,31 +126,64 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
   }
 
   const activeCount = activeFilterCount(filters)
-  const showCount = total !== undefined && resultCount !== undefined
 
   return (
-    <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3">
-        {/* - Search — instant - */}
-        <div className="relative flex-1 min-w-[200px] max-w-[340px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] pointer-events-none" />
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(e) => onChange({ ...filters, search: e.target.value })}
-            placeholder="Search patient name..."
-            className="w-full h-10 pl-9 pr-8 text-sm border border-[#E5E7EB] rounded-xl bg-[#F8FAF9] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 focus:bg-white transition-all"
-          />
-          {filters.search && (
-            <button
-              onClick={() => onChange({ ...filters, search: "" })}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280] transition-colors cursor-pointer"
-              title="Clear search"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+    <div className={cn("relative", bare ? "" : "rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)]")}>
+      <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-3", bare ? "px-0 py-0" : "px-4 py-3")}>
+        {/* - Search — round icon button; expanded input floats absolutely so the row never shifts - */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen((v) => !v)}
+          className={cn(
+            "w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer",
+            searchExpanded
+              ? "bg-[#036638] text-white shadow-sm shadow-emerald-500/30"
+              : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#EBF7EC] hover:text-[#036638] hover:ring-2 hover:ring-[#036638]/15",
           )}
-        </div>
+          title={searchExpanded ? "Close search" : "Search patients"}
+          aria-label={searchExpanded ? "Close search" : "Search patients"}
+          aria-expanded={searchExpanded}
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
+        {/* Expanded search — absolutely positioned, overlays content, breaks nothing */}
+        {searchExpanded && (
+          <div ref={searchBarRef} className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-[min(360px,calc(100vw-3rem))]">
+            <div className="flex items-center gap-2 pl-3.5 pr-2 h-11 rounded-full border border-[#036638]/25 bg-white shadow-xl shadow-emerald-900/10 focus-within:ring-2 focus-within:ring-[#036638]/25">
+              <Search className="w-4 h-4 text-[#036638] shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={filters.search}
+                autoFocus
+                onChange={(e) => onChange({ ...filters, search: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setSearchOpen(false)
+                }}
+                placeholder="Search patient name..."
+                className="flex-1 min-w-0 bg-transparent text-sm text-[#1A1B1E] placeholder:text-[#9CA3AF] focus:outline-none"
+              />
+              {filters.search ? (
+                <button
+                  onClick={() => onChange({ ...filters, search: "" })}
+                  className="p-1.5 rounded-full text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280] transition-colors cursor-pointer shrink-0"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setSearchOpen(false)}
+                  className="p-1.5 rounded-full text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280] transition-colors cursor-pointer shrink-0"
+                  title="Close search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="hidden xl:block h-6 w-px bg-[#E5E7EB]" />
 
@@ -239,12 +288,6 @@ export function BoardFilterBar({ filters, onChange, vas, total, resultCount }: B
           </button>
         )}
 
-        {showCount && (
-          <span className="ml-auto flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] hidden sm:inline-flex whitespace-nowrap">
-            <SlidersHorizontal className="w-3 h-3 text-[#65BD6C]" />
-            Showing <span className="font-bold text-[#036638]">{resultCount}</span> of {total}
-          </span>
-        )}
       </div>
     </div>
   )

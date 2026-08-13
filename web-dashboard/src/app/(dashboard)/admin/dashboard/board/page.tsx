@@ -9,8 +9,7 @@ import { StageSettingsDialog } from "@/components/features/stage-settings-dialog
 import { AddPatientDialog } from "@/components/features/add-patient-dialog"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { StageJumpBar } from "@/components/features/stage-jump-bar"
-import { BoardFilterBar } from "@/components/features/board-filter-bar"
-import { PageHeader } from "@/components/shared/page-header"
+import { BoardHeaderBar } from "@/components/features/board-header-bar"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useStageJump } from "@/hooks/useStageJump"
 import { EMPTY_BOARD_FILTERS, filterPatients, type BoardFilters } from "@/lib/board-filters"
@@ -120,12 +119,9 @@ export default function AdminBoardPage() {
         </div>
       )}
 
-      {/* - Board Header - */}
-      <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] px-4 py-3.5 sm:px-5 mb-4">
-        <PageHeader
-          breadcrumb="Admin"
-          title="Admin Pipeline Board"
-          subtitle="Full oversight - manage all patient stages"
+      {/* - Merged Board Header + Filter Bar - */}
+      <div className="mb-4">
+        <BoardHeaderBar
           icon={ShieldCheck}
           count={
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EBF7EC] border border-[#65BD6C]/30 text-[11px] font-bold text-[#036638]">
@@ -140,12 +136,6 @@ export default function AdminBoardPage() {
               <StageSettingsDialog />
             </div>
           }
-        />
-      </div>
-
-      {/* - Global Filter Bar (search, status, date ranges — applies to all stages) - */}
-      <div className="mb-4">
-        <BoardFilterBar
           filters={filters}
           onChange={setFilters}
           vas={vas}

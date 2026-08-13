@@ -122,7 +122,7 @@ export function ImportDialog() {
       <DialogContent
         hideAccent
         closeButtonClassName="bg-white/15 text-white hover:bg-white/25 hover:text-white"
-        className="sm:max-w-lg gap-0 p-0 overflow-hidden"
+        className="sm:max-w-lg gap-0 p-0 overflow-hidden border-0 shadow-2xl rounded-3xl"
       >
         {/* Gradient brand header band */}
         <div className="relative overflow-hidden bg-gradient-to-r border-none from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">

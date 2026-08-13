@@ -33,10 +33,19 @@ import {
   Layers,
   History,
   Calendar,
+  EllipsisVertical,
+  Power,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useForm } from "react-hook-form"
 import type { PipelineStage, ChecklistItemDef } from "@/types"
 
@@ -297,8 +306,8 @@ export function StageSettingsPanel({
               >
                 {/* Stage row */}
                 <div className="flex items-center gap-3 px-4 py-3.5">
-                  {/* Drag handle */}
-                  <div className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 shrink-0" title="Drag to reorder">
+                  {/* Drag handle — desktop only (HTML5 drag doesn't work on touch) */}
+                  <div className="hidden sm:block cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 shrink-0" title="Drag to reorder">
                     <GripVertical className="w-4 h-4" />
                   </div>
 
@@ -313,7 +322,7 @@ export function StageSettingsPanel({
                       <h3 className="text-sm font-bold text-[#1A1B1E]">{stage.name}</h3>
                       <span
                         className={cn(
-                          "text-[10px] font-mono px-1.5 py-0.5 rounded",
+                          "hidden sm:inline-flex text-[10px] font-mono px-1.5 py-0.5 rounded",
                           isExpanded ? "bg-emerald-50 text-emerald-700" : "bg-[#F3F4F6] text-[#6B7280]",
                         )}
                       >
@@ -331,15 +340,15 @@ export function StageSettingsPanel({
                       )}
                     </div>
                     {stage.hint && (
-                      <p className="flex items-center gap-1.5 text-xs text-[#6B7280] mt-0.5 truncate">
+                      <p className="hidden sm:flex items-center gap-1.5 text-xs text-[#6B7280] mt-0.5 truncate">
                         <Calendar className="w-3 h-3 shrink-0" />
                         {stage.hint}
                       </p>
                     )}
                   </div>
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* Stats — desktop only */}
+                  <div className="hidden sm:flex items-center gap-2 shrink-0">
                     <div className={cn("flex items-center gap-1.5 bg-white rounded-xl px-2.5 py-1.5", isDialog ? "shadow-[0_1px_2px_rgba(16,24,40,0.05)]" : "border border-[#E5E7EB]")} title="Patients in this stage">
                       <Users className="w-3.5 h-3.5 text-[#6B7280]" />
                       <span className="text-xs font-bold text-[#1A1B1E]">{count}</span>
@@ -350,8 +359,8 @@ export function StageSettingsPanel({
                     </div>
                   </div>
 
-                  {/* Enable toggle */}
-                  <div className={cn("flex items-center gap-2 shrink-0 bg-white rounded-xl px-2.5 py-1.5", isDialog ? "shadow-[0_1px_2px_rgba(16,24,40,0.05)]" : "border border-[#E5E7EB]")}>
+                  {/* Enable toggle — desktop only */}
+                  <div className={cn("hidden sm:flex items-center gap-2 shrink-0 bg-white rounded-xl px-2.5 py-1.5", isDialog ? "shadow-[0_1px_2px_rgba(16,24,40,0.05)]" : "border border-[#E5E7EB]")}>
                     <span className="text-[11px] font-semibold text-[#374151]">Enable</span>
                     <ToggleSwitch
                       checked={stage.isActive}
@@ -360,8 +369,8 @@ export function StageSettingsPanel({
                     />
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Actions — desktop only */}
+                  <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={() => setEditingStage(stage)}
                       className={cn("p-2 rounded-xl text-[#6B7280] hover:text-[#036638] transition-colors", isDialog ? "hover:bg-[#EBF7EC]" : "border border-[#E5E7EB] hover:border-[#036638]")}
@@ -383,6 +392,63 @@ export function StageSettingsPanel({
                     >
                       {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </button>
+                  </div>
+
+                  {/* 3-dot menu — phone only */}
+                  <div className="sm:hidden shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-2 rounded-xl text-[#036638] hover:bg-[#EBF7EC] transition-colors cursor-pointer"
+                          title="Stage options"
+                        >
+                          <EllipsisVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5 shadow-xl">
+                        <div className="px-2 py-1.5">
+                          <p className="text-sm font-bold text-[#1A1B1E] truncate">{stage.name}</p>
+                          <p className="text-[11px] text-[#6B7280]">
+                            {count} patients · {itemCount} checklist items
+                          </p>
+                        </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setEditingStage(stage)}
+                          className="cursor-pointer text-xs gap-2 text-[#374151]"
+                        >
+                          <Settings className="w-3.5 h-3.5 text-[#036638]" />
+                          Edit Stage
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => updateStage.mutate({ key: stage.key, isActive: !stage.isActive })}
+                          disabled={updateStage.isPending}
+                          className="cursor-pointer text-xs gap-2 text-[#374151]"
+                        >
+                          <Power className="w-3.5 h-3.5 text-[#036638]" />
+                          {stage.isActive ? "Disable Stage" : "Enable Stage"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setExpandedStage(isExpanded ? null : stage.key)}
+                          className="cursor-pointer text-xs gap-2 text-[#374151]"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="w-3.5 h-3.5 text-[#036638]" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5 text-[#036638]" />
+                          )}
+                          {isExpanded ? "Collapse Checklist" : "Manage Checklist"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setDeletingStage(stage)}
+                          className="cursor-pointer text-xs gap-2 text-red-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                          Delete Stage
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 

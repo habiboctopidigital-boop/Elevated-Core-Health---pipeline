@@ -20,8 +20,18 @@ import {
 } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+
+// Short month names for the quick-jump month dropdown.
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+// Year range for the quick-jump year dropdown — scrollable in the list.
+const NAV_YEAR_END = new Date().getFullYear() + 5
+const NAV_YEAR_START = NAV_YEAR_END - 60
+const NAV_YEARS: number[] = []
+for (let y = NAV_YEAR_START; y <= NAV_YEAR_END; y++) NAV_YEARS.push(y)
 
 function toIso(d: Date): string {
   return format(d, "yyyy-MM-dd")
@@ -97,7 +107,10 @@ export function DateRangePicker({ label, from, to, pending, onFrom, onTo }: Date
   // eachDayOfInterval handles DST shifts correctly (a day is never 24h).
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
-  const triggerText = !from && !to ? "Any date" : `${from ? format(parseISO(from), "MMM d") : "…"} – ${to ? format(parseISO(to), "MMM d") : "…"}`
+  const hasRange = Boolean(from || to)
+  const triggerText = hasRange
+    ? `${from ? format(parseISO(from), "MMM d") : "…"} – ${to ? format(parseISO(to), "MMM d") : "…"}`
+    : label
 
   return (
     <Popover
@@ -121,31 +134,71 @@ export function DateRangePicker({ label, from, to, pending, onFrom, onTo }: Date
           title={`Filter by ${label.toLowerCase()} date`}
         >
           <CalendarDays className="w-3.5 h-3.5 shrink-0" />
-          <span>{label}</span>
-          <span className={cn("shrink-0", from || to ? "text-[#036638]" : "text-[#9CA3AF]")}>·</span>
-          <span className="max-w-[120px] truncate font-bold">{triggerText}</span>
+          <span
+            className={cn(
+              "truncate",
+              pending
+                ? "font-bold text-amber-700"
+                : hasRange
+                  ? "font-bold text-[#036638]"
+                  : "text-[#6B7280]",
+            )}
+          >
+            {triggerText}
+          </span>
           {pending && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />}
         </button>
       </PopoverTrigger>
 
       <PopoverContent className="w-[290px] p-3 rounded-2xl shadow-lg" align="start">
-        {/* Month nav */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Month nav — arrows + month/year dropdowns for instant jumps */}
+        <div className="flex items-center gap-1 mb-2">
           <button
             type="button"
             onClick={() => setViewDate((v) => subMonths(v, 1))}
             aria-label="Previous month"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
             title="Previous month"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-bold text-[#12141A]">{format(viewDate, "MMMM yyyy")}</span>
+          <div className="flex-1 grid grid-cols-2 gap-1">
+            <Select
+              value={String(viewDate.getMonth())}
+              onValueChange={(v) => setViewDate(new Date(viewDate.getFullYear(), Number(v), 1))}
+            >
+              <SelectTrigger className="h-7 w-full rounded-lg border-[#E5E7EB] bg-white text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 px-2 cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {MONTH_NAMES.map((m, i) => (
+                  <SelectItem key={m} value={String(i)}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={String(viewDate.getFullYear())}
+              onValueChange={(v) => setViewDate(new Date(Number(v), viewDate.getMonth(), 1))}
+            >
+              <SelectTrigger className="h-7 w-full rounded-lg border-[#E5E7EB] bg-white text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 px-2 cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-64 rounded-xl">
+                {NAV_YEARS.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <button
             type="button"
             onClick={() => setViewDate((v) => addMonths(v, 1))}
             aria-label="Next month"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
             title="Next month"
           >
             <ChevronRight className="w-4 h-4" />

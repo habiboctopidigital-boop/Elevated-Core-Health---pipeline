@@ -57,7 +57,6 @@ const ADMIN_NAV = [
   ]},
   { section: "Management", items: [
     { href: ROUTES.ADMIN.USERS, icon: Users, label: "Users" },
-    { href: ROUTES.ADMIN.STAGES, icon: Settings, label: "Stage Settings" },
     { href: ROUTES.ADMIN.CRM, icon: Contact, label: "CRM Integration" },
     { href: ROUTES.ADMIN.ELIGIBILITY, icon: ShieldCheck, label: "Eligibility" },
   ]},
