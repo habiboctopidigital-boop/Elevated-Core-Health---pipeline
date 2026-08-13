@@ -44,6 +44,7 @@ import { useAllUsers } from "@/hooks/query/useUsers"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { PatientModal } from "@/components/features/patient-modal"
+import { DatePicker } from "@/components/ui/date-time-picker"
 import type { ActivityCategory, ActivityLog, UserRole } from "@/types"
 import { cn } from "@/lib/utils"
 import { isAdminOrAbove } from "@/lib/roles"
@@ -446,26 +447,24 @@ export function HandoffLog() {
           <div className="flex items-center gap-3 flex-wrap pt-3 border-t border-[#E5E7EB]/60">
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-[#6B7280] font-medium">From</label>
-              <input
-                type="date"
+              <DatePicker
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value)
+                onChange={(v) => {
+                  setStartDate(v)
                   setPage(1)
                 }}
-                className="h-9 px-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+                placeholder="From date"
               />
             </div>
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-[#6B7280] font-medium">To</label>
-              <input
-                type="date"
+              <DatePicker
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value)
+                onChange={(v) => {
+                  setEndDate(v)
                   setPage(1)
                 }}
-                className="h-9 px-2.5 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+                placeholder="To date"
               />
             </div>
             {isAdmin && (

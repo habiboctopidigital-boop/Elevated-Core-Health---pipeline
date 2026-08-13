@@ -11,6 +11,7 @@ import {
   isSameDay,
   isSameMonth,
   isToday,
+  parseISO,
   startOfMonth,
   startOfWeek,
   subMonths,
@@ -40,6 +41,8 @@ interface DateTimePickerProps {
   value: string
   onChange: (iso: string) => void
   placeholder?: string
+  /** Compact trigger for narrow layouts (e.g. the patient modal's sidebar). */
+  compact?: boolean
 }
 
 /**
@@ -48,7 +51,7 @@ interface DateTimePickerProps {
  * time select. Picking a day keeps any chosen time (defaults to 9:00 AM);
  * picking a time keeps the selected day.
  */
-export function DateTimePicker({ value, onChange, placeholder = "Select date & time" }: DateTimePickerProps) {
+export function DateTimePicker({ value, onChange, placeholder = "Select date & time", compact }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const selected = value ? new Date(value) : null
 
@@ -102,6 +105,7 @@ export function DateTimePicker({ value, onChange, placeholder = "Select date & t
           type="button"
           className={cn(
             "w-full h-10 px-3.5 rounded-lg border bg-white text-sm flex items-center gap-2.5 transition-all cursor-pointer",
+            compact && "h-9 px-2.5 text-xs gap-1.5",
             selected
               ? "border-[#036638]/40 focus:border-[#036638]/60"
               : "border-[#E5E7EB] hover:border-[#D1D5DB]",
@@ -109,19 +113,24 @@ export function DateTimePicker({ value, onChange, placeholder = "Select date & t
           )}
           title={selected ? format(selected, "EEEE, MMMM d, yyyy h:mm a") : placeholder}
         >
-          <Calendar className={cn("w-4 h-4 shrink-0", selected ? "text-[#036638]" : "text-[#9CA3AF]")} />
+          <Calendar className={cn("w-4 h-4 shrink-0", compact && "w-3.5 h-3.5", selected ? "text-[#036638]" : "text-[#9CA3AF]")} />
           {selected ? (
             <>
-              <span className="font-semibold text-[#1A1B1E]">
-                {format(selected, "EEE, MMM d, yyyy")}
+              <span className="min-w-0 truncate font-semibold text-[#1A1B1E]">
+                {format(selected, compact ? "EEE, MMM d" : "EEE, MMM d, yyyy")}
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-[#036638] bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-md px-1.5 py-0.5">
-                <Clock className="w-3 h-3" />
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 font-bold text-[#036638] bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-md whitespace-nowrap",
+                  compact ? "text-[10px] px-1 py-0.5" : "text-xs px-1.5 py-0.5",
+                )}
+              >
+                <Clock className={compact ? "w-2.5 h-2.5" : "w-3 h-3"} />
                 {format(selected, "h:mm a")}
               </span>
             </>
           ) : (
-            <span className="text-[#9CA3AF]">{placeholder}</span>
+            <span className="truncate text-[#9CA3AF]">{placeholder}</span>
           )}
           <ChevronDown className="ml-auto w-4 h-4 text-[#9CA3AF] shrink-0" />
         </button>
@@ -213,6 +222,146 @@ export function DateTimePicker({ value, onChange, placeholder = "Select date & t
           >
             <X className="w-3 h-3" />
             Clear date & time
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+interface DatePickerProps {
+  /** Date value as "YYYY-MM-DD" ("" when unset). */
+  value: string
+  onChange: (iso: string) => void
+  placeholder?: string
+  disabled?: boolean
+}
+
+/**
+ * Shadcn-style date-only picker: click the input-like trigger and a popover
+ * opens with a calendar grid (date-fns — no new dependency). Picking a day
+ * calls onChange with "YYYY-MM-DD". No time select — use DateTimePicker when
+ * a time is needed too.
+ */
+export function DatePicker({ value, onChange, placeholder = "Select date", disabled }: DatePickerProps) {
+  const [open, setOpen] = useState(false)
+  const selected = value ? parseISO(value) : null
+
+  const [viewDate, setViewDate] = useState<Date>(() =>
+    selected ? startOfMonth(selected) : startOfMonth(new Date()),
+  )
+
+  const gridStart = startOfWeek(startOfMonth(viewDate), { weekStartsOn: 0 })
+  const gridEnd = endOfWeek(endOfMonth(viewDate), { weekStartsOn: 0 })
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
+
+  const handleDaySelect = (day: Date) => {
+    if (!isSameMonth(day, viewDate)) setViewDate(startOfMonth(day))
+    onChange(format(day, "yyyy-MM-dd"))
+    setOpen(false)
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next && selected) setViewDate(startOfMonth(selected))
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "w-full h-10 px-3.5 rounded-lg border bg-white text-sm flex items-center gap-2.5 transition-all cursor-pointer",
+            disabled && "opacity-50 cursor-not-allowed",
+            selected
+              ? "border-[#036638]/40 focus:border-[#036638]/60"
+              : "border-[#E5E7EB] hover:border-[#D1D5DB]",
+            "focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50",
+          )}
+          title={selected ? format(selected, "EEEE, MMMM d, yyyy") : placeholder}
+        >
+          <Calendar className={cn("w-4 h-4 shrink-0", selected ? "text-[#036638]" : "text-[#9CA3AF]")} />
+          {selected ? (
+            <span className="font-semibold text-[#1A1B1E]">{format(selected, "EEE, MMM d, yyyy")}</span>
+          ) : (
+            <span className="text-[#9CA3AF]">{placeholder}</span>
+          )}
+          <ChevronDown className="ml-auto w-4 h-4 text-[#9CA3AF] shrink-0" />
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-[280px] p-3 rounded-2xl shadow-lg" align="start">
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-2">
+          <button
+            type="button"
+            onClick={() => setViewDate((v) => subMonths(v, 1))}
+            aria-label="Previous month"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-bold text-[#12141A]">{format(viewDate, "MMMM yyyy")}</span>
+          <button
+            type="button"
+            onClick={() => setViewDate((v) => addMonths(v, 1))}
+            aria-label="Next month"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {WEEKDAYS.map((d) => (
+            <span key={d} className="text-center text-[10px] font-bold text-[#9CA3AF]">
+              {d}
+            </span>
+          ))}
+        </div>
+
+        {/* Day grid */}
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {days.map((day) => {
+            const inMonth = isSameMonth(day, viewDate)
+            const isSelected = selected && isSameDay(day, selected)
+            return (
+              <button
+                key={day.toISOString()}
+                type="button"
+                aria-label={format(day, "EEEE, MMMM d, yyyy")}
+                aria-pressed={Boolean(isSelected)}
+                onClick={() => handleDaySelect(day)}
+                className={cn(
+                  "h-8 w-8 mx-auto rounded-full text-xs font-medium transition-colors cursor-pointer",
+                  !inMonth && "text-[#D1D5DB]",
+                  inMonth && !isSelected && "text-[#1A1B1E] hover:bg-[#EBF7EC] hover:text-[#036638]",
+                  isToday(day) && inMonth && !isSelected && "ring-1 ring-[#036638]/40",
+                  isSelected && "bg-[#036638] text-white hover:bg-[#036638] shadow-sm shadow-emerald-500/30",
+                )}
+              >
+                {format(day, "d")}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Clear */}
+        <div className="mt-2.5 pt-2 border-t border-[#EDEFF2]">
+          <button
+            type="button"
+            onClick={() => {
+              onChange("")
+              setOpen(false)
+            }}
+            className="flex items-center gap-1 text-[10px] font-semibold text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+          >
+            <X className="w-3 h-3" />
+            Clear date
           </button>
         </div>
       </PopoverContent>

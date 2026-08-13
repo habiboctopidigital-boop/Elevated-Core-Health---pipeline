@@ -220,7 +220,7 @@
     scrollbar-color: #65BD6C #EBF7EC;
   }
   .scrollbar-brand::-webkit-scrollbar {
-    width: 10px;
+    width: 5px;
     height: 10px;
   }
   .scrollbar-brand::-webkit-scrollbar-track {
@@ -374,20 +374,25 @@ button{
    Premium Toasts (sonner) - Elevated Core Health branding
    ============================================================ */
 
-/* Toast card: frosted glass, brand-green tinted shadow, rounded */
+/* Toast card: frosted, rounded. Card background is tinted per type:
+   default/normal + success + info -> green-based
+   warning/loading ("working")     -> amber-based
+   error                            -> red-based */
 .ech-toast {
   position: relative;
   overflow: hidden;
   border-radius: 5px !important;
-  border: 1px solid rgba(3, 102, 56, 0.10) !important;
-  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid rgba(3, 102, 56, 0.20) !important;
+  background: linear-gradient(135deg, #F1FAF2, #E3F4E6) !important;
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   box-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 8px 24px -6px rgba(3, 102, 56, 0.14),
     0 20px 48px -12px rgba(3, 102, 56, 0.18) !important;
-  padding: 14px 16px 14px 18px !important;
+  /* Right padding reserves room for the always-visible close button (28px)
+     so long titles/descriptions never slide underneath it. */
+  padding: 14px 30px 14px 18px !important;
   gap: 12px !important;
   align-items: flex-start !important;
 }
@@ -418,7 +423,25 @@ button{
   background: linear-gradient(180deg, #34d399, #0d9488);
 }
 [data-sonner-toast].ech-toast-loading::before {
-  background: linear-gradient(180deg, #65bd6c, #036638);
+  background: linear-gradient(180deg, #fbbf24, #d97706);
+}
+
+/* Tinted card backgrounds per type (override the green base above) */
+[data-sonner-toast].ech-toast-success {
+  background: linear-gradient(135deg, #E6F6E9, #CFEDD4) !important;
+  border-color: rgba(3, 102, 56, 0.28) !important;
+}
+[data-sonner-toast].ech-toast-info {
+  background: linear-gradient(135deg, #EAF8EC, #DFF3E2) !important;
+}
+[data-sonner-toast].ech-toast-warning,
+[data-sonner-toast].ech-toast-loading {
+  background: linear-gradient(135deg, #FEF7EA, #FBECCD) !important;
+  border-color: rgba(217, 119, 6, 0.28) !important;
+}
+[data-sonner-toast].ech-toast-error {
+  background: linear-gradient(135deg, #FEF1F0, #FBDFDE) !important;
+  border-color: rgba(220, 38, 38, 0.30) !important;
 }
 
 /* Icon: brand-green dot; red/amber only for alert types */
@@ -434,7 +457,8 @@ button{
 .ech-toast-error .ech-toast-icon {
   color: #dc2626 !important;
 }
-.ech-toast-warning .ech-toast-icon {
+.ech-toast-warning .ech-toast-icon,
+.ech-toast-loading .ech-toast-icon {
   color: #d97706 !important;
 }
 .ech-toast-info .ech-toast-icon {
@@ -449,6 +473,19 @@ button{
   line-height: 1.4;
   color: #1a1b1e;
   letter-spacing: -0.01em;
+}
+
+/* Title colour follows the toast type */
+.ech-toast-success .ech-toast-title,
+.ech-toast-info .ech-toast-title {
+  color: #036638 !important;
+}
+.ech-toast-error .ech-toast-title {
+  color: #b91c1c !important;
+}
+.ech-toast-warning .ech-toast-title,
+.ech-toast-loading .ech-toast-title {
+  color: #b45309 !important;
 }
 .ech-toast-description {
   font-size: 12.5px;
@@ -465,11 +502,47 @@ button{
   color: #036638 !important;
   transition: all 0.2s ease;
 }
+
+/* Sonner v2 anchors the close button at the card's top-left CORNER with a
+   -35% translate, which this card's overflow:hidden clips — leaving the cross
+   half-invisible. Re-anchor it fully INSIDE the toast at the top-right so the
+   close icon is always perfectly visible. */
+[data-sonner-toast][data-styled='true'] [data-close-button].ech-toast-close {
+  left: auto !important;
+  right: 8px !important;
+  top: 8px !important;
+  transform: none !important;
+  z-index: 2 !important;
+}
 .ech-toast-close:hover {
   background: #036638 !important;
   border-color: #036638 !important;
   color: #ffffff !important;
   transform: scale(1.05);
+}
+
+/* Close button adapts to the toast type */
+.ech-toast-error .ech-toast-close {
+  background: rgba(220, 38, 38, 0.08) !important;
+  border-color: rgba(220, 38, 38, 0.22) !important;
+  color: #dc2626 !important;
+}
+.ech-toast-error .ech-toast-close:hover {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+}
+.ech-toast-warning .ech-toast-close,
+.ech-toast-loading .ech-toast-close {
+  background: rgba(217, 119, 6, 0.08) !important;
+  border-color: rgba(217, 119, 6, 0.22) !important;
+  color: #d97706 !important;
+}
+.ech-toast-warning .ech-toast-close:hover,
+.ech-toast-loading .ech-toast-close:hover {
+  background: #d97706 !important;
+  border-color: #d97706 !important;
+  color: #ffffff !important;
 }
 
 /* Action / cancel buttons keep the green gradient action style.

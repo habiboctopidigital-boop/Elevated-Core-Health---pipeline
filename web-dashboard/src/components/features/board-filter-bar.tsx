@@ -56,13 +56,6 @@ const MODE_OPTIONS: Array<{
     hover: "hover:text-[#036638]",
   },
   {
-    value: "stale",
-    label: "Stale",
-    icon: Clock,
-    active: "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm shadow-amber-500/25",
-    hover: "hover:text-amber-600",
-  },
-  {
     value: "flagged",
     label: "Flagged",
     icon: Flag,

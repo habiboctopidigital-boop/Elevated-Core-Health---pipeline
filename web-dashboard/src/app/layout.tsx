@@ -56,7 +56,7 @@ export default function RootLayout({
                   close: <X className="w-3.5 h-3.5" strokeWidth={2.5} />,
                 }}
                 toastOptions={{
-                  duration: 400000,
+                  duration: 3000,
                   classNames: {
                     toast: "ech-toast",
                     title: "ech-toast-title",

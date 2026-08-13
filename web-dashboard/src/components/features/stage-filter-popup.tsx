@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Calendar, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DatePicker } from "@/components/ui/date-time-picker"
 import type { Patient } from "@/types"
 
 interface StageFilterPopupProps {
@@ -179,16 +180,12 @@ export function StageFilterPopup({
               <label className="text-xs font-semibold text-[#374151] uppercase tracking-wider block mb-2">
                 Filter by Date
               </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
-                <input
-                  type="date"
-                  value={specificDate}
-                  onChange={(e) => setSpecificDate(e.target.value)}
-                  disabled={isLoading}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
+              <DatePicker
+                value={specificDate}
+                onChange={(v) => setSpecificDate(v)}
+                placeholder="Filter by date"
+                disabled={isLoading}
+              />
             </div>
           </div>
 

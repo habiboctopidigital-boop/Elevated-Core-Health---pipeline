@@ -199,8 +199,8 @@ export function KanbanBoard({
       {/* Desktop: Horizontal scroll | Mobile: Vertical stack.
           Height is left to the page (flex-1) so the board's own green
           scrollbars handle overflow — no parent page scrollbar. */}
-      <div className="sm:flex-1 sm:min-h-0 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
-        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-3 sm:p-5 sm:w-[450px] w-full">
+      <div className="sm:flex-1 sm:min-h-0 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin ">
+        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-3 sm:p-5 sm:w-[450px] w-full ">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
