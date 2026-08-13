@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Loader2 } from "lucide-react"
-import { DateTimePicker, DatePicker } from "@/components/ui/date-time-picker"
+import { DateTimePicker, DatePicker, getMinAppointmentDate, getMaxDobDate } from "@/components/ui/date-time-picker"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { useListVas } from "@/hooks/query/usePatients"
@@ -59,8 +59,18 @@ const addPatientSchema = z.object({
       message: "Enter a valid phone number",
     }),
   location: z.string().trim().max(120, "Location is too long").optional(),
-  dateOfBirth: z.string().optional(),
-  appointmentDatetime: z.string().optional(),
+  dateOfBirth: z
+    .string()
+    .optional()
+    .refine((v) => !v || new Date(v).getTime() <= getMaxDobDate().getTime(), {
+      message: "Patient must be at least 18 years old",
+    }),
+  appointmentDatetime: z
+    .string()
+    .optional()
+    .refine((v) => !v || new Date(v).getTime() >= getMinAppointmentDate().getTime(), {
+      message: "Appointment date cannot be in the past",
+    }),
   bookingPlatform: z.string().optional(),
   assignedTo: z.string().optional(),
   paymentMethod: z.string().optional(),
@@ -317,6 +327,7 @@ export function AddPatientDialog() {
                     setFormData((f) => ({ ...f, dateOfBirth: iso }))
                     clearFieldError("dateOfBirth")
                   }}
+                  maxDate={getMaxDobDate()}
                   placeholder="Select date of birth"
                 />
               </Field>
@@ -328,6 +339,7 @@ export function AddPatientDialog() {
                     setFormData((f) => ({ ...f, appointmentDatetime: iso }))
                     clearFieldError("appointmentDatetime")
                   }}
+                  minDate={getMinAppointmentDate()}
                   placeholder="Pick a date & time"
                 />
               </Field>

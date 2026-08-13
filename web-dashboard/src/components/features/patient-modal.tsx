@@ -50,7 +50,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { DateTimePicker, DatePicker } from "@/components/ui/date-time-picker"
+import { DateTimePicker, DatePicker, getMinAppointmentDate, getMaxDobDate } from "@/components/ui/date-time-picker"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 import {
@@ -186,7 +186,13 @@ const contactSchema = z.object({
       message: "Enter a valid phone number",
     }),
   location: z.string().trim().max(120, "Location is too long").optional().or(z.literal("")),
-  dateOfBirth: z.string().optional().or(z.literal("")),
+  dateOfBirth: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || new Date(v).getTime() <= getMaxDobDate().getTime(), {
+      message: "Patient must be at least 18 years old",
+    }),
   copayAmount: z.string().trim().optional().or(z.literal("")),
   amountPaid: z.string().trim().optional().or(z.literal("")),
 })
@@ -578,6 +584,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const handleUpdateAppointment = async () => {
     if (!patient || !newAppointmentDatetime.trim()) return
+    if (new Date(newAppointmentDatetime).getTime() < getMinAppointmentDate().getTime()) {
+      toast.error("Appointment date cannot be in the past")
+      return
+    }
     const isoDatetime = new Date(newAppointmentDatetime).toISOString()
     await updateAppointment.mutateAsync({ id: patient.id, appointmentDatetime: isoDatetime })
     setEditingAppointment(false)
@@ -919,6 +929,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         compact
                         value={newAppointmentDatetime ? new Date(newAppointmentDatetime).toISOString() : ""}
                         onChange={(iso) => setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(iso)))}
+                        minDate={getMinAppointmentDate()}
                       />
                       <div className="flex gap-1.5">
                         <button
@@ -1516,8 +1527,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                             <DatePicker
                               value={watch("dateOfBirth") ?? ""}
                               onChange={(iso) => setValue("dateOfBirth", iso, { shouldValidate: true })}
+                              maxDate={getMaxDobDate()}
                               placeholder="Select date of birth"
                             />
+                            {errors.dateOfBirth && <p className="text-[11px] text-[#CC3333] mt-1">{errors.dateOfBirth.message}</p>}
                           </div>
                           <div>
                             <label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label>
@@ -2116,7 +2129,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 </div>
                 {editingAppointment ? (
                   <div className="space-y-1.5 mt-1">
-                    <DateTimePicker compact value={newAppointmentDatetime ? new Date(newAppointmentDatetime).toISOString() : ""} onChange={(iso) => setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(iso)))} />
+                    <DateTimePicker compact minDate={getMinAppointmentDate()} value={newAppointmentDatetime ? new Date(newAppointmentDatetime).toISOString() : ""} onChange={(iso) => setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(iso)))} />
                     <div className="flex gap-1">
                       <button onClick={handleUpdateAppointment} disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()} className="flex-1 text-[10px] font-semibold py-1 rounded bg-emerald-600 text-white">Save</button>
                       <button onClick={() => { setEditingAppointment(false); if (patient.appointmentDatetime) setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(patient.appointmentDatetime))); else setNewAppointmentDatetime(""); }} className="px-2 py-1 text-[10px] font-medium rounded border border-gray-200 text-gray-600">Cancel</button>

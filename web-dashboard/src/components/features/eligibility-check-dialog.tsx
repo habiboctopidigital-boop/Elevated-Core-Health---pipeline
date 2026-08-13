@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { DatePicker } from "@/components/ui/date-time-picker"
+import { DatePicker, getMaxDobDate } from "@/components/ui/date-time-picker"
 import { Loader2, ShieldCheck, RotateCcw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import { useCheckEligibility } from "@/hooks/query/usePatients"
 import { SelectOrOther } from "@/components/shared/select-or-other"
@@ -186,7 +186,7 @@ export function EligibilityCheckDialog({ patient, open, onClose }: EligibilityCh
                 </div>
                 <div className="sm:col-span-2">
                   <FieldLabel>Date of Birth</FieldLabel>
-                  <DatePicker value={dob} onChange={(v) => setDob(v)} placeholder="Select date of birth" />
+                  <DatePicker value={dob} onChange={(v) => setDob(v)} maxDate={getMaxDobDate()} placeholder="Select date of birth" />
                 </div>
               </div>
 

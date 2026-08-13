@@ -22,6 +22,66 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
 
+// Short month names for the quick-jump month dropdown.
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+// Year range for the quick-jump year dropdown: 5 years ahead (appointments)
+// back to ~1916 (DOBs) — far more than any real use, scrollable in the list.
+const NAV_YEAR_END = new Date().getFullYear() + 5
+const NAV_YEAR_START = NAV_YEAR_END - 115
+const NAV_YEARS: number[] = []
+for (let y = NAV_YEAR_START; y <= NAV_YEAR_END; y++) NAV_YEARS.push(y)
+
+/**
+ * Month + year dropdowns so users can jump to any date fast (no 40 clicks on
+ * the arrows). Keeps the calendar grid in sync; both pickers share it.
+ */
+function MonthYearNav({
+  viewDate,
+  onNavigate,
+}: {
+  viewDate: Date
+  onNavigate: (date: Date) => void
+}) {
+  const viewYear = viewDate.getFullYear()
+  const viewMonth = viewDate.getMonth()
+
+  return (
+    <div className="flex-1 grid grid-cols-2 gap-1">
+      <Select
+        value={String(viewMonth)}
+        onValueChange={(v) => onNavigate(new Date(viewYear, Number(v), 1))}
+      >
+        <SelectTrigger className="h-7 w-full rounded-lg border-[#E5E7EB] bg-white text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 px-2 cursor-pointer">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {MONTH_NAMES.map((m, i) => (
+            <SelectItem key={m} value={String(i)}>
+              {m}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={String(viewYear)}
+        onValueChange={(v) => onNavigate(new Date(Number(v), viewMonth, 1))}
+      >
+        <SelectTrigger className="h-7 w-full rounded-lg border-[#E5E7EB] bg-white text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 px-2 cursor-pointer">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="max-h-64">
+          {NAV_YEARS.map((y) => (
+            <SelectItem key={y} value={String(y)}>
+              {y}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
 const pad = (n: number) => String(n).padStart(2, "0")
 
 // 30-minute slots across the full day (48 options) — scrollable inside the popover.
@@ -43,6 +103,10 @@ interface DateTimePickerProps {
   placeholder?: string
   /** Compact trigger for narrow layouts (e.g. the patient modal's sidebar). */
   compact?: boolean
+  /** Earliest selectable day (inclusive). Days before this are grayed out. */
+  minDate?: Date | string | null
+  /** Latest selectable day (inclusive). Days after this are grayed out. */
+  maxDate?: Date | string | null
 }
 
 /**
@@ -51,7 +115,14 @@ interface DateTimePickerProps {
  * time select. Picking a day keeps any chosen time (defaults to 9:00 AM);
  * picking a time keeps the selected day.
  */
-export function DateTimePicker({ value, onChange, placeholder = "Select date & time", compact }: DateTimePickerProps) {
+export function DateTimePicker({
+  value,
+  onChange,
+  placeholder = "Select date & time",
+  compact,
+  minDate,
+  maxDate,
+}: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const selected = value ? new Date(value) : null
 
@@ -65,6 +136,10 @@ export function DateTimePicker({ value, onChange, placeholder = "Select date & t
   const gridStart = startOfWeek(startOfMonth(viewDate), { weekStartsOn: 0 })
   const gridEnd = endOfWeek(endOfMonth(viewDate), { weekStartsOn: 0 })
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
+
+  // Disabled-day range (inclusive): minDate from start-of-day, maxDate to end-of-day.
+  const minDayTs = minDate ? new Date(minDate).setHours(0, 0, 0, 0) : null
+  const maxDayTs = maxDate ? new Date(maxDate).setHours(23, 59, 59, 999) : null
 
   const handleDaySelect = (day: Date) => {
     if (!isSameMonth(day, viewDate)) setViewDate(startOfMonth(day))
@@ -137,22 +212,22 @@ export function DateTimePicker({ value, onChange, placeholder = "Select date & t
       </PopoverTrigger>
 
       <PopoverContent className="w-[300px] p-3 rounded-2xl shadow-lg" align="start">
-        {/* Month nav */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Month nav — arrows step one month, dropdowns jump to any month/year */}
+        <div className="flex items-center gap-1 mb-2">
           <button
             type="button"
             onClick={() => setViewDate((v) => subMonths(v, 1))}
             aria-label="Previous month"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-bold text-[#12141A]">{format(viewDate, "MMMM yyyy")}</span>
+          <MonthYearNav viewDate={viewDate} onNavigate={(d) => setViewDate(d)} />
           <button
             type="button"
             onClick={() => setViewDate((v) => addMonths(v, 1))}
             aria-label="Next month"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -172,19 +247,25 @@ export function DateTimePicker({ value, onChange, placeholder = "Select date & t
           {days.map((day) => {
             const inMonth = isSameMonth(day, viewDate)
             const isSelected = selected && isSameDay(day, selected)
+            const isDisabled =
+              (minDayTs !== null && day.getTime() < minDayTs) ||
+              (maxDayTs !== null && day.getTime() > maxDayTs)
             return (
               <button
                 key={day.toISOString()}
                 type="button"
                 aria-label={format(day, "EEEE, MMMM d, yyyy")}
                 aria-pressed={Boolean(isSelected)}
+                aria-disabled={isDisabled}
+                disabled={isDisabled}
                 onClick={() => handleDaySelect(day)}
                 className={cn(
                   "h-8 w-8 mx-auto rounded-full text-xs font-medium transition-colors cursor-pointer",
                   !inMonth && "text-[#D1D5DB]",
-                  inMonth && !isSelected && "text-[#1A1B1E] hover:bg-[#EBF7EC] hover:text-[#036638]",
-                  isToday(day) && inMonth && !isSelected && "ring-1 ring-[#036638]/40",
-                  isSelected && "bg-[#036638] text-white hover:bg-[#036638] shadow-sm shadow-emerald-500/30",
+                  isDisabled && "text-[#D1D5DB] cursor-not-allowed hover:bg-transparent hover:text-[#D1D5DB]",
+                  inMonth && !isSelected && !isDisabled && "text-[#1A1B1E] hover:bg-[#EBF7EC] hover:text-[#036638]",
+                  isToday(day) && inMonth && !isSelected && !isDisabled && "ring-1 ring-[#036638]/40",
+                  isSelected && !isDisabled && "bg-[#036638] text-white hover:bg-[#036638] shadow-sm shadow-emerald-500/30",
                 )}
               >
                 {format(day, "d")}
@@ -235,6 +316,10 @@ interface DatePickerProps {
   onChange: (iso: string) => void
   placeholder?: string
   disabled?: boolean
+  /** Earliest selectable day (inclusive). Days before this are grayed out. */
+  minDate?: Date | string | null
+  /** Latest selectable day (inclusive). Days after this are grayed out. */
+  maxDate?: Date | string | null
 }
 
 /**
@@ -243,7 +328,14 @@ interface DatePickerProps {
  * calls onChange with "YYYY-MM-DD". No time select — use DateTimePicker when
  * a time is needed too.
  */
-export function DatePicker({ value, onChange, placeholder = "Select date", disabled }: DatePickerProps) {
+export function DatePicker({
+  value,
+  onChange,
+  placeholder = "Select date",
+  disabled,
+  minDate,
+  maxDate,
+}: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const selected = value ? parseISO(value) : null
 
@@ -254,6 +346,10 @@ export function DatePicker({ value, onChange, placeholder = "Select date", disab
   const gridStart = startOfWeek(startOfMonth(viewDate), { weekStartsOn: 0 })
   const gridEnd = endOfWeek(endOfMonth(viewDate), { weekStartsOn: 0 })
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
+
+  // Disabled-day range (inclusive): minDate from start-of-day, maxDate to end-of-day.
+  const minDayTs = minDate ? new Date(minDate).setHours(0, 0, 0, 0) : null
+  const maxDayTs = maxDate ? new Date(maxDate).setHours(23, 59, 59, 999) : null
 
   const handleDaySelect = (day: Date) => {
     if (!isSameMonth(day, viewDate)) setViewDate(startOfMonth(day))
@@ -294,22 +390,22 @@ export function DatePicker({ value, onChange, placeholder = "Select date", disab
       </PopoverTrigger>
 
       <PopoverContent className="w-[280px] p-3 rounded-2xl shadow-lg" align="start">
-        {/* Month nav */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Month nav — arrows step one month, dropdowns jump to any month/year */}
+        <div className="flex items-center gap-1 mb-2">
           <button
             type="button"
             onClick={() => setViewDate((v) => subMonths(v, 1))}
             aria-label="Previous month"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-bold text-[#12141A]">{format(viewDate, "MMMM yyyy")}</span>
+          <MonthYearNav viewDate={viewDate} onNavigate={(d) => setViewDate(d)} />
           <button
             type="button"
             onClick={() => setViewDate((v) => addMonths(v, 1))}
             aria-label="Next month"
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -329,19 +425,25 @@ export function DatePicker({ value, onChange, placeholder = "Select date", disab
           {days.map((day) => {
             const inMonth = isSameMonth(day, viewDate)
             const isSelected = selected && isSameDay(day, selected)
+            const isDisabled =
+              (minDayTs !== null && day.getTime() < minDayTs) ||
+              (maxDayTs !== null && day.getTime() > maxDayTs)
             return (
               <button
                 key={day.toISOString()}
                 type="button"
                 aria-label={format(day, "EEEE, MMMM d, yyyy")}
                 aria-pressed={Boolean(isSelected)}
+                aria-disabled={isDisabled}
+                disabled={isDisabled}
                 onClick={() => handleDaySelect(day)}
                 className={cn(
                   "h-8 w-8 mx-auto rounded-full text-xs font-medium transition-colors cursor-pointer",
                   !inMonth && "text-[#D1D5DB]",
-                  inMonth && !isSelected && "text-[#1A1B1E] hover:bg-[#EBF7EC] hover:text-[#036638]",
-                  isToday(day) && inMonth && !isSelected && "ring-1 ring-[#036638]/40",
-                  isSelected && "bg-[#036638] text-white hover:bg-[#036638] shadow-sm shadow-emerald-500/30",
+                  isDisabled && "text-[#D1D5DB] cursor-not-allowed hover:bg-transparent hover:text-[#D1D5DB]",
+                  inMonth && !isSelected && !isDisabled && "text-[#1A1B1E] hover:bg-[#EBF7EC] hover:text-[#036638]",
+                  isToday(day) && inMonth && !isSelected && !isDisabled && "ring-1 ring-[#036638]/40",
+                  isSelected && !isDisabled && "bg-[#036638] text-white hover:bg-[#036638] shadow-sm shadow-emerald-500/30",
                 )}
               >
                 {format(day, "d")}
@@ -367,4 +469,24 @@ export function DatePicker({ value, onChange, placeholder = "Select date", disab
       </PopoverContent>
     </Popover>
   )
+}
+
+/**
+ * Earliest allowed appointment day — today at 00:00. Pass as `minDate` to
+ * DateTimePicker so past appointment dates can't be selected.
+ */
+export function getMinAppointmentDate(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+/**
+ * Latest allowed date of birth — exactly 18 years ago. Pass as `maxDate` to
+ * DatePicker so patients must be at least 18 years old.
+ */
+export function getMaxDobDate(): Date {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 18)
+  return d
 }
