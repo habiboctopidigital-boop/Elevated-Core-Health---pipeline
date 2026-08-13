@@ -1,5 +1,8 @@
 "use client"
 
+
+
+
 import { useState, useEffect, useMemo, useRef } from "react"
 
 import type { Patient, PatientFlag, PatientStage } from "@/types"
@@ -42,6 +45,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Clock,
+  Info,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -71,6 +75,7 @@ import { SelectOrOther } from "@/components/shared/select-or-other"
 import { EligibilityCheckDialog } from "./eligibility-check-dialog"
 import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS, VOB_LABELS } from "@/lib/patient-options"
 import { getStageColor } from "@/lib/stage-colors"
+import { actionMeta, fullDateTime } from "@/lib/activity-meta"
 import { cn, getInitials } from "@/lib/utils"
 import { toast } from "sonner"
 import z from "zod"
@@ -187,8 +192,6 @@ const contactSchema = z.object({
 
 type ContactFormValues = z.infer<typeof contactSchema>
 
-// Split a stored full name into first + last so patients created via the
-// webhook/intake (name only, no separate first/last) still render both fields.
 function splitPatientName(fullName: string): { firstName: string; lastName: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return { firstName: "", lastName: "" }
@@ -196,7 +199,7 @@ function splitPatientName(fullName: string): { firstName: string; lastName: stri
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") }
 }
 
-type TabKey = "overview" | "contact" | "eligibility" | "activity"
+type TabKey = "overview" | "contact" | "eligibility" | "checklist" | "activity"
 
 // Small donut/ring progress indicator used in the Overview → SOP card.
 function ProgressRing({ percent, label, sublabel }: { percent: number; label: string; sublabel: string }) {
@@ -264,8 +267,7 @@ function SidebarItem({
   )
 }
 
-// Inline "Clear Flag" form — admin writes feedback before clearing a flag. The
-// message is stored as the cleared reason and emailed to the original flagger.
+// Inline "Clear Flag" form — admin writes feedback before clearing a flag.
 function FlagClearForm({
   clearReason,
   setClearReason,
@@ -282,7 +284,7 @@ function FlagClearForm({
   return (
     <div className="mt-3 space-y-2 rounded-xl bg-white/80 border border-gray-200 p-3">
       <Textarea
-        placeholder="Write your feedback / reason for clearing this flag (emailed to the person who raised it)..."
+        placeholder="Write your feedback / reason for clearing this flag..."
         value={clearReason}
         onChange={(e) => setClearReason(e.target.value)}
         className="text-xs min-h-[64px] rounded-lg"
@@ -308,8 +310,6 @@ function FlagClearForm({
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
   const isAdmin = isAdminOrAbove(user?.role)
-  // A flag raised by an admin/super_admin renders with a distinct "Admin Flag"
-  // symbol so oversight flags are easy to spot vs. VA-raised flags.
   const isAdminFlag = (flag?: PatientFlag | null) =>
     !!flag?.flaggedByUser && isAdminOrAbove(flag.flaggedByUser.role)
   const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
@@ -341,7 +341,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const currentState = patient?.checklistState?.[patient.stage] || {}
 
-  // Flag history array (newest first) + derived counts for the header badges.
   const flagHistory = patient?.flags ?? []
   const latestFlag = flagHistory[0] ?? null
   const flagTotalCount = flagHistory.length
@@ -359,8 +358,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
   const [showMenu, setShowMenu] = useState(false)
-  // Tracks which 3-dot menu action is running so that item can show its own
-  // inline spinner (Reactivate / Lock / Unlock) instead of hiding feedback.
   const [menuPending, setMenuPending] = useState<"reactivate" | "unlock" | "lock" | null>(null)
   const [notesText, setNotesText] = useState("")
   const [flagReason, setFlagReason] = useState("")
@@ -370,8 +367,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [newFlagReason, setNewFlagReason] = useState("")
   const [newFlagType, setNewFlagType] = useState<"positive" | "negative">("positive")
   const [clearReason, setClearReason] = useState("")
-  // Which flag's "Clear Flag" form is open: "current" = the Overview card's
-  // latest flag, or the flag's id inside the Activity tab's history list.
   const [clearingFlagId, setClearingFlagId] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("")
@@ -478,8 +473,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      // Don't close the whole modal when Escape is used inside a child dialog
-      // (e.g. the eligibility check) — let that dialog handle its own Escape.
       if (e.key === "Escape" && open && !assigning && !showEligibilityCheck) {
         onClose()
       }
@@ -505,10 +498,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const handleClearFlag = async () => {
     if (!patient || !clearReason.trim()) return
-    // Resolve the SPECIFIC flag being cleared: "current" = the latest flag
-    // shown in the Overview card; otherwise the flag id the admin clicked in
-    // the Activity tab's history list. Only that flag is cleared — others stay
-    // untouched with their own reason.
     const flagId =
       clearingFlagId === "current"
         ? latestFlag?.id ?? undefined
@@ -518,7 +507,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setClearReason("")
   }
 
-  // "View All Flags" jumps to the Activity tab, where the full history renders.
   const flagHistoryRef = useRef<HTMLDivElement | null>(null)
   const scrollToFlagHistory = () => {
     setActiveTab("activity")
@@ -564,8 +552,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setCancelReason("")
   }
 
-  // Runs an immediate 3-dot menu mutation (reactivate / lock / unlock) while
-  // keeping the menu open so the clicked item can show its own loading state.
   const runMenuAction = async (action: "reactivate" | "unlock" | "lock") => {
     if (!patient || menuPending) return
     setMenuPending(action)
@@ -578,7 +564,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
         await lockPatient.mutateAsync(patient.id)
       }
     } catch {
-      // Errors are surfaced by each mutation hook's toast — just re-enable the menu.
     } finally {
       setMenuPending(null)
       setShowMenu(false)
@@ -649,19 +634,16 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     (Date.now() - new Date(patient.updatedAt).getTime()) / (1000 * 60 * 60) >
       STALE_HOURS
 
-  // Current position in the pipeline (drives the timeline + progress header)
   const currentStageIdx = patient ? stageOrder.indexOf(patient.stage) : -1
 
-  // SOP items are shown as a checklist too — the first N (= completed
-  // required-items count for this stage) render as "done" so the card gives
-  // an at-a-glance sense of progress even though SOP text and checklist defs
-  // aren't a strict 1:1 mapping.
   const sopItems = patient ? STAGE_SOPs[patient.stage] || [] : []
 
   const assignableVas = vaList?.filter((v) => v.id !== user?.id) ?? []
 
   if (!open) return null
 
+  // Both layouts share the same 4 tabs (desktop & mobile) — no separate
+  // Checklist tab.
   const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: "overview", label: "Overview", icon: <LayoutGrid className="w-4 h-4" /> },
     { key: "contact", label: "Contact & Payment", icon: <User className="w-4 h-4" /> },
@@ -670,6 +652,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   ]
 
   return (
+    <>
+      {/* Desktop (lg+) — original desktop layout */}
+      <div className="hidden lg:block">
     <div className="fixed inset-0 z-100 flex items-center justify-center p-2 sm:p-4 lg:pl-[calc(var(--ech-sidebar-offset,8rem)*2)] 
 ">
       <div
@@ -1771,16 +1756,36 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4">
                             <MessageSquare className="w-5 h-5 text-indigo-400" /> Activity Log
                           </h4>
-                          <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
-                            {logData?.logs?.length ? logData.logs.map((log) => (
-                              <div key={log.id} className="flex gap-2 text-xs py-2.5 px-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                <span className="text-gray-400 whitespace-nowrap font-medium">{new Date(log.createdAt).toLocaleDateString()}</span>
-                                <div>
-                                  <span className="font-semibold text-gray-700">{log.author}</span>
-                                  <span className="text-gray-600 ml-1">- {log.message}</span>
+                          <div className="space-y-1 max-h-[28rem] overflow-y-auto pr-1">
+                            {logData?.logs?.length ? logData.logs.map((log) => {
+                              const meta = actionMeta(log.action)
+                              const Icon = meta.icon
+                              return (
+                                <div key={log.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#EBF7EC]/30 transition-colors">
+                                  <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                                    style={{ backgroundColor: `${meta.color}1A` }}
+                                  >
+                                    <Icon className="w-4 h-4" style={{ color: meta.color }} />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span>
+                                      <span
+                                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                        style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}
+                                      >
+                                        {meta.label}
+                                      </span>
+                                      <span className="text-[11px] text-[#9CA3AF] ml-auto shrink-0 whitespace-nowrap">
+                                        {fullDateTime(log.createdAt)}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-[#374151] mt-1 leading-relaxed">{log.message}</p>
+                                  </div>
                                 </div>
-                              </div>
-                            )) : <p className="text-sm text-gray-400 italic">No activity yet</p>}
+                              )
+                            }) : <p className="text-sm text-gray-400 italic px-2 py-4">No activity yet</p>}
                           </div>
                         </div>
                       </>
@@ -1903,7 +1908,726 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
             onClose={() => setShowEligibilityCheck(false)}
           />
         )}
+        </div>
+      </div>
+      </div>
+
+      {/* Mobile & tablet — new responsive layout */}
+      <div className="lg:hidden">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-2 sm:p-4 lg:pl-[calc(var(--ech-sidebar-offset,8rem)*2)]">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={() => !assigning && onClose()}
+      />
+      <div className="relative w-full max-w-[1400px] max-h-[95dvh] bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
+        {isLoading || !patient ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+            {isLoading ? (
+              <div className="flex flex-col items-center gap-5">
+                <div className="relative w-24 h-24 sm:w-28 sm:h-28">
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#65BD6C] border-r-[#036638] animate-spin" />
+                  <div className="absolute inset-2 rounded-full bg-gradient-to-br from-[#EBF7EC] to-[#036638]/10 blur-md animate-pulse" />
+                  <div className="absolute inset-3 rounded-full border border-[#65BD6C]/30" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/logo.png"
+                      alt="Elevated Core Health"
+                      className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
+                    />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-[#1A1B1E]">Loading patient details...</p>
+                  <p className="text-[11px] text-[#6B7280] mt-1">
+                    Elevated <span className="text-[#036638] font-semibold">Core Health</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-[#65BD6C] rounded-full animate-bounce" />
+                  <span className="w-1.5 h-1.5 bg-[#65BD6C] rounded-full animate-bounce" style={{ animationDelay: "0.15s" }} />
+                  <span className="w-1.5 h-1.5 bg-[#65BD6C] rounded-full animate-bounce" style={{ animationDelay: "0.3s" }} />
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Patient not found</p>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="shrink-0 relative bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600 border-b border-white/10 px-4 sm:px-8 py-4 flex items-start justify-between gap-3 sm:gap-4">
+              <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
+              <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
+              <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
+                {avatarError ? (
+                  <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full shadow-sm shrink-0 bg-gradient-to-br from-lime-400 to-green-500 flex items-center justify-center text-white font-bold text-base sm:text-lg">
+                    {getInitials(patient.name)}
+                  </div>
+                ) : (
+                  <img
+                    src={getAvatarUrl(patient)}
+                    onError={() => setAvatarError(true)}
+                    alt={patient.name}
+                    className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover shadow-sm shrink-0 bg-gray-50"
+                  />
+                )}
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-2xl font-bold text-white truncate">{patient.name}</h2>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-white/90">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5" />
+                      {patient.source === "webhook" ? "Web" : "Manual"}
+                    </span>
+                    {patient.phone && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5" />
+                        {patient.phone}
+                      </span>
+                    )}
+                    {patient.email && (
+                      <span className="inline-flex items-center gap-1.5 truncate">
+                        <Mail className="w-3.5 h-3.5" />
+                        {patient.email}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 border border-white/25 text-white">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      {stageLabels[patient.stage]}
+                    </span>
+                    {patient.eligibilityStatus === "eligible" ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 border border-white/25 text-white">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Eligible
+                      </span>
+                    ) : patient.eligibilityStatus === "not_eligible" ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[#CC3333]/30 border border-[#FF8A8A]/40 text-white">
+                        <XCircle className="w-3.5 h-3.5" />
+                        Not Eligible
+                      </span>
+                    ) : null}
+                    {patient.isFlagged && (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-red-400 border border-red-400 text-white">
+                        <Flag className="w-3.5 h-3.5" fill="currentColor" />
+                        Flagged
+                      </span>
+                    )}
+                    {stale && (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Stale
+                      </span>
+                    )}
+                    {patient.status !== "active" && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border",
+                          patient.status === "completed"
+                            ? "bg-sky-400/25 border-sky-300/40 text-sky-50"
+                            : "bg-[#CC3333]/30 border-[#FF8A8A]/40 text-white",
+                        )}
+                      >
+                        {patient.status === "completed" ? "Completed" : "Cancelled"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2.5 shrink-0 min-w-0 max-w-full">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <button
+                    onClick={() => setShowFlagPopup(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 sm:px-3.5 rounded-xl bg-white border border-white text-xs sm:text-sm font-semibold text-[#036638] hover:bg-emerald-50 transition-colors shadow-sm"
+                    title="Raise flag"
+                  >
+                    <Flag className="w-4 h-4 text-[#036638]" />
+                    Flag
+                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMenu((v) => !v)}
+                      className="p-2 sm:p-2.5 rounded-xl border border-white/30 text-white hover:bg-white/10 transition-colors"
+                      title="More actions"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {showMenu && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => {
+                            if (!menuPending) setShowMenu(false)
+                          }}
+                        />
+                        <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20">
+                          {isAdmin && patient.status !== "cancelled" && (
+                            <button
+                              onClick={() => {
+                                setShowMenu(false)
+                                setShowCancelInput(true)
+                                setActiveTab("overview")
+                              }}
+                              disabled={menuPending !== null}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#CC3333] hover:bg-[#CC3333]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              <Ban className="w-4 h-4 shrink-0" /> Mark Cancelled
+                            </button>
+                          )}
+                          {isAdmin && patient.status === "cancelled" && (
+                            <button
+                              onClick={() => runMenuAction("reactivate")}
+                              disabled={menuPending !== null}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              {menuPending === "reactivate" ? (
+                                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4 shrink-0" />
+                              )}
+                              {menuPending === "reactivate" ? "Reactivating..." : "Reactivate"}
+                            </button>
+                          )}
+                          {patient.isPrivate ? (
+                            canUnlock && (
+                              <button
+                                onClick={() => runMenuAction("unlock")}
+                                disabled={menuPending !== null}
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              >
+                                {menuPending === "unlock" ? (
+                                  <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                                ) : (
+                                  <Unlock className="w-4 h-4 shrink-0" />
+                                )}
+                                {menuPending === "unlock" ? "Unlocking..." : "Unlock Record"}
+                              </button>
+                            )
+                          ) : (
+                            canLock && (
+                              <button
+                                onClick={() => runMenuAction("lock")}
+                                disabled={menuPending !== null}
+                                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              >
+                                {menuPending === "lock" ? (
+                                  <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                                ) : (
+                                  <Lock className="w-4 h-4 shrink-0" />
+                                )}
+                                {menuPending === "lock" ? "Locking..." : "Lock Record"}
+                              </button>
+                            )
+                          )}
+                          {flagTotalCount > 0 && (
+                            <button
+                              onClick={() => {
+                                setShowMenu(false)
+                                scrollToFlagHistory()
+                              }}
+                              disabled={menuPending !== null}
+                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                              <Flag className="w-4 h-4 shrink-0" /> View Flag History
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={onClose}
+                    className="p-2 sm:p-2.5 rounded-xl border border-white/30 text-white hover:bg-white/10 transition-colors"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Body: Stats Grid + Tabs + Content */}
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
+              
+              {/* Stats Grid (Mobile/Tablet View) */}
+              <div className="shrink-0 px-4 py-4 border-b border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <span className="text-[8px] font-bold text-gray-400 uppercase">Appointment</span>
+                    </div>
+                    {editingAppointment ? (
+                      <div className="space-y-2 mt-1">
+                        <DateTimePicker compact value={newAppointmentDatetime ? new Date(newAppointmentDatetime).toISOString() : ""} onChange={(iso) => setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(iso)))} />
+                        <div className="flex gap-1">
+                          <button onClick={handleUpdateAppointment} disabled={updateAppointment.isPending || !newAppointmentDatetime.trim()} className="flex-1 text-[10px] font-semibold py-1 rounded bg-emerald-600 text-white">Save</button>
+                          <button onClick={() => { setEditingAppointment(false); if (patient.appointmentDatetime) setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(patient.appointmentDatetime))); else setNewAppointmentDatetime(""); }} className="px-2 py-1 text-[10px] font-medium rounded border border-gray-200 text-gray-600">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col min-w-0">
+                          <p className="text-xs font-bold text-gray-800 truncate">
+                            {patient.appointmentDatetime ? new Date(patient.appointmentDatetime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not scheduled"}
+                          </p>
+                          {patient.appointmentDatetime && <p className="text-[10px] font-medium text-emerald-600">{new Date(patient.appointmentDatetime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>}
+                        </div>
+                        <button onClick={() => setEditingAppointment(true)} className="p-1 rounded hover:bg-emerald-50 text-emerald-500"><Pencil className="w-3 h-3" /></button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#CC3333]/10 flex items-center justify-center text-[#CC3333]">
+                        <Shield className="w-4 h-4" />
+                      </div>
+                      <span className="text-[8px] font-bold text-gray-400 uppercase">Eligibility</span>
+                    </div>
+                    <p className={cn("text-xs font-bold", patient.eligibilityStatus === "eligible" ? "text-emerald-600" : "text-[#CC3333]")}>
+                      {patient.eligibilityStatus === "eligible" ? "Eligible" : "Not Eligible"}
+                    </p>
+                    <button onClick={() => setShowEligibilityCheck(true)} className="mt-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold text-[#CC3333] bg-[#CC3333]/10 px-2 py-0.5 rounded-full hover:bg-[#CC3333]/15">
+                      Check <ChevronRight className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+
+                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600">
+                        <User className="w-4 h-4" />
+                      </div>
+                      <span className="text-[8px] font-bold text-gray-400 uppercase">Assigned To</span>
+                    </div>
+                    <p className="text-xs font-bold text-gray-800 truncate">{patient.assignedUser ? patient.assignedUser.name : "Unassigned"}</p>
+                    {(!!vaList && (isAdmin || !patient.assignedUser)) && (
+                      <div className="relative mt-1.5">
+                        <button onClick={() => setShowAssignDropdown((v) => !v)} disabled={assigning} className="text-[9px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full flex items-center gap-0.5 hover:bg-violet-100">
+                          {patient.assignedUser ? "Change" : "Assign"} <ChevronRight className="w-2.5 h-2.5" />
+                        </button>
+                        {showAssignDropdown && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setShowAssignDropdown(false)} />
+                            <div className="absolute left-0 top-full mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20 max-h-40 overflow-y-auto">
+                              {assignableVas.length === 0 && <p className="px-3 py-1.5 text-[10px] text-gray-400">No VAs available</p>}
+                              {assignableVas.map((va) => (
+                                <button key={va.id} onClick={() => handleAssignTo(va.id)} className="w-full text-left px-3 py-1.5 text-[10px] font-medium text-gray-700 hover:bg-violet-50">{va.name}</button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {assignFeedback && <p className={cn("text-[9px] mt-1 font-medium", assignFeedback.type === "success" ? "text-emerald-600" : "text-[#CC3333]")}>{assignFeedback.message}</p>}
+                  </div>
+
+                  <div className="relative bg-white rounded-xl border border-gray-100 p-3.5 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <span className="text-[8px] font-bold text-gray-400 uppercase">Insurance</span>
+                    </div>
+                    <p className="text-xs font-bold text-gray-800 truncate">{patient.insuranceProvider || "Not on file"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="shrink-0 border-b border-gray-100 px-4 sm:px-8 flex gap-4 sm:gap-6 overflow-x-auto scrollbar-thin">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={cn(
+                      "flex items-center gap-2 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 transition-colors",
+                      activeTab === tab.key
+                        ? "border-emerald-600 text-emerald-700"
+                        : "border-transparent text-gray-500 hover:text-gray-700",
+                    )}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 p-4 sm:p-6 space-y-5 bg-[#F9FAFB]">
+
+                {/* OVERVIEW TAB */}
+                {activeTab === "overview" && (
+                  <>
+                    {(latestFlag ?? patient.flagReason) && patient.isFlagged && (
+                      <div className={cn("rounded-2xl border p-4", isAdminFlag(latestFlag) ? "border-amber-200 bg-amber-50/70 border-l-4 border-l-amber-400" : latestFlag?.type === "positive" ? "border-emerald-200 bg-emerald-50/70 border-l-4 border-l-emerald-400" : "border-[#CC3333]/30 bg-[#CC3333]/10 border-l-4 border-l-[#CC3333]/60")}>
+                        <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                          <p className={cn("text-xs font-bold flex items-center gap-1.5", isAdminFlag(latestFlag) ? "text-amber-700" : latestFlag?.type === "positive" ? "text-emerald-700" : "text-[#CC3333]")}>
+                            {isAdminFlag(latestFlag) ? <><Shield className="w-3.5 h-3.5" fill="#F59E0B" /> Admin Flag</> : <><Flag className="w-3.5 h-3.5" fill="#CC3333" /> Flag Reason</>}
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn("px-2 py-0.5 text-[10px] font-bold rounded-full whitespace-nowrap", isAdminFlag(latestFlag) ? "bg-amber-100 text-amber-700" : latestFlag?.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-[#CC3333]/15 text-[#CC3333]")}>
+                              {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""}
+                            </span>
+                            {flagStageCount > 0 && <span className="px-2 py-0.5 text-[10px] font-bold bg-white/70 text-gray-600 border border-gray-200 rounded-full whitespace-nowrap">{flagStageCount} on this stage</span>}
+                          </div>
+                        </div>
+                        <p className={cn("text-sm", isAdminFlag(latestFlag) ? "text-amber-900" : latestFlag?.type === "positive" ? "text-emerald-900" : "text-[#A32727]")}>
+                          {latestFlag?.reason ?? patient.flagReason}
+                        </p>
+                        <p className={cn("text-[11px] mt-1", isAdminFlag(latestFlag) ? "text-amber-700/70" : latestFlag?.type === "positive" ? "text-emerald-700/70" : "text-[#CC3333]/70")}>
+                          by {latestFlag?.flaggedByUser?.name ?? patient.flaggedByUser?.name} {isAdminFlag(latestFlag) ? "(Admin)" : ""} - {timeAgo((latestFlag?.createdAt ?? patient.flaggedAt?.toString()) || "")}
+                        </p>
+                        {flagTotalCount > 1 && <button onClick={scrollToFlagHistory} className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 underline underline-offset-2 hover:text-gray-900">View All Flags ({flagTotalCount}) <ChevronDown className="w-3 h-3" /></button>}
+                        {isAdmin && (clearingFlagId === "current" ? (
+                          <FlagClearForm clearReason={clearReason} setClearReason={setClearReason} isPending={clearFlag.isPending} onClear={handleClearFlag} onCancel={() => { setClearingFlagId(null); setClearReason(""); }} />
+                        ) : (
+                          <button onClick={() => setClearingFlagId("current")} className={cn("mt-3 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors", isAdminFlag(latestFlag) ? "text-amber-700 border-amber-200 bg-white/70 hover:bg-amber-50" : latestFlag?.type === "positive" ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50" : "text-[#CC3333] border-[#CC3333]/30 bg-white/70 hover:bg-[#CC3333]/10")}>
+                            <FlagOff className="w-3.5 h-3.5" /> Clear Flag
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* SOP */}
+                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 overflow-hidden">
+                      <ClipboardList className="absolute -right-3 -bottom-3 w-28 h-28 text-amber-500/10 pointer-events-none" />
+                      <div className="relative flex flex-col sm:flex-row items-start gap-6">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Zap className="w-5 h-5 text-amber-500" />
+                            <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wide">Standard Operating Procedure</h4>
+                            <div className="ml-auto text-[10px] font-bold text-amber-700 bg-white/60 px-2.5 py-0.5 rounded-full border border-amber-200">
+                              {completedItems} / {totalItems} Completed
+                            </div>
+                          </div>
+                          <ul className="space-y-2.5">
+                            {sopItems.map((sop, idx) => {
+                              const done = idx < completedItems
+                              return (
+                                <li key={idx} className="flex items-center gap-2.5 text-sm font-medium">
+                                  {done ? (
+                                    <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-white" /></span>
+                                  ) : (
+                                    <Circle className="w-5 h-5 text-amber-300 shrink-0" />
+                                  )}
+                                  <span className={done ? "text-amber-900/60 line-through" : "text-amber-900"}>{sop}</span>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                        {totalItems > 0 && <ProgressRing percent={progress} label={`${completedItems} / ${totalItems}`} sublabel="Completed" />}
+                      </div>
+                    </div>
+
+                    {/* Status, Source, Last Updated Cards */}
+                    <div className="space-y-3">
+                      <div className="bg-amber-50/80 rounded-xl border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+                            <HelpCircle className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Status</p>
+                            <p className="text-sm font-bold text-amber-900">{patient.assignedUser ? patient.assignedUser.name : "Unassigned"}</p>
+                          </div>
+                        </div>
+                        {!patient.assignedUser && vaList && vaList.length > 0 && (
+                          <button onClick={() => setShowAssignDropdown(true)} className="flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-100 px-3 py-1.5 rounded-full hover:bg-orange-200 transition-colors ml-auto sm:ml-0 shrink-0">
+                            Assign Now <ArrowRight className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="bg-purple-50/80 rounded-xl border border-purple-200 p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center text-purple-700 shrink-0">
+                            <Globe className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-purple-700">Source</p>
+                            <p className="text-sm font-bold text-purple-900 capitalize">{patient.source || "Manual"}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 shrink-0">
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Last Updated</p>
+                            <p className="text-sm font-bold text-gray-800">{timeAgo(patient.updatedAt)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact & Payment Info Card */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+                      <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                            <Info className="w-3.5 h-3.5" />
+                          </div>
+                          Contact & Payment Information
+                        </h4>
+                        <button onClick={() => setActiveTab("contact")} className="flex items-center gap-1.5 text-xs font-semibold text-green-600 border border-green-200 bg-green-50 px-3 py-1 rounded-lg hover:bg-green-100 transition-colors">
+                          <Pencil className="w-3.5 h-3.5" /> Edit
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4">
+                        <div className="flex items-center gap-3">
+                          <User className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium text-gray-500">Name</p>
+                            <p className="text-sm font-medium text-gray-800 truncate">{patient.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium text-gray-500">Phone</p>
+                            <p className="text-sm font-medium text-gray-800 truncate">{patient.phone || "-"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium text-gray-500">Email</p>
+                            <p className="text-sm font-medium text-gray-800 truncate">{patient.email || "-"}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Globe className="w-4 h-4 text-gray-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium text-gray-500">Location</p>
+                            <p className="text-sm font-medium text-gray-800 truncate">{patient.location || "-"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-3">Operational Notes</h4>
+                      <Textarea placeholder="Add notes..." value={notesText} onChange={(e) => setNotesText(e.target.value)} className="text-sm min-h-[100px] rounded-xl border-gray-200 focus:ring-emerald-400/30" />
+                      <div className="flex justify-end mt-3">
+                        <Button size="sm" onClick={handleSaveNotes} disabled={savingNotes} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow">
+                          {savingNotes ? "Saving..." : "Save Notes"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {isAdmin && showCancelInput && (
+                      <div className="space-y-2 bg-[#CC3333]/10 p-3 rounded-xl border border-[#CC3333]/30">
+                        <Textarea placeholder="Cancellation reason..." value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className="text-sm min-h-[70px]" />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={handleCancelPatient} disabled={updateStatus.isPending} className="bg-[#CC3333] hover:bg-[#B02A2A] text-white text-xs gap-1.5">
+                            {updateStatus.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                            {updateStatus.isPending ? "Cancelling..." : "Confirm"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setShowCancelInput(false)} className="text-xs">Cancel</Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* CONTACT TAB */}
+                {activeTab === "contact" && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4 gap-2">
+                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Contact & Payment</h4>
+                      <Button size="sm" onClick={onSaveContact} disabled={isSubmitting} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow shrink-0">
+                        {isSubmitting ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+                      <img src={getAvatarUrl(patient)} alt={patient.name} onError={(e) => { ;(e.currentTarget as HTMLImageElement).src = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(patient.name || "Patient")}` }} className="w-12 h-12 rounded-full object-cover border border-gray-200 shrink-0 bg-gray-50" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-800 truncate">{patient.name}</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                          {patient.phone && <span className="flex items-center gap-1 text-xs text-gray-500"><Phone className="w-3 h-3" /> {patient.phone}</span>}
+                          {patient.email && <span className="flex items-center gap-1 text-xs text-gray-500 truncate"><Mail className="w-3 h-3" /> {patient.email}</span>}
+                          {!patient.phone && !patient.email && <span className="text-xs text-gray-400 italic">No contact info on file</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className={contactLabelClass(!!errors.firstName)}>First Name <span className="text-[#CC3333]">*</span></label>
+                        <input {...register("firstName")} aria-invalid={!!errors.firstName} className={contactInputClass(!!errors.firstName)} />
+                        {errors.firstName && <p className="text-[11px] text-[#CC3333] mt-1">{errors.firstName.message}</p>}
+                      </div>
+                      <div>
+                        <label className={contactLabelClass(!!errors.lastName)}>Last Name <span className="text-[#CC3333]">*</span></label>
+                        <input {...register("lastName")} aria-invalid={!!errors.lastName} className={contactInputClass(!!errors.lastName)} />
+                        {errors.lastName && <p className="text-[11px] text-[#CC3333] mt-1">{errors.lastName.message}</p>}
+                      </div>
+                      <div><label className={contactLabelClass(false)}>Location</label><input {...register("location")} className={contactInputClass(false)} /></div>
+                      <div><label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label><input {...register("phone")} aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />{errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}</div>
+                      <div><label className={contactLabelClass(!!errors.email)}>Email <span className="text-[#CC3333]">*</span></label><input type="email" {...register("email")} aria-invalid={!!errors.email} className={contactInputClass(!!errors.email)} />{errors.email && <p className="text-[11px] text-[#CC3333] mt-1">{errors.email.message}</p>}</div>
+                      <div><label className={contactLabelClass(false)}>Copay Amount</label><input {...register("copayAmount")} className={contactInputClass(false)} /></div>
+                      <div><label className={contactLabelClass(false)}>Amount Paid</label><input {...register("amountPaid")} className={contactInputClass(false)} /></div>
+                      <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Payment Type</label><SelectOrOther value={paymentMethod} onChange={setPaymentMethod} otherMode={paymentMethodOther} onOtherModeChange={setPaymentMethodOther} options={PAYMENT_METHOD_OPTIONS} placeholder="Select..." /></div>
+                      <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Insurance</label><SelectOrOther value={insuranceProvider} onChange={setInsuranceProvider} otherMode={insuranceProviderOther} onOtherModeChange={setInsuranceProviderOther} options={INSURANCE_PROVIDER_OPTIONS} placeholder="Select..." /></div>
+                      <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Visit Status</label><select value={visitStatus} onChange={(e) => setVisitStatus(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400/30">{VISIT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ELIGIBILITY TAB */}
+                {activeTab === "eligibility" && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4"><Shield className="w-5 h-5 text-emerald-600" /> Eligibility Details</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <div><label className="text-xs font-semibold text-gray-500 mb-1 block">Payment Type</label><SelectOrOther value={paymentMethod} onChange={setPaymentMethod} otherMode={paymentMethodOther} onOtherModeChange={setPaymentMethodOther} options={PAYMENT_METHOD_OPTIONS} placeholder="Select..." /></div>
+                      <div><label className="text-xs font-semibold text-gray-500 mb-1 block">Insurance Company</label><SelectOrOther value={insuranceProvider} onChange={setInsuranceProvider} otherMode={insuranceProviderOther} onOtherModeChange={setInsuranceProviderOther} options={INSURANCE_PROVIDER_OPTIONS} placeholder="Select..." /></div>
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className={cn("px-2.5 py-1 text-xs font-bold rounded-full border shadow-sm shrink-0", patient.eligibilityStatus === "eligible" ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-[#CC3333]/15 text-[#CC3333] border-[#CC3333]/30")}>
+                        {patient.eligibilityStatus === "eligible" ? "Eligible" : "Not Eligible"}
+                      </span>
+                      <button onClick={() => setShowEligibilityCheck(true)} className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow transition-colors shrink-0">Check Eligibility</button>
+                    </div>
+                    {patient.eligibilityDetails?.vob && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {VOB_LABELS.map(([key, label]) => {
+                          const value = patient.eligibilityDetails?.vob?.[key]
+                          if (value === undefined || value === null) return null
+                          return (<div key={key} className="bg-gray-50 rounded-xl p-2.5"><p className="text-[10px] text-gray-500 font-medium">{label}</p><p className="text-sm font-semibold text-gray-700">{typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}</p></div>)
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* CHECKLIST TAB */}
+                {activeTab === "activity" && (
+                  <>
+                    {flagTotalCount > 0 && (
+                      <div ref={flagHistoryRef} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm scroll-mt-4">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2"><Flag className="w-5 h-5 text-[#CC3333]" /> Flag History</h4>
+                          <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">{flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} | {flagStageCount} on this stage</span>
+                        </div>
+                        <div className="space-y-3">
+                          {flagHistory.length > 0 ? (flagHistory.map((flag) => (
+                            <div key={flag.id} className={cn("rounded-xl border p-3", flag.type === "positive" ? "bg-emerald-50/60 border-emerald-200" : "bg-[#CC3333]/10 border-[#CC3333]/30")}>
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full", flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-[#CC3333]/15 text-[#CC3333]")}>{flag.type === "positive" ? "Positive" : "Alert"}</span>
+                                  {isAdminFlag(flag) && (<span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Shield className="w-3 h-3" /> Admin Flag</span>)}
+                                </div>
+                                <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">{new Date(flag.createdAt).toLocaleString()}</span>
+                              </div>
+                              <p className="text-sm text-gray-800 mt-2">{flag.reason}</p>
+                              <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
+                                <span className="text-gray-500">by <span className="font-semibold text-gray-700">{flag.flaggedByUser?.name ?? "Unknown"}</span>{isAdminFlag(flag) && <span className="font-semibold text-amber-700"> (Admin)</span>}{stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}</span>
+                                {flag.clearedAt ? (<span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">Cleared by {flag.clearedByUser?.name ?? "Unknown"}{flag.clearedByUser?.role ? ` (${roleLabel(flag.clearedByUser.role)})` : ""}{flag.clearedReason ? ` - ${flag.clearedReason}` : ""}</span>) : (<span className="px-2 py-0.5 bg-[#CC3333]/15 text-[#CC3333] font-semibold rounded-full whitespace-nowrap">Open</span>)}
+                              </div>
+                              {isAdmin && !flag.clearedAt && (clearingFlagId === flag.id ? (<FlagClearForm clearReason={clearReason} setClearReason={setClearReason} isPending={clearFlag.isPending} onClear={handleClearFlag} onCancel={() => { setClearingFlagId(null); setClearReason(""); }} />) : (<button onClick={() => setClearingFlagId(flag.id)} className={cn("mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors", flag.type === "positive" ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50" : "text-[#CC3333] border-[#CC3333]/30 bg-white/70 hover:bg-[#CC3333]/10")}><FlagOff className="w-3.5 h-3.5" /> Clear Flag</button>))}
+                            </div>
+                          ))) : (<p className="text-sm text-gray-400 italic">No flags raised yet</p>)}
+                        </div>
+                      </div>
+                    )}
+                    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4"><MessageSquare className="w-5 h-5 text-indigo-400" /> Activity Log</h4>
+                      <div className="space-y-1 max-h-[28rem] overflow-y-auto pr-1">
+                        {logData?.logs?.length ? logData.logs.map((log) => {
+                          const meta = actionMeta(log.action)
+                          const Icon = meta.icon
+                          return (
+                            <div key={log.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#EBF7EC]/30 transition-colors">
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${meta.color}1A` }}><Icon className="w-4 h-4" style={{ color: meta.color }} /></div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap"><span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span><span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}>{meta.label}</span><span className="text-[11px] text-[#9CA3AF] ml-auto shrink-0 whitespace-nowrap">{fullDateTime(log.createdAt)}</span></div>
+                                <p className="text-sm text-[#374151] mt-1 leading-relaxed">{log.message}</p>
+                              </div>
+                            </div>
+                          )
+                        }) : <p className="text-sm text-gray-400 italic px-2 py-4">No activity yet</p>}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="shrink-0 border-t border-gray-100 px-4 sm:px-8 py-4 bg-white flex items-center justify-between gap-3">
+              <button onClick={onClose} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#6B7280] border border-gray-200 bg-white hover:bg-gray-50 hover:text-[#12141A] transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+              <div className="flex items-center gap-2.5">
+                {currentStageIdx < stageOrder.length - 1 && (
+                  <button onClick={() => handleMoveStage(stageOrder[currentStageIdx + 1])} disabled={!allComplete} className={cn("flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all", allComplete ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-sm shadow-emerald-500/30" : "bg-gray-100 text-gray-400 cursor-not-allowed")} title={allComplete ? `Move to ${stageLabels[stageOrder[currentStageIdx + 1]]}` : "Tick every required item before moving forward."}>
+                    Move Next <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+        {assigning && (
+          <div className="absolute inset-0 z-50 bg-white/80 flex items-center justify-center gap-3">
+            <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+            <span className="text-sm font-medium text-gray-700">Updating assignment...</span>
+          </div>
+        )}
+
+        {/* Flag Popup */}
+        {showFlagPopup && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFlagPopup(false)} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className={cn("px-5 py-4 flex items-center justify-between", isAdmin ? "bg-gradient-to-r from-emerald-600 to-teal-600" : "bg-[#CC3333]")}>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><Flag className="w-5 h-5" fill="white" /> {isAdmin ? "Raise Admin Flag" : "Raise Flag"}</h3>
+                <button onClick={() => setShowFlagPopup(false)} className="p-1 rounded-lg hover:bg-white/20 text-white"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Type</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="flagType" value="positive" checked={newFlagType === "positive"} onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-emerald-600" />
+                      <span className="text-sm font-medium">Positive Note</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="flagType" value="negative" checked={newFlagType === "negative"} onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-[#CC3333]" />
+                      <span className="text-sm font-medium">Alert/Issue</span>
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Reason</label>
+                  <textarea value={newFlagReason} onChange={(e) => setNewFlagReason(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl min-h-[80px] focus:outline-none focus:ring-2 focus:ring-emerald-400/30" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => { setShowFlagPopup(false); setNewFlagReason(""); setNewFlagType("positive"); }} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
+                  <button onClick={async () => { if (patient && newFlagReason.trim()) { await flagPatient.mutateAsync({ id: patient.id, reason: newFlagReason, type: newFlagType }); setShowFlagPopup(false); setNewFlagReason(""); setNewFlagType("positive"); toast.success("Flag raised"); } }} disabled={!newFlagReason.trim() || flagPatient.isPending} className={cn("px-4 py-2 text-sm font-bold rounded-xl transition-colors flex items-center gap-2 shadow", newFlagReason.trim() && !flagPatient.isPending ? (isAdmin ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white" : "bg-gradient-to-r from-[#CC3333] to-[#B02A2A] hover:from-[#B02A2A] hover:to-[#962222] text-white") : "bg-gray-200 text-gray-400 cursor-not-allowed")}>
+                    {flagPatient.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flag className="w-4 h-4" fill="currentColor" />} Raise Flag
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {patient && (
+          <EligibilityCheckDialog patient={patient} open={showEligibilityCheck} onClose={() => setShowEligibilityCheck(false)} />
+        )}
       </div>
     </div>
+      </div>
+    </>
   )
 }

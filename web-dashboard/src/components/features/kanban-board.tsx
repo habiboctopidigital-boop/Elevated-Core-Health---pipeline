@@ -175,16 +175,16 @@ export function KanbanBoard({
         </div>
       )}
 
-      {/* Quick Jump Selector */}
-      <div className="mb-4 flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-medium text-[#6B7280]">Jump to stage:</span>
-        <div className="flex gap-2 flex-wrap">
+      {/* Quick Jump Selector — single scrollable row on phones (no wrapping) */}
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm font-medium text-[#6B7280] shrink-0">Jump to stage:</span>
+        <div className="flex gap-2 overflow-x-auto scrollbar-thin py-1 -my-1 flex-1">
           {stageOrder.map((stage) => (
             <button
               key={stage}
               onClick={() => handleQuickJump(stage)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer",
+                "px-3 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer whitespace-nowrap shrink-0",
                 quickJumpStage === stage
                   ? "bg-[#036638] text-white border-[#036638] shadow-md"
                   : "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#036638] hover:text-[#036638]"
@@ -196,11 +196,12 @@ export function KanbanBoard({
         </div>
       </div>
 
-      {/* Desktop: Horizontal scroll | Mobile: Vertical stack.
-          Height is left to the page (flex-1) so the board's own green
-          scrollbars handle overflow — no parent page scrollbar. */}
-      <div className="sm:flex-1 sm:min-h-0 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin ">
-        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-3 sm:p-5 sm:w-[450px] w-full ">
+      {/* Phone: stages stack vertically (flex-col), ~90% width with a small
+          gap, no horizontal scrollbar. sm+: the existing horizontal snap-scroll
+          with 450px columns. On lg+ the board locks to the page height (flex-1)
+          with internal scrollbars; below lg it flows naturally. */}
+      <div className="flex-1 min-h-0 overflow-x-hidden sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin ">
+        <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-5 sm:w-[450px] w-full ">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
@@ -213,7 +214,7 @@ export function KanbanBoard({
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-full flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 sm:shrink-0",
+                  "w-full min-w-0 sm:w-full sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50",
                   // Brief self-fading flash (animate-jump-flash clears on its own)
 quickJumpStage === stage && "animate-jump-flash",
                   isOver && !isDisabled

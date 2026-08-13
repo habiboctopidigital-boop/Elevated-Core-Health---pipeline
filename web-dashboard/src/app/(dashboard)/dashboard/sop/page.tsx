@@ -40,29 +40,29 @@ export default function SOPPage() {
           <div className="flex items-start gap-2.5">
             <CheckCircle className="w-4 h-4 text-[#65BD6C] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
-              <strong>Forward moves are checklist-gated.</strong> A patient cannot advance
+              <strong>Forward moves are checklist-gated:</strong> A patient cannot advance
               until every <strong>Required</strong> checklist item for the current stage is
-              checked. Optional items never block advancement.
+              checked: Optional items never block advancement.
             </p>
           </div>
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
-              <strong>Stale flag (48h).</strong> If a card hasn&apos;t been updated in 48+
+              <strong>Stale flag (48h):</strong> If a card hasn&apos;t been updated in 48+
               hours and is not in <strong>Reconciled</strong>, it gets flagged visually.
             </p>
           </div>
           <div className="flex items-start gap-2.5">
             <Flag className="w-4 h-4 text-[#036638] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
-              <strong>Flag for Donna.</strong> Any VA can flag a card with a text reason.
-              Only Donna can clear flags. Use this for issues needing her attention.
+              <strong>Flag for Donna:</strong> Any VA can flag a card with a text reason:
+              Only Donna can clear flags: Use this for issues needing her attention.
             </p>
           </div>
           <div className="flex items-start gap-2.5">
             <CheckCircle className="w-4 h-4 text-[#65BD6C] mt-0.5 shrink-0" />
             <p className="text-sm text-[#374151]">
-              <strong>No clinical data.</strong> Notes fields are for operational status
+              <strong>No clinical data:</strong> Notes fields are for operational status
               only - never diagnoses or clinical details.
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function SOPPage() {
                       <span className="w-1.5 h-1.5 rounded-full bg-[#65BD6C] mt-1.5 shrink-0" />
                       <span className="flex-1 min-w-0">
                         <span className="flex items-center gap-2 flex-wrap">
-                          {item.label}
+                          {item.label.replaceAll(".", ":")}
                           <span
                             className={cn(
                               "text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0",
@@ -108,7 +108,7 @@ export default function SOPPage() {
                         </span>
                         {item.description && (
                           <span className="block text-xs text-[#6B7280] mt-0.5">
-                            {item.description}
+                            {item.description.replaceAll(".", ":")}
                           </span>
                         )}
                       </span>

@@ -113,7 +113,7 @@ export function ImportDialog() {
         <Button
           variant="outline"
           size="sm"
-          className="cursor-pointer gap-1.5 h-9 rounded-xl border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all"
+          className="cursor-pointer gap-1.5 h-9 rounded-xl  bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all"
         >
           <Upload className="w-3.5 h-3.5 text-[#036638]" />
           Patients Import
@@ -125,7 +125,7 @@ export function ImportDialog() {
         className="sm:max-w-lg gap-0 p-0 overflow-hidden"
       >
         {/* Gradient brand header band */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">
+        <div className="relative overflow-hidden bg-gradient-to-r border-none from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">
           {/* Decorative bubbles */}
           <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
           <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />

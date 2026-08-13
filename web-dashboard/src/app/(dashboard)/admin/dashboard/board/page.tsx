@@ -107,11 +107,11 @@ export default function AdminBoardPage() {
     )
   }
 
+  // Desktop (lg+): fixed header height, so the board locks to the viewport
+  // with internal scrollbars. Phone/tablet: the mobile topbar is taller, so
+  // the page flows naturally (scrolls) to avoid clipping the board.
   return (
-    // Bound the page to the viewport (desktop header h-16 + main padding) and
-    // clip overflow so only the kanban board's own green scrollbars ever show
-    // — the parent page scrollbar is removed.
-    <div className="flex flex-col h-full sm:h-[calc(100vh-7.5rem)] sm:overflow-hidden no-scrollbar">
+    <div className="flex flex-col h-full overflow-x-hidden lg:h-[calc(100vh-7.5rem)] lg:overflow-hidden no-scrollbar">
       {/* Stale-data banner — a background refetch failed but we're still showing the last good board */}
       {error && patients && (
         <div className="mb-3 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
@@ -161,9 +161,10 @@ export default function AdminBoardPage() {
         onJump={handleQuickJump}
       />
 
-      {/* - Kanban Board - (height flexes to the page; only its green scrollbars show) */}
-      <div className="sm:flex-1 sm:min-h-0 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
-        <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-0 sm:p-6 sm:min-w-max">
+      {/* - Kanban Board - (height flexes to the page; only its green scrollbars show)
+          Phone: stages stack vertically, ~90% width, no horizontal scrollbar. */}
+      <div className="flex-1 min-h-0 overflow-x-hidden sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
+        <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-6 w-full sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             return (
@@ -171,7 +172,7 @@ export default function AdminBoardPage() {
                 key={stage}
                 ref={registerStageRef(stage)}
                 className={cn(
-                  "w-full sm:w-[420px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 transition-all duration-200",
+                  "w-full min-w-0 sm:w-[420px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 transition-all duration-200",
                   quickJumpStage === stage && "animate-jump-flash",
                 )}
               >

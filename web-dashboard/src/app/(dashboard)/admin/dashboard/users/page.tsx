@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { useAdminUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/query/useAdmin"
 import { useAuth } from "@/hooks/auth/useAuth"
-import { Loader2, Plus, Pencil, Trash2, Shield, ShieldCheck, AlertTriangle, User as UserIcon, Users, Clock } from "lucide-react"
+import { Loader2, Plus, Pencil, Trash2, Shield, ShieldCheck, AlertTriangle, User as UserIcon, Users, Clock, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import z from "zod"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { SettingsNav } from "@/components/features/settings-nav"
 import { PageHeader } from "@/components/shared/page-header"
@@ -54,12 +56,27 @@ export default function AdminUsersPage() {
     return true
   }
 
+  const userFormSchema = z.object({
+    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    email: z.string().trim().email("Enter a valid email address"),
+    // Empty password is allowed in edit mode (keeps the current one); any value
+    // entered must be at least 6 characters. Create mode requires it via onSubmit.
+    password: z.string().refine((v) => v.length === 0 || v.length >= 6, "Password must be at least 6 characters"),
+    role: z.enum(["va", "admin"]),
+    shift: z.union([z.literal(""), z.enum(["morning", "evening"])]).optional(),
+  })
+  type UserFormValues = z.infer<typeof userFormSchema>
+
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
-  } = useForm()
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(userFormSchema),
+  })
+  const [showPassword, setShowPassword] = useState(false)
 
   const openCreate = () => {
     setEditingUser(null)
@@ -79,13 +96,18 @@ export default function AdminUsersPage() {
       name: user.name,
       email: user.email,
       password: "",
-      role: user.role,
-      shift: user.shift || "",
+      role: user.role === "va" ? "va" : "admin",
+      shift: user.shift === "morning" || user.shift === "evening" ? user.shift : "",
     })
     setModalOpen(true)
   }
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: UserFormValues) => {
+    // Create mode always requires a password (edit mode may leave it blank).
+    if (!editingUser && !data.password) {
+      setError("password", { message: "Password is required" })
+      return
+    }
     const payload = {
       name: data.name,
       email: data.email,
@@ -422,30 +444,53 @@ export default function AdminUsersPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-[#374151]">Name</label>
               <input
-                {...register("name", { required: "Name is required" })}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+                {...register("name")}
+                className={`w-full h-9 px-3 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all ${
+                  errors.name
+                    ? "border-[#CC3333]/50 bg-[#CC3333]/5 focus:ring-[#CC3333]/25 focus:border-[#CC3333]/60"
+                    : "border-[#E5E7EB] focus:ring-[#036638]/30"
+                }`}
               />
-              {errors.name && <p className="text-[11px] text-red-500">{errors.name.message as string}</p>}
+              {errors.name && <p className="text-[11px] text-[#CC3333] mt-1">{errors.name.message}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-[#374151]">Email</label>
               <input
                 type="email"
-                {...register("email", { required: "Email is required" })}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
+                {...register("email")}
+                className={`w-full h-9 px-3 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all ${
+                  errors.email
+                    ? "border-[#CC3333]/50 bg-[#CC3333]/5 focus:ring-[#CC3333]/25 focus:border-[#CC3333]/60"
+                    : "border-[#E5E7EB] focus:ring-[#036638]/30"
+                }`}
               />
-              {errors.email && <p className="text-[11px] text-red-500">{errors.email.message as string}</p>}
+              {errors.email && <p className="text-[11px] text-[#CC3333] mt-1">{errors.email.message}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-[#374151]">
                 Password {editingUser && "(leave blank to keep current)"}
               </label>
-              <input
-                type="password"
-                {...register("password", editingUser ? {} : { required: "Password is required" })}
-                className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-              />
-              {errors.password && <p className="text-[11px] text-red-500">{errors.password.message as string}</p>}
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  className={`w-full h-9 pl-3 pr-10 rounded-lg border text-sm focus:outline-none focus:ring-2 transition-all ${
+                    errors.password
+                      ? "border-[#CC3333]/50 bg-[#CC3333]/5 focus:ring-[#CC3333]/25 focus:border-[#CC3333]/60"
+                      : "border-[#E5E7EB] focus:ring-[#036638]/30"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-[#9CA3AF] hover:text-[#036638] hover:bg-[#F3F4F6] transition-colors"
+                  title={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-[11px] text-[#CC3333] mt-1">{errors.password.message}</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -460,11 +505,14 @@ export default function AdminUsersPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[#374151]">Shift</label>
-                <input
+                <select
                   {...register("shift")}
-                  placeholder="e.g. Morning"
-                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
-                />
+                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
+                >
+                  <option value="">No shift</option>
+                  <option value="morning">Morning</option>
+                  <option value="evening">Evening</option>
+                </select>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">

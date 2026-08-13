@@ -9,35 +9,13 @@ import {
   RefreshCw,
   X,
   ArrowRightLeft,
+  ArrowRight,
   CheckSquare,
   Square,
-  UserCog,
-  UserCheck,
-  UserPlus,
-  UserMinus,
-  UserX,
-  MessageSquare,
-  Flag,
-  FlagOff,
-  ShieldCheck,
-  Pencil,
-  Lock,
-  Unlock,
   Activity,
   ChevronDown,
-  LogIn,
-  LogOut,
-  KeyRound,
-  ShieldAlert,
-  Image as ImageIcon,
-  FileDown,
-  Settings2,
-  Workflow,
-  ListChecks,
-  Plug,
-  Unplug,
-  CalendarClock,
 } from "lucide-react"
+import { ACTION_META, CATEGORY_META, actionMeta } from "@/lib/activity-meta"
 import { toast } from "sonner"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { useAllUsers } from "@/hooks/query/useUsers"
@@ -49,62 +27,7 @@ import type { ActivityCategory, ActivityLog, UserRole } from "@/types"
 import { cn } from "@/lib/utils"
 import { isAdminOrAbove } from "@/lib/roles"
 
-const ACTION_META: Record<string, { label: string; icon: typeof Activity; color: string }> = {
-  "stage.move": { label: "Stage Move", icon: ArrowRightLeft, color: "#036638" },
-  "checklist.toggle": { label: "Checklist", icon: CheckSquare, color: "#0F9B8E" },
-  "assignment.change": { label: "Assignment", icon: UserCog, color: "#7C3AED" },
-  "assignment.claim": { label: "Claim", icon: UserCheck, color: "#7C3AED" },
-  "notes.update": { label: "Notes", icon: MessageSquare, color: "#6B7280" },
-  "flag.create": { label: "Flag Raised", icon: Flag, color: "#DC2626" },
-  "flag.clear": { label: "Flag Cleared", icon: FlagOff, color: "#16A34A" },
-  "eligibility.check": { label: "Eligibility", icon: ShieldCheck, color: "#0891B2" },
-  "patient.create": { label: "Patient Created", icon: UserPlus, color: "#036638" },
-  "patient.update": { label: "Details Updated", icon: Pencil, color: "#6B7280" },
-  "status.update": { label: "Status", icon: RefreshCw, color: "#D97706" },
-  "lock.set": { label: "Locked", icon: Lock, color: "#D97706" },
-  "lock.clear": { label: "Unlocked", icon: Unlock, color: "#16A34A" },
-  "appointment.update": { label: "Appointment", icon: CalendarClock, color: "#D97706" },
-  "auth.login": { label: "Login", icon: LogIn, color: "#2563EB" },
-  "auth.login_failed": { label: "Failed Login", icon: ShieldAlert, color: "#DC2626" },
-  "auth.logout": { label: "Logout", icon: LogOut, color: "#2563EB" },
-  "auth.password_change": { label: "Password Changed", icon: KeyRound, color: "#2563EB" },
-  "auth.password_reset_requested": { label: "Reset Requested", icon: KeyRound, color: "#2563EB" },
-  "auth.password_reset_completed": { label: "Password Reset", icon: KeyRound, color: "#2563EB" },
-  "profile.update": { label: "Profile Updated", icon: Pencil, color: "#7C3AED" },
-  "profile.avatar_update": { label: "Avatar Changed", icon: ImageIcon, color: "#7C3AED" },
-  "user_management.user_created": { label: "User Created", icon: UserPlus, color: "#0891B2" },
-  "user_management.user_updated": { label: "User Updated", icon: UserCog, color: "#0891B2" },
-  "user_management.user_deleted": { label: "User Deleted", icon: UserMinus, color: "#DC2626" },
-  "user_management.user_activated": { label: "User Activated", icon: UserCheck, color: "#16A34A" },
-  "user_management.user_deactivated": { label: "User Deactivated", icon: UserX, color: "#D97706" },
-  "report.exported": { label: "Report Exported", icon: FileDown, color: "#0F9B8E" },
-  "system.setting_updated": { label: "Settings", icon: Settings2, color: "#6B7280" },
-  "system.stage_created": { label: "Stage Created", icon: Workflow, color: "#6B7280" },
-  "system.stage_updated": { label: "Stage Updated", icon: Workflow, color: "#6B7280" },
-  "system.stage_reordered": { label: "Stages Reordered", icon: Workflow, color: "#6B7280" },
-  "system.stage_deleted": { label: "Stage Deleted", icon: Workflow, color: "#6B7280" },
-  "system.checklist_item_created": { label: "Checklist Added", icon: ListChecks, color: "#6B7280" },
-  "system.checklist_item_updated": { label: "Checklist Updated", icon: ListChecks, color: "#6B7280" },
-  "system.checklist_item_deleted": { label: "Checklist Removed", icon: ListChecks, color: "#6B7280" },
-  "system.eligibility_rule_created": { label: "Eligibility Rule", icon: ShieldCheck, color: "#6B7280" },
-  "system.eligibility_rule_updated": { label: "Eligibility Rule", icon: ShieldCheck, color: "#6B7280" },
-  "system.eligibility_rule_deleted": { label: "Eligibility Rule", icon: ShieldCheck, color: "#6B7280" },
-  "system.crm_connected": { label: "CRM Connected", icon: Plug, color: "#6B7280" },
-  "system.crm_disconnected": { label: "CRM Disconnected", icon: Unplug, color: "#6B7280" },
-  "system.crm_permission_updated": { label: "CRM Permission", icon: Plug, color: "#6B7280" },
-}
-
 const ACTION_OPTIONS = Object.entries(ACTION_META).map(([value, meta]) => ({ value, label: meta.label }))
-
-const CATEGORY_META: Record<string, { label: string; color: string }> = {
-  auth: { label: "Auth", color: "#2563EB" },
-  profile: { label: "Profile", color: "#7C3AED" },
-  patient: { label: "Patient", color: "#036638" },
-  appointment: { label: "Appointment", color: "#D97706" },
-  user_management: { label: "User Mgmt", color: "#0891B2" },
-  report: { label: "Report", color: "#0F9B8E" },
-  system: { label: "System", color: "#6B7280" },
-}
 
 const CATEGORY_OPTIONS = Object.entries(CATEGORY_META).map(([value, meta]) => ({ value, label: meta.label }))
 
@@ -118,10 +41,6 @@ const ENTITY_OPTIONS = [
   { value: "export", label: "Export" },
   { value: "app_setting", label: "App Setting" },
 ]
-
-function actionMeta(action?: string | null) {
-  return (action && ACTION_META[action]) || { label: action || "Activity", icon: Activity, color: "#6B7280" }
-}
 
 function timeOnly(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
@@ -223,7 +142,7 @@ function DiffSummary({ log, stageLabels }: { log: ActivityLog; stageLabels: Reco
             <div key={k} className="flex items-center gap-2 text-[11px]">
               <span className="text-[#9CA3AF] w-20 shrink-0 truncate capitalize">{k.replace(/([A-Z])/g, " $1")}</span>
               <span className="text-red-600 bg-red-50 rounded px-1.5 py-0.5 max-w-[160px] truncate">{fmt(pv)}</span>
-              <span className="text-[#9CA3AF]">-&gt;</span>
+              <ArrowRight className="w-3 h-3 text-[#9CA3AF] shrink-0" />
               <span className="text-green-700 bg-green-50 rounded px-1.5 py-0.5 max-w-[160px] truncate">{fmt(nv)}</span>
             </div>
           )

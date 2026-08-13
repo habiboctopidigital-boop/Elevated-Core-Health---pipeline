@@ -203,8 +203,8 @@
     scrollbar-color: #d4d4d8 transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
@@ -237,6 +237,18 @@
   }
   .scrollbar-brand::-webkit-scrollbar-corner {
     background: transparent;
+  }
+
+  /* ── Global scrollbar hiding ─────────────────────────────────────────────
+     The app hides the page-level scrollbar for a clean look. Internal scroll
+     areas (kanban board columns, the board's horizontal strip, modals,
+     dropdowns) keep their own styled scrollbars via .scrollbar-brand / .thin. */
+  html {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  html::-webkit-scrollbar {
+    display: none;
   }
 
   /* Glass surfaces - light variant for content on the #F4F5F7 page bg */

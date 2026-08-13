@@ -19,7 +19,6 @@ import {
   BadgeCheck,
   ShieldCheck,
   AlertCircle,
-  ChevronRight,
   Fingerprint,
   LockKeyhole,
 } from "lucide-react"
@@ -36,11 +35,6 @@ const ALLOWED_AVATAR_TYPES = ["image/png", "image/jpeg", "image/webp"]
 const inputClass =
   "w-full h-11 pl-10 pr-3.5 rounded-xl border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 transition-all hover:border-[#D1D5DB]"
 
-const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  super_admin: "Full control — manages the practice, team and every workflow.",
-  admin: "Oversees the team, stages, reporting and pipeline analytics.",
-  va: "Handles day-to-day patient intake and pipeline work.",
-}
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth()
@@ -158,23 +152,12 @@ export function ProfilePage() {
       <SettingsNav currentPage="profile" />
 
       <div className="max-w-5xl mx-auto mt-8 pb-16">
-        {/* ─────────────────────────── Hero banner ─────────────────────────── */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#036638] via-[#025030] to-[#012e1f] shadow-[0_16px_48px_rgba(3,102,56,0.28)]">
-          {/* Decorative layers */}
-          <span aria-hidden className="absolute -right-16 -top-24 w-72 h-72 rounded-full bg-white/[0.06]" />
-          <span aria-hidden className="absolute right-40 -bottom-28 w-56 h-56 rounded-full bg-[#65BD6C]/[0.12]" />
-          <span aria-hidden className="absolute -left-14 -bottom-20 w-48 h-48 rounded-full bg-[#65BD6C]/[0.08]" />
-          <div
-            aria-hidden
-            className="absolute inset-0 opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-              backgroundSize: "28px 28px",
-            }}
-          />
+        {/* ─────────────────────────── Profile header ─────────────────────────── */}
+        <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] overflow-hidden">
+          {/* Brand accent strip */}
+          <div className="h-1.5 bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600" />
 
-          <div className="relative flex flex-col sm:flex-row sm:items-center gap-6 px-6 sm:px-8 py-7 sm:py-8">
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 px-5 sm:px-6 py-5 sm:py-6">
             {/* Avatar */}
             <input
               ref={avatarInputRef}
@@ -184,14 +167,12 @@ export function ProfilePage() {
               className="hidden"
             />
             <div className="relative w-fit shrink-0">
-              {/* Animated gradient ring */}
-              <div className="absolute -inset-1.5 rounded-[1.35rem] bg-gradient-to-br from-[#65BD6C] via-white/30 to-[#65BD6C] opacity-80 animate-pulse [animation-duration:3s]" />
               <button
                 type="button"
                 onClick={handleAvatarPick}
                 disabled={uploadingAvatar}
                 title="Change profile picture"
-                className="relative w-24 h-24 rounded-3xl overflow-hidden group cursor-pointer disabled:cursor-wait ring-4 ring-white/15 shadow-xl shadow-black/20"
+                className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden group cursor-pointer disabled:cursor-wait ring-4 ring-[#EBF7EC] shadow-md shadow-[#036638]/10 transition-all hover:ring-[#65BD6C]/50"
               >
                 <div
                   className={cn(
@@ -230,48 +211,47 @@ export function ProfilePage() {
                 </div>
               </button>
               {/* Small status dot */}
-              <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#EBF7EC] border-4 border-[#036638] flex items-center justify-center">
+              <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-[#EBF7EC] border-4 border-white flex items-center justify-center shadow-sm">
                 <CircleCheck className="w-3 h-3 text-[#036638]" />
               </span>
             </div>
 
             {/* Identity */}
             <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#65BD6C] mb-1">
+                Settings · Profile
+              </p>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight truncate">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#1A1B1E] tracking-tight truncate">
                   {user?.name}
                 </h1>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full bg-white/10 text-white border border-white/20 backdrop-blur whitespace-nowrap">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#EBF7EC] text-[#036638] border border-[#65BD6C]/30 whitespace-nowrap">
                   {isAdmin ? <ShieldCheck className="w-3 h-3" /> : <User className="w-3 h-3" />}
                   {roleLabel(user?.role)}
                 </span>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full bg-[#65BD6C]/20 text-[#D9F5DC] border border-[#65BD6C]/30 backdrop-blur whitespace-nowrap">
-                  <CircleCheck className="w-3 h-3" />
-                  Active
-                </span>
               </div>
-              <p className="flex items-center gap-2 text-sm text-white/75 mt-2 truncate">
-                <Mail className="w-3.5 h-3.5 shrink-0" />
+              <p className="flex items-center gap-2 text-sm text-[#6B7280] mt-1 truncate">
+                <Mail className="w-3.5 h-3.5 shrink-0 text-[#9CA3AF]" />
                 {user?.email}
               </p>
 
               {/* Meta chips */}
               <div className="flex items-center gap-2 flex-wrap mt-3">
                 {memberSince && (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/70 bg-white/[0.07] border border-white/10 rounded-lg px-2.5 py-1">
-                    <CalendarDays className="w-3 h-3 text-[#65BD6C]" />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-2.5 py-1">
+                    <CalendarDays className="w-3 h-3 text-[#036638]" />
                     Member since {memberSince}
                   </span>
                 )}
                 {lastLogin && (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/70 bg-white/[0.07] border border-white/10 rounded-lg px-2.5 py-1">
-                    <Clock className="w-3 h-3 text-[#65BD6C]" />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-2.5 py-1">
+                    <Clock className="w-3 h-3 text-[#036638]" />
                     Last login {lastLogin}
                   </span>
                 )}
                 {isVa && user?.shift && (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/70 bg-white/[0.07] border border-white/10 rounded-lg px-2.5 py-1">
-                    <Clock className="w-3 h-3 text-[#65BD6C]" />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#6B7280] bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-2.5 py-1">
+                    <Clock className="w-3 h-3 text-[#036638]" />
                     {user.shift} shift
                   </span>
                 )}
@@ -532,13 +512,6 @@ export function ProfilePage() {
               </div>
               <div className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-[#6B7280]">Status</span>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#036638] bg-[#EBF7EC] border border-[#65BD6C]/30 rounded-full px-2.5 py-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#036638] animate-pulse" />
-                    Active
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-[#6B7280]">Role</span>
                   <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1A1B1E] uppercase tracking-wide bg-[#F3F4F6] rounded-full px-2.5 py-1">
                     {isAdmin ? <Shield className="w-3 h-3 text-[#036638]" /> : <User className="w-3 h-3 text-[#0e9e5b]" />}
@@ -563,57 +536,6 @@ export function ProfilePage() {
                     <span className="text-xs font-semibold text-[#1A1B1E] capitalize">{user.shift}</span>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* - Role & Access - */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#036638] to-[#025030] p-5 shadow-[0_8px_24px_rgba(3,102,56,0.2)]">
-              <span aria-hidden className="absolute -right-8 -top-10 w-32 h-32 rounded-full bg-white/[0.07]" />
-              <span aria-hidden className="absolute right-10 -bottom-12 w-24 h-24 rounded-full bg-[#65BD6C]/[0.14]" />
-              <div className="relative flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/12 ring-1 ring-white/20 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-[#65BD6C]" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold text-white">{roleLabel(user?.role)} Access</h2>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#65BD6C] mt-0.5">
-                    {isAdmin ? "Administrator" : "Virtual Assistant"}
-                  </p>
-                </div>
-              </div>
-              <p className="relative text-xs leading-relaxed text-white/75 mt-4">
-                {ROLE_DESCRIPTIONS[user?.role ?? "va"]}
-              </p>
-              <div className="relative flex items-center gap-2 flex-wrap mt-4">
-                {isAdmin ? (
-                  <>
-                    <span className="text-[10px] font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-2.5 py-1">
-                      Users
-                    </span>
-                    <span className="text-[10px] font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-2.5 py-1">
-                      Stages
-                    </span>
-                    <span className="text-[10px] font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-2.5 py-1">
-                      Reporting
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[10px] font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-2.5 py-1">
-                      Board
-                    </span>
-                    <span className="text-[10px] font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-2.5 py-1">
-                      Checklists
-                    </span>
-                    <span className="text-[10px] font-semibold text-white/80 bg-white/10 border border-white/15 rounded-full px-2.5 py-1">
-                      Notes
-                    </span>
-                  </>
-                )}
-              </div>
-              <div className="relative flex items-center gap-1 text-[10px] font-semibold text-white/55 mt-4 hover:text-white/85 transition-colors cursor-default">
-                <ChevronRight className="w-3 h-3" />
-                Permissions are enforced server-side
               </div>
             </div>
 
