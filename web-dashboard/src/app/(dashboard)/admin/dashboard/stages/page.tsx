@@ -763,14 +763,12 @@ export default function AdminStageSettingsPage() {
   const orderedStages = useMemo(() => [...(stages ?? [])].sort((a, b) => a.sortOrder - b.sortOrder), [stages])
 
   // ---------------------------------------------------------------------
-  // Drag-and-drop stage reordering. This is a MOCK: it only reorders local
-  // state and shows a brief dummy "saving" indicator — it never calls the
-  // real reorder endpoint, per request.
+  // Drag-and-drop stage reordering — optimistic local reorder + real
+  // persistence via PATCH /admin/stages/reorder.
   // ---------------------------------------------------------------------
   const [localStages, setLocalStages] = useState<PipelineStage[]>(orderedStages)
   const [draggedStageKey, setDraggedStageKey] = useState<string | null>(null)
   const [dragOverStageKey, setDragOverStageKey] = useState<string | null>(null)
-  const [isReorderingStages, setIsReorderingStages] = useState(false)
 
   useEffect(() => {
     if (!draggedStageKey) setLocalStages(orderedStages)
@@ -793,18 +791,15 @@ export default function AdminStageSettingsPage() {
     setDraggedStageKey(null)
     setDragOverStageKey(null)
     if (!dragged || dragged === targetKey) return
-    setLocalStages((prev) => {
-      const from = prev.findIndex((s) => s.key === dragged)
-      const to = prev.findIndex((s) => s.key === targetKey)
-      if (from === -1 || to === -1) return prev
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
-    setIsReorderingStages(true)
-    // Mock save — no backend call here.
-    setTimeout(() => setIsReorderingStages(false), 700)
+    const from = localStages.findIndex((s) => s.key === dragged)
+    const to = localStages.findIndex((s) => s.key === targetKey)
+    if (from === -1 || to === -1) return
+    const next = [...localStages]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    setLocalStages(next)
+    // Persist the new order server-side (backend rewrites sortOrder = index).
+    reorderStages.mutate(next.map((s) => s.key))
   }
   const handleStageDragEnd = () => {
     setDraggedStageKey(null)
@@ -886,7 +881,7 @@ export default function AdminStageSettingsPage() {
         </div>
 
         {/* Reordering indicator */}
-        {isReorderingStages && (
+        {reorderStages.isPending && (
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 w-fit">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             Saving new order...
@@ -1036,12 +1031,28 @@ export default function AdminStageSettingsPage() {
               <DialogTitle className="text-base font-bold text-[#1A1B1E]">Add Stage</DialogTitle>
             </DialogHeader>
             <StageForm
+              stages={displayStages}
               onCancel={() => setCreateOpen(false)}
               onSubmit={async (values) => {
-                await createStage.mutateAsync(values)
+                const { position, ...stageInput } = values
+                const created = await createStage.mutateAsync(stageInput)
+                // Backend appends new stages at the end — if the user picked a
+                // position, insert the new key there and persist the full order.
+                if (position) {
+                  const keys = displayStages.map((s) => s.key)
+                  if (position.type === "start") {
+                    keys.unshift(created.key)
+                  } else if (position.type === "after") {
+                    const idx = keys.indexOf(position.key)
+                    keys.splice(idx === -1 ? keys.length : idx + 1, 0, created.key)
+                  } else {
+                    keys.push(created.key)
+                  }
+                  await reorderStages.mutateAsync(keys)
+                }
                 setCreateOpen(false)
               }}
-              isPending={createStage.isPending}
+              isPending={createStage.isPending || reorderStages.isPending}
             />
           </DialogContent>
         </Dialog>
@@ -1069,34 +1080,70 @@ export default function AdminStageSettingsPage() {
 
         {/* Delete Stage Confirm */}
         {deletingStage && (
-          <Dialog open onOpenChange={() => setDeletingStage(null)}>
+          <Dialog
+            open
+            // Keep the modal open while the request is in flight — the user
+            // asked for the loading state to stay visible until it finishes.
+            onOpenChange={(next) => {
+              if (!deleteStage.isPending && !next) setDeletingStage(null)
+            }}
+          >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle className="text-base font-bold text-[#1A1B1E]">Delete Stage</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  {deleteStage.isPending ? (
+                    <Loader2 className="w-4 h-4 text-amber-600 animate-spin mt-0.5 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  )}
                   <p className="text-xs text-amber-800">
-                    This permanently removes <strong>{deletingStage.name}</strong> (key:{" "}
-                    <code className="font-mono">{deletingStage.key}</code>). The action is blocked if
-                    patients or checklist items still reference it.
+                    {deleteStage.isPending ? (
+                      <>
+                        Deleting <strong>{deletingStage.name}</strong>…
+                      </>
+                    ) : (
+                      <>
+                        This permanently removes <strong>{deletingStage.name}</strong>. The action is blocked if
+                        patients or checklist items still reference it.
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setDeletingStage(null)} className="text-xs">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeletingStage(null)}
+                    disabled={deleteStage.isPending}
+                    className="text-xs"
+                  >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => {
-                      deleteStage.mutate(deletingStage.key)
-                      setDeletingStage(null)
+                    onClick={async () => {
+                      try {
+                        await deleteStage.mutateAsync(deletingStage.key)
+                        // Close only after the request succeeded.
+                        setDeletingStage(null)
+                      } catch {
+                        // Keep the modal open — the hook already toasts the error.
+                      }
                     }}
                     disabled={deleteStage.isPending}
-                    className="bg-red-600 hover:bg-red-700 text-white text-xs"
+                    className="bg-red-600 hover:bg-red-700 text-white text-xs min-w-[110px]"
                   >
-                    {deleteStage.isPending ? "Deleting..." : "Delete Stage"}
+                    {deleteStage.isPending ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Stage"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1116,12 +1163,21 @@ function StageForm({
   onSubmit,
   isPending,
   allowFinalToggle = false,
+  stages = [],
 }: {
   initial?: PipelineStage
   onCancel: () => void
-  onSubmit: (values: { name: string; hint: string | null; isFinal?: boolean; isActive?: boolean }) => void
+  onSubmit: (values: {
+    name: string
+    hint: string | null
+    isFinal?: boolean
+    isActive?: boolean
+    position?: { type: "start" | "end" } | { type: "after"; key: string }
+  }) => void
   isPending: boolean
   allowFinalToggle?: boolean
+  /** Ordered stage list — only used when creating, to offer position choices. */
+  stages?: PipelineStage[]
 }) {
   const { register, handleSubmit } = useForm({
     defaultValues: {
@@ -1130,6 +1186,9 @@ function StageForm({
       isFinal: initial?.isFinal ?? false,
     },
   })
+  // Position for a NEW stage: at the end (default), at the start, or after a
+  // specific existing stage.
+  const [position, setPosition] = useState<"start" | "end" | `after:${string}`>("end")
 
   return (
     <form
@@ -1138,6 +1197,12 @@ function StageForm({
           name: data.name,
           hint: data.hint?.trim() || null,
           isFinal: allowFinalToggle ? data.isFinal : undefined,
+          position:
+            position === "start"
+              ? { type: "start" }
+              : position.startsWith("after:")
+                ? { type: "after", key: position.slice(6) }
+                : { type: "end" },
         }),
       )}
       className="space-y-4"
@@ -1163,6 +1228,27 @@ function StageForm({
           className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30"
         />
       </div>
+      {!initial && stages.length > 0 && (
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-[#374151]">Position in Pipeline</label>
+          <select
+            value={position}
+            onChange={(e) => setPosition(e.target.value as typeof position)}
+            className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#036638]/30 cursor-pointer"
+          >
+            <option value="end">At the end (default)</option>
+            <option value="start">At the beginning</option>
+            {stages.map((s) => (
+              <option key={s.key} value={`after:${s.key}`}>
+                After “{s.name}”
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-[#6B7280]">
+            Choose where this stage should appear in the pipeline.
+          </p>
+        </div>
+      )}
       {allowFinalToggle && (
         <label className="flex items-center gap-2.5 cursor-pointer">
           <input
@@ -1214,8 +1300,8 @@ function StageChecklistManager({
   const [showAdd, setShowAdd] = useState(false)
 
   // ---------------------------------------------------------------------
-  // Drag-and-drop item reordering — MOCK only (local state + dummy loading,
-  // no backend call), matching the stage-level reorder behavior.
+  // Drag-and-drop item reordering — optimistic local reorder + persistence
+  // by rewriting each item's sortOrder via PATCH /admin/checklist-items/:id.
   // ---------------------------------------------------------------------
   const [localItems, setLocalItems] = useState<ChecklistItemDef[]>(items)
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null)
@@ -1238,18 +1324,20 @@ function StageChecklistManager({
     setDraggedItemId(null)
     setDragOverItemId(null)
     if (!dragged || dragged === targetId) return
-    setLocalItems((prev) => {
-      const from = prev.findIndex((i) => i.id === dragged)
-      const to = prev.findIndex((i) => i.id === targetId)
-      if (from === -1 || to === -1) return prev
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(to, 0, moved)
-      return next
-    })
+    const from = localItems.findIndex((i) => i.id === dragged)
+    const to = localItems.findIndex((i) => i.id === targetId)
+    if (from === -1 || to === -1) return
+    const next = [...localItems]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    setLocalItems(next)
+    // Persist the new order — rewrite sortOrder on every item in sequence.
     setIsReorderingItems(true)
-    // Mock save — no backend call here.
-    setTimeout(() => setIsReorderingItems(false), 700)
+    void Promise.all(
+      next.map((item, index) =>
+        updateItem.mutateAsync({ id: item.id, label: item.label, sortOrder: index, silent: true }),
+      ),
+    ).finally(() => setIsReorderingItems(false))
   }
   const handleItemDragEnd = () => {
     setDraggedItemId(null)

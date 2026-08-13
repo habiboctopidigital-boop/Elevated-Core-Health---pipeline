@@ -99,11 +99,16 @@ export function useCreateChecklistItem() {
 export function useUpdateChecklistItem() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, label, status, stage }: { id: string; label: string; status?: "required" | "optional"; stage?: string }) =>
-      AdminService.updateChecklistItem(id, { label, ...(status ? { status } : {}), ...(stage ? { stage } : {}) }),
-    onSuccess: () => {
+    mutationFn: ({ id, label, status, stage, sortOrder, silent }: { id: string; label: string; status?: "required" | "optional"; stage?: string; sortOrder?: number; silent?: boolean }) =>
+      AdminService.updateChecklistItem(id, {
+        label,
+        ...(status ? { status } : {}),
+        ...(stage ? { stage } : {}),
+        ...(sortOrder !== undefined ? { sortOrder } : {}),
+      }).then((item) => ({ item, silent })),
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
-      toast.success("Checklist item updated")
+      if (!res.silent) toast.success("Checklist item updated")
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to update item")
