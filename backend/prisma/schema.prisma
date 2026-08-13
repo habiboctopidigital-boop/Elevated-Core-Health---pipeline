@@ -103,6 +103,7 @@ model User {
   createdAt            DateTime   @default(now()) @map("created_at")
 
   assignedPatients      Patient[]        @relation("PatientAssignedTo")
+  createdPatients       Patient[]        @relation("PatientCreatedBy")
   flaggedPatients       Patient[]        @relation("PatientFlaggedBy")
   flagClearedPatients   Patient[]        @relation("PatientFlagClearedBy")
   flagsRaised           PatientFlag[]    @relation("FlagRaisedBy")
@@ -150,6 +151,7 @@ model Patient {
   cancelledById        String?           @map("cancelled_by")
   cancelledReason      String?           @map("cancelled_reason")
   source               String            @default("manual")
+  createdById          String?           @map("created_by")
   bookingPlatform      String?           @map("booking_platform")
   appointmentDatetime  DateTime?         @map("appointment_datetime")
   problemDescription   String?           @map("problem_description")
@@ -171,6 +173,7 @@ model Patient {
   createdAt            DateTime          @default(now()) @map("created_at")
 
   assignedUser        User?        @relation("PatientAssignedTo", fields: [assignedTo], references: [id])
+  createdByUser       User?        @relation("PatientCreatedBy", fields: [createdById], references: [id])
   flaggedByUser       User?        @relation("PatientFlaggedBy", fields: [flaggedById], references: [id])
   flagClearedByUser   User?        @relation("PatientFlagClearedBy", fields: [flagClearedById], references: [id])
   updatedByUser       User?        @relation("PatientUpdatedBy", fields: [updatedById], references: [id])

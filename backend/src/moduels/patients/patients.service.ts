@@ -176,6 +176,7 @@ async function resolveAutoAssign(
 
 const patientInclude = {
 	assignedUser: { select: { id: true, name: true } },
+	createdByUser: { select: { id: true, name: true } },
 	// Role is included on flag-related users so the UI can distinguish
 	// admin-raised flags (oversight) from VA-raised flags without a lookup.
 	flaggedByUser: { select: { id: true, name: true, role: true } },
@@ -1051,6 +1052,7 @@ export const patientsService = {
 				notes: null,
 				assignedTo,
 				updatedById: user.id,
+				createdById: user.id,
 			},
 		});
 

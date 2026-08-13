@@ -92,6 +92,8 @@ export interface Patient {
   visitStatus: VisitStatus
   assignedTo?: string | null
   assignedUser?: Pick<User, "id" | "name"> | null
+  createdById?: string | null
+  createdByUser?: Pick<User, "id" | "name"> | null
   notes?: string | null
   checklistState: Record<string, Record<string, boolean>>
   isFlagged: boolean

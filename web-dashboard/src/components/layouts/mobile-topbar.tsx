@@ -2,16 +2,12 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Bell, LogOut, Menu, User, Flag, Clock, UserPlus, CheckCircle2, Info } from "lucide-react"
+import { Bell, LogOut, User, Flag, Clock, UserPlus, CheckCircle2, Info } from "lucide-react"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { ROUTES } from "@/constants"
 import { cn } from "@/lib/utils"
 import { isAdminOrAbove, roleLabel } from "@/lib/roles"
-
-interface MobileTopbarProps {
-  onMenuClick: () => void
-}
 
 function getNotificationIcon(type: string) {
   const className = "w-4 h-4"
@@ -39,7 +35,7 @@ function timeAgo(date: Date) {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
-export function MobileTopbar({ onMenuClick }: MobileTopbarProps) {
+export function MobileTopbar() {
   const router = useRouter()
   const { user, logout } = useAuth()
   const { notifications, unreadCount } = useNotificationsContext()
@@ -70,14 +66,6 @@ export function MobileTopbar({ onMenuClick }: MobileTopbarProps) {
 
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#E5E7EB] px-2 z-30 flex items-center gap-1">
-      <button
-        onClick={onMenuClick}
-        className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-[#F3F4F6] active:bg-[#E5E7EB] transition-colors shrink-0"
-        aria-label="Open menu"
-      >
-        <Menu className="w-5 h-5 text-[#036638]" />
-      </button>
-
       {/* Brand */}
       <button
         onClick={() => router.push(isAdminOrAbove(user?.role) ? ROUTES.ADMIN.HOME : ROUTES.DASHBOARD.HOME)}

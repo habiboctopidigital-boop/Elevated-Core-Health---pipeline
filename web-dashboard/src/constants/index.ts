@@ -10,6 +10,7 @@ export const ROUTES = {
   DASHBOARD: {
     HOME: "/dashboard",
     BOARD: "/dashboard/board",
+    PATIENTS: "/dashboard/patients",
     WORKLOAD: "/dashboard/workload",
     LOG: "/dashboard/log",
     SOP: "/dashboard/sop",
