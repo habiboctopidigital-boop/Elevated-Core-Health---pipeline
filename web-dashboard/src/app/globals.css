@@ -203,8 +203,8 @@
     scrollbar-color: #d4d4d8 transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
@@ -215,41 +215,40 @@
   }
 
   /* Thick brand-green scrollbars for the pipeline stage columns */
-  .scrollbar-brand {
-    scrollbar-width: auto;
-    scrollbar-color: #65BD6C #EBF7EC;
-  }
-  .scrollbar-brand::-webkit-scrollbar {
-    width: 5px;
-    height: 10px;
-  }
-  .scrollbar-brand::-webkit-scrollbar-track {
-    background: #EBF7EC;
-    border-radius: 6px;
-  }
-  .scrollbar-brand::-webkit-scrollbar-thumb {
-    background: linear-gradient(to bottom right, #65BD6C, #036638);
-    border-radius: 6px;
-    border: 2px solid #EBF7EC;
-  }
-  .scrollbar-brand::-webkit-scrollbar-thumb:hover {
-    background: #036638;
-  }
-  .scrollbar-brand::-webkit-scrollbar-corner {
-    background: transparent;
-  }
+.scrollbar-brand {
+  /* Firefox */
+  scrollbar-width: thin; 
+  scrollbar-color: #65BD6C #EBF7EC;
+}
 
-  /* ── Global scrollbar hiding ─────────────────────────────────────────────
-     The app hides the page-level scrollbar for a clean look. Internal scroll
-     areas (kanban board columns, the board's horizontal strip, modals,
-     dropdowns) keep their own styled scrollbars via .scrollbar-brand / .thin. */
-  html {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
-  html::-webkit-scrollbar {
-    display: none;
-  }
+/* Chrome, Safari, and Opera */
+.scrollbar-brand::-webkit-scrollbar {
+  width: 5px;  /* Vertical scrollbar width */
+  height: 5px; /* Horizontal scrollbar height */
+}
+body::-webkit-scrollbar {
+display: none;
+}
+
+.scrollbar-brand::-webkit-scrollbar-track {
+  background: #EBF7EC;
+  border-radius: 6px;
+}
+
+.scrollbar-brand::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #65BD6C, #036638);
+  border-radius: 6px;
+  /* Removed the 2px border to let the 5px gradient show fully */
+}
+
+.scrollbar-brand::-webkit-scrollbar-thumb:hover {
+  background: #036638;
+}
+
+.scrollbar-brand::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 
   /* Glass surfaces - light variant for content on the #F4F5F7 page bg */
   .glass {
@@ -402,9 +401,7 @@ button{
     0 1px 2px rgba(16, 24, 40, 0.04),
     0 8px 24px -6px rgba(3, 102, 56, 0.14),
     0 20px 48px -12px rgba(3, 102, 56, 0.18) !important;
-  /* Right padding reserves room for the always-visible close button (28px)
-     so long titles/descriptions never slide underneath it. */
-  padding: 14px 30px 14px 18px !important;
+  padding: 14px 16px 14px 18px !important;
   gap: 12px !important;
   align-items: flex-start !important;
 }
