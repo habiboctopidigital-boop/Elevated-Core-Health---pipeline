@@ -5,6 +5,7 @@ import { usePatients, useMoveStage, useListVas } from "@/hooks/query/usePatients
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { ImportDialog } from "@/components/features/import-dialog"
+import { StageSettingsDialog } from "@/components/features/stage-settings-dialog"
 import { AddPatientDialog } from "@/components/features/add-patient-dialog"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { StageJumpBar } from "@/components/features/stage-jump-bar"
@@ -136,6 +137,7 @@ export default function AdminBoardPage() {
             <div className="flex flex-wrap items-center gap-2">
               <AddPatientDialog />
               <ImportDialog />
+              <StageSettingsDialog />
             </div>
           }
         />
