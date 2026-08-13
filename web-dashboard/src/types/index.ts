@@ -86,6 +86,7 @@ export interface Patient {
   location?: string | null
   email?: string | null
   phone?: string | null
+  dateOfBirth?: string | null
   stage: PatientStage
   status: PatientStatus
   visitStatus: VisitStatus

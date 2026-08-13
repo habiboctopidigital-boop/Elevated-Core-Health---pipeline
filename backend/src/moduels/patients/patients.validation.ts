@@ -83,10 +83,20 @@ const moneyValue = z
 	.regex(/^\d+(\.\d{1,2})?$/, "Amount must be a number (e.g. 30 or 30.50)")
 	.or(z.number().nonnegative());
 
+// Date of birth is sent as "YYYY-MM-DD" from the UI (and may also arrive as a
+// full ISO datetime from imports/webhooks), so accept any parseable date string.
+const dateOfBirthValue = z
+	.string()
+	.trim()
+	.optional()
+	.nullable()
+	.refine((v) => !v || !Number.isNaN(new Date(v).getTime()), "Date of birth must be a valid date");
+
 export const UpdatePatientSchema = z.object({
 	body: z.object({
 		firstName: z.string().trim().max(100).optional().nullable(),
 		lastName: z.string().trim().max(100).optional().nullable(),
+		dateOfBirth: dateOfBirthValue,
 		location: z.string().trim().max(200).optional().nullable(),
 		email: z.string().trim().email().optional().nullable(),
 		phone: z.string().trim().max(50).optional().nullable(),
@@ -134,6 +144,7 @@ export const CreatePatientSchema = z.object({
 		),
 		email: z.string().email().optional().nullable(),
 		phone: z.string().optional().nullable(),
+		dateOfBirth: dateOfBirthValue,
 		location: z.string().trim().max(200).optional().nullable(),
 		appointmentDatetime: z.string().datetime().optional().nullable(),
 		assignedTo: z.string().uuid().optional().nullable(),

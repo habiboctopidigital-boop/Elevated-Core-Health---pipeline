@@ -197,11 +197,14 @@ export function KanbanBoard({
       </div>
 
       {/* Phone: stages stack vertically (flex-col), ~90% width with a small
-          gap, no horizontal scrollbar. sm+: the existing horizontal snap-scroll
-          with 450px columns. On lg+ the board locks to the page height (flex-1)
-          with internal scrollbars; below lg it flows naturally. */}
+          gap, no horizontal scrollbar. sm+: the board fills the browser width
+          (w-full sm:min-w-max) with fixed 450px columns — as many as fit are
+          shown side by side, and the area scrolls horizontally when the
+          columns exceed the viewport. On lg+ the board locks to the page
+          height (flex-1) with internal scrollbars; below lg it flows
+          naturally. */}
       <div className="flex-1 min-h-0 overflow-x-hidden sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin ">
-        <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-5 sm:w-[450px] w-full ">
+        <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-5 w-full sm:min-w-max ">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
@@ -214,7 +217,7 @@ export function KanbanBoard({
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-full min-w-0 sm:w-full sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50",
+                  "w-full min-w-0 sm:w-[450px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50",
                   // Brief self-fading flash (animate-jump-flash clears on its own)
 quickJumpStage === stage && "animate-jump-flash",
                   isOver && !isDisabled

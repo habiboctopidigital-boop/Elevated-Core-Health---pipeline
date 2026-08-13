@@ -298,6 +298,7 @@ export function useUpdatePatient() {
       location: string | null
       email: string | null
       phone: string | null
+      dateOfBirth: string | null
       copayAmount: string | null
       amountPaid: string | null
       paymentMethod: string | null

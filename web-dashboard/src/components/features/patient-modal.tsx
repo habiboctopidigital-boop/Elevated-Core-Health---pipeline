@@ -50,7 +50,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { DateTimePicker, DatePicker } from "@/components/ui/date-time-picker"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 import {
@@ -186,6 +186,7 @@ const contactSchema = z.object({
       message: "Enter a valid phone number",
     }),
   location: z.string().trim().max(120, "Location is too long").optional().or(z.literal("")),
+  dateOfBirth: z.string().optional().or(z.literal("")),
   copayAmount: z.string().trim().optional().or(z.literal("")),
   amountPaid: z.string().trim().optional().or(z.literal("")),
 })
@@ -380,6 +381,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     mode: "onTouched",
@@ -390,6 +393,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       location: "",
       phone: "",
       email: "",
+      dateOfBirth: "",
       copayAmount: "",
       amountPaid: "",
     },
@@ -446,6 +450,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       location: patient?.location ?? "",
       phone: patient?.phone ?? "",
       email: patient?.email ?? "",
+      dateOfBirth: patient?.dateOfBirth ?? "",
       copayAmount: patient?.copayAmount ?? "",
       amountPaid: patient?.amountPaid ?? "",
     })
@@ -537,6 +542,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       location: values.location?.trim() || null,
       phone: values.phone.trim(),
       email: values.email.trim(),
+      dateOfBirth: values.dateOfBirth?.trim() || null,
       copayAmount: values.copayAmount?.trim() || null,
       amountPaid: values.amountPaid?.trim() || null,
       paymentMethod: paymentMethod.trim() || null,
@@ -1504,6 +1510,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                           <div>
                             <label className={contactLabelClass(false)}>Location</label>
                             <input {...register("location")} className={contactInputClass(false)} />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Date of Birth</label>
+                            <DatePicker
+                              value={watch("dateOfBirth") ?? ""}
+                              onChange={(iso) => setValue("dateOfBirth", iso, { shouldValidate: true })}
+                              placeholder="Select date of birth"
+                            />
                           </div>
                           <div>
                             <label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label>

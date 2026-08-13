@@ -130,6 +130,7 @@ model Patient {
   location             String?
   email                String?
   phone                String?
+  dateOfBirth          DateTime?         @map("date_of_birth") @db.Date
   stage                String            @default("onboarding")
   stageRef             Stage?            @relation(fields: [stage], references: [key], onDelete: Restrict)
   status               PatientStatus     @default(active)

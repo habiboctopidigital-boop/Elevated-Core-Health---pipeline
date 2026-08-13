@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Loader2 } from "lucide-react"
-import { DateTimePicker } from "@/components/ui/date-time-picker"
+import { DateTimePicker, DatePicker } from "@/components/ui/date-time-picker"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { useListVas } from "@/hooks/query/usePatients"
@@ -59,6 +59,7 @@ const addPatientSchema = z.object({
       message: "Enter a valid phone number",
     }),
   location: z.string().trim().max(120, "Location is too long").optional(),
+  dateOfBirth: z.string().optional(),
   appointmentDatetime: z.string().optional(),
   bookingPlatform: z.string().optional(),
   assignedTo: z.string().optional(),
@@ -77,6 +78,7 @@ const EMPTY_FORM: AddPatientFormData = {
   email: "",
   phone: "",
   location: "",
+  dateOfBirth: "",
   appointmentDatetime: "",
   bookingPlatform: "phone",
   assignedTo: "",
@@ -114,6 +116,7 @@ export function AddPatientDialog() {
         email: data.email || undefined,
         phone: data.phone || undefined,
         location: data.location || undefined,
+        dateOfBirth: data.dateOfBirth || undefined,
         appointmentDatetime: data.appointmentDatetime
           ? new Date(data.appointmentDatetime).toISOString()
           : undefined,
@@ -304,6 +307,17 @@ export function AddPatientDialog() {
                   placeholder="City, State"
                   className={inputClass(!!errors.location)}
                   aria-invalid={!!errors.location}
+                />
+              </Field>
+
+              <Field label="Date of Birth" optional error={errors.dateOfBirth}>
+                <DatePicker
+                  value={formData.dateOfBirth ?? ""}
+                  onChange={(iso) => {
+                    setFormData((f) => ({ ...f, dateOfBirth: iso }))
+                    clearFieldError("dateOfBirth")
+                  }}
+                  placeholder="Select date of birth"
                 />
               </Field>
 

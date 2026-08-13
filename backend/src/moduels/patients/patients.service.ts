@@ -642,6 +642,11 @@ export const patientsService = {
 			prev.phone = patient.phone;
 			next.phone = input.phone;
 		}
+		if (input.dateOfBirth !== undefined) {
+			data.dateOfBirth = input.dateOfBirth ? new Date(input.dateOfBirth) : null;
+			prev.dateOfBirth = patient.dateOfBirth;
+			next.dateOfBirth = data.dateOfBirth;
+		}
 		if (input.copayAmount !== undefined) {
 			data.copayAmount = input.copayAmount === null || input.copayAmount === "" ? null : String(input.copayAmount);
 			prev.copayAmount = patient.copayAmount?.toString() ?? null;
@@ -1032,6 +1037,7 @@ export const patientsService = {
 				name: input.name,
 				email: input.email ?? null,
 				phone: input.phone ?? null,
+				dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
 				location: input.location ?? null,
 				stage: firstStage,
 				appointmentDatetime,

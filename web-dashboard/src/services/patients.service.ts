@@ -81,6 +81,7 @@ export const PatientsService = {
       location: string | null
       email: string | null
       phone: string | null
+      dateOfBirth: string | null
       copayAmount: string | null
       amountPaid: string | null
       paymentMethod: string | null
@@ -182,6 +183,7 @@ export const PatientsService = {
     email?: string | null
     phone?: string | null
     location?: string | null
+    dateOfBirth?: string | null
     appointmentDatetime?: string | null
     bookingPlatform?: string | null
     assignedTo?: string | null

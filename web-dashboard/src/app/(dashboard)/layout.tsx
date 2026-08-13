@@ -44,7 +44,7 @@ export default function DashboardLayout({
   }, [isCollapsed])
 
   return (
-    <div className="flex min-h-screen bg-[#F4F5F7]">
+    <div className="flex min-h-screen w-full bg-[#F4F5F7] overflow-x-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block fixed left-0 top-0 h-screen z-30">
         <EchSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
@@ -72,7 +72,7 @@ export default function DashboardLayout({
 
       {/* Main Content - No margin on mobile, margin on desktop for sidebar */}
       <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 w-full overflow-x-hidden ${
           isCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
       >
@@ -89,8 +89,8 @@ export default function DashboardLayout({
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto no-scrollbar p-3 sm:p-4 md:p-6 lg:p-6">
-          <div className="relative z-10 sm:max-w-[1440px] w-screen mx-auto no-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar p-3 sm:p-4 md:p-6 lg:p-6">
+          <div className="relative z-10 w-full no-scrollbar">
             <DashboardWatermark
               position="center"
               opacity={WatermarkOpacity.DASHBOARD_SUBTLE}
