@@ -71,8 +71,8 @@ export interface PatientFlag {
   stage: PatientStage
   type: PatientFlagType
   reason: string
-  flaggedByUser?: Pick<User, "id" | "name"> | null
-  clearedByUser?: Pick<User, "id" | "name"> | null
+  flaggedByUser?: Pick<User, "id" | "name" | "role"> | null
+  clearedByUser?: Pick<User, "id" | "name" | "role"> | null
   clearedReason?: string | null
   clearedAt?: string | null
   createdAt: string
@@ -95,10 +95,10 @@ export interface Patient {
   checklistState: Record<string, Record<string, boolean>>
   isFlagged: boolean
   flagReason?: string | null
-  flaggedByUser?: Pick<User, "id" | "name"> | null
+  flaggedByUser?: Pick<User, "id" | "name" | "role"> | null
   flaggedAt?: string | null
   flagClearedReason?: string | null
-  flagClearedByUser?: Pick<User, "id" | "name"> | null
+  flagClearedByUser?: Pick<User, "id" | "name" | "role"> | null
   flagClearedAt?: string | null
   flags?: PatientFlag[]
   completedAt?: string | null

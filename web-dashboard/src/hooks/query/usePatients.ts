@@ -211,8 +211,8 @@ export function useFlagPatient() {
 export function useClearFlag() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, clearReason }: { id: string; clearReason: string }) =>
-      PatientsService.clearFlag(id, clearReason),
+    mutationFn: ({ id, clearReason, flagId }: { id: string; clearReason: string; flagId?: string }) =>
+      PatientsService.clearFlag(id, clearReason, flagId),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })

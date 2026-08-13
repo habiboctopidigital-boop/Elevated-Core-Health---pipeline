@@ -21,7 +21,10 @@ export default function VABoardPage() {
   const { data: patients } = usePatients()
 
   return (
-    <div className="flex flex-col h-full">
+    // Bound the page to the viewport (desktop header h-16 + main padding) and
+    // clip overflow so only the kanban board's own green scrollbars ever show
+    // — the parent page scrollbar is removed.
+    <div className="flex flex-col h-full sm:h-[calc(100vh-7.5rem)] sm:overflow-hidden no-scrollbar">
       {/* - Board Header - */}
       <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] px-4 py-3.5 sm:px-5 mb-4">
         <PageHeader

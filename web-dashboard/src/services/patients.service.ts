@@ -63,10 +63,12 @@ export const PatientsService = {
     return data.data
   },
 
-  async clearFlag(id: string, clearReason: string): Promise<Patient> {
+  async clearFlag(id: string, clearReason: string, flagId?: string): Promise<Patient> {
     const { data } = await axiosInstance.patch<ApiResponse<Patient>>(
       `${API_ENDPOINTS.PATIENTS}/${id}/flag/clear`,
-      { clearReason },
+      // flagId targets ONE specific flag in history — without it the backend
+      // clears only the most recent open flag, never all of them.
+      { clearReason, ...(flagId ? { flagId } : {}) },
     )
     return data.data
   },

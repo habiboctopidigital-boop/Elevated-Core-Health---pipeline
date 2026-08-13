@@ -176,8 +176,10 @@ async function resolveAutoAssign(
 
 const patientInclude = {
 	assignedUser: { select: { id: true, name: true } },
-	flaggedByUser: { select: { id: true, name: true } },
-	flagClearedByUser: { select: { id: true, name: true } },
+	// Role is included on flag-related users so the UI can distinguish
+	// admin-raised flags (oversight) from VA-raised flags without a lookup.
+	flaggedByUser: { select: { id: true, name: true, role: true } },
+	flagClearedByUser: { select: { id: true, name: true, role: true } },
 	cancelledByUser: { select: { id: true, name: true } },
 	privateLockedByUser: { select: { id: true, name: true } },
 	// Full flag history (newest first). The patient row keeps its single
@@ -186,8 +188,8 @@ const patientInclude = {
 	flags: {
 		orderBy: { createdAt: "desc" },
 		include: {
-			flaggedByUser: { select: { id: true, name: true } },
-			clearedByUser: { select: { id: true, name: true } },
+			flaggedByUser: { select: { id: true, name: true, role: true } },
+			clearedByUser: { select: { id: true, name: true, role: true } },
 		},
 	},
 } as const;
@@ -474,54 +476,104 @@ export const patientsService = {
 	},
 
 	async clearFlag(id: string, input: ClearFlagInput, user: AuthenticatedUser) {
-		const patient = await prisma.patient.findUnique({
-			where: { id },
-			include: { flaggedByUser: { select: { email: true, name: true } } },
-		});
+		const patient = await prisma.patient.findUnique({ where: { id } });
 		if (!patient) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
 
-		const updated = await prisma.patient.update({
-			where: { id },
-			data: {
-				isFlagged: false,
-				flagReason: null,
-				flaggedById: null,
-				flaggedAt: null,
-				flagClearedReason: input.clearReason,
-				flagClearedById: user.id,
-				flagClearedAt: new Date(),
-				updatedAt: new Date(),
-				updatedById: user.id,
-			},
+		// Resolve which SINGLE flag to clear: the one the UI clicked (flagId),
+		// or the most recent open flag as a fallback (e.g. the admin home page
+		// "Clear Flag" row). Never clear every open flag at once — each flag is
+		// resolved independently and keeps its own clear reason.
+		let targetFlagId: string | null = null;
+		if (input.flagId) {
+			const target = await prisma.patientFlag.findFirst({
+				where: { id: input.flagId, patientId: id },
+				select: { id: true, clearedAt: true },
+			});
+			if (!target) {
+				return ServiceResponse.failure("Flag not found for this patient.", null, StatusCodes.NOT_FOUND);
+			}
+			if (target.clearedAt) {
+				return ServiceResponse.failure("This flag is already cleared.", null, StatusCodes.CONFLICT);
+			}
+			targetFlagId = target.id;
+		} else {
+			const latestOpen = await prisma.patientFlag.findFirst({
+				where: { patientId: id, clearedAt: null },
+				orderBy: { createdAt: "desc" },
+				select: { id: true },
+			});
+			targetFlagId = latestOpen?.id ?? null;
+		}
+
+		if (targetFlagId) {
+			await prisma.patientFlag.update({
+				where: { id: targetFlagId },
+				data: {
+					clearedById: user.id,
+					clearedReason: input.clearReason,
+					clearedAt: new Date(),
+				},
+			});
+		}
+
+		// Re-check remaining open flags to decide the patient snapshot state.
+		const remainingOpen = await prisma.patientFlag.count({
+			where: { patientId: id, clearedAt: null },
 		});
 
-		// Mark the most recent open flag record as cleared in history.
-		await prisma.patientFlag.updateMany({
-			where: { patientId: id, clearedAt: null },
-			data: {
-				clearedById: user.id,
-				clearedReason: input.clearReason,
-				clearedAt: new Date(),
-			},
-		});
+		const snapshot: Record<string, unknown> = { updatedAt: new Date(), updatedById: user.id };
+		if (remainingOpen === 0) {
+			snapshot.isFlagged = false;
+			snapshot.flagReason = null;
+			snapshot.flaggedById = null;
+			snapshot.flaggedAt = null;
+			snapshot.flagClearedReason = input.clearReason;
+			snapshot.flagClearedById = user.id;
+			snapshot.flagClearedAt = new Date();
+		} else {
+			// Other flags are still open — keep the patient flagged and point the
+			// snapshot at the most recent remaining open flag.
+			const latestOpen = await prisma.patientFlag.findFirst({
+				where: { patientId: id, clearedAt: null },
+				orderBy: { createdAt: "desc" },
+				select: { reason: true, flaggedById: true, createdAt: true },
+			});
+			if (latestOpen) {
+				snapshot.flagReason = latestOpen.reason;
+				snapshot.flaggedById = latestOpen.flaggedById;
+				snapshot.flaggedAt = latestOpen.createdAt;
+				snapshot.flagClearedReason = null;
+				snapshot.flagClearedById = null;
+				snapshot.flagClearedAt = null;
+			}
+		}
+
+		const updated = await prisma.patient.update({ where: { id }, data: snapshot });
 
 		await audit({
 			patientId: id,
 			user,
 			action: "flag.clear",
-			entityType: "patient",
-			entityId: id,
+			entityType: "patient_flag",
+			entityId: targetFlagId ?? id,
 			prevValue: { isFlagged: true },
-			newValue: { isFlagged: false, reason: input.clearReason },
+			newValue: { isFlagged: remainingOpen === 0, reason: input.clearReason },
 			message: `Flag cleared - ${input.clearReason}`,
 		});
 
-		// Email the original flagger with Donna's feedback
+		// Email the flagger of the cleared flag with Donna's feedback (only the
+		// person who raised the flag we actually cleared).
 		try {
-			if (patient.flaggedByUser?.email) {
-				await emailService.notifyFlagCleared(patient.name, user.name, input.clearReason, patient.flaggedByUser.email);
+			const clearedFlag = targetFlagId
+				? await prisma.patientFlag.findUnique({
+						where: { id: targetFlagId },
+						include: { flaggedByUser: { select: { email: true, name: true } } },
+					})
+				: null;
+			if (clearedFlag?.flaggedByUser?.email) {
+				await emailService.notifyFlagCleared(patient.name, user.name, input.clearReason, clearedFlag.flaggedByUser.email);
 			}
 		} catch (err) {
 			logger.error({ err, patientId: id }, "Failed to send flag-cleared notification email");

@@ -5524,12 +5524,13 @@ import { z } from "zod"
 
 import { useState, useEffect, useMemo, useRef } from "react"
 
-import type { Patient, PatientStage } from "@/types"
+import type { Patient, PatientFlag, PatientStage } from "@/types"
 import { ROLES, STALE_HOURS } from "@/constants"
 import { useStageMeta } from "@/hooks/query/useStages"
 import {
   X,
   Flag,
+  FlagOff,
   Check,
   Circle,
   CheckCheck,
@@ -5568,7 +5569,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/hooks/auth/useAuth"
-import { isAdminOrAbove } from "@/lib/roles"
+import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 import {
   useMoveStage,
   useToggleChecklist,
@@ -5781,9 +5782,54 @@ function SidebarItem({
   )
 }
 
+// Inline "Clear Flag" form — admin writes feedback before clearing a flag. The
+// message is stored as the cleared reason and emailed to the original flagger.
+function FlagClearForm({
+  clearReason,
+  setClearReason,
+  isPending,
+  onClear,
+  onCancel,
+}: {
+  clearReason: string
+  setClearReason: (v: string) => void
+  isPending: boolean
+  onClear: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="mt-3 space-y-2 rounded-xl bg-white/80 border border-gray-200 p-3">
+      <Textarea
+        placeholder="Write your feedback / reason for clearing this flag (emailed to the person who raised it)..."
+        value={clearReason}
+        onChange={(e) => setClearReason(e.target.value)}
+        className="text-xs min-h-[64px] rounded-lg"
+      />
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          onClick={onClear}
+          disabled={!clearReason.trim() || isPending}
+          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs gap-1.5"
+        >
+          {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {isPending ? "Clearing..." : "Confirm Clear"}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancel} className="text-xs text-gray-600">
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const { user } = useAuth()
   const isAdmin = isAdminOrAbove(user?.role)
+  // A flag raised by an admin/super_admin renders with a distinct "Admin Flag"
+  // symbol so oversight flags are easy to spot vs. VA-raised flags.
+  const isAdminFlag = (flag?: PatientFlag | null) =>
+    !!flag?.flaggedByUser && isAdminOrAbove(flag.flaggedByUser.role)
   const { order: stageOrder, labels: stageLabels, byKey: stageByKey } = useStageMeta()
   const { data: patient, isLoading } = usePatient(patientId || "")
   const { data: logData } = useActivityLog(
@@ -5842,7 +5888,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [newFlagReason, setNewFlagReason] = useState("")
   const [newFlagType, setNewFlagType] = useState<"positive" | "negative">("positive")
   const [clearReason, setClearReason] = useState("")
-  const [showClearInput, setShowClearInput] = useState(false)
+  // Which flag's "Clear Flag" form is open: "current" = the Overview card's
+  // latest flag, or the flag's id inside the Activity tab's history list.
+  const [clearingFlagId, setClearingFlagId] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("")
   const [insuranceProvider, setInsuranceProvider] = useState("")
@@ -5926,7 +5974,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     })
     setShowFlagInput(false)
     setFlagReason("")
-    setShowClearInput(false)
+    setClearingFlagId(null)
     setClearReason("")
     setShowCancelInput(false)
     setCancelReason("")
@@ -5975,8 +6023,16 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const handleClearFlag = async () => {
     if (!patient || !clearReason.trim()) return
-    await clearFlag.mutateAsync({ id: patient.id, clearReason })
-    setShowClearInput(false)
+    // Resolve the SPECIFIC flag being cleared: "current" = the latest flag
+    // shown in the Overview card; otherwise the flag id the admin clicked in
+    // the Activity tab's history list. Only that flag is cleared — others stay
+    // untouched with their own reason.
+    const flagId =
+      clearingFlagId === "current"
+        ? latestFlag?.id ?? undefined
+        : clearingFlagId ?? undefined
+    await clearFlag.mutateAsync({ id: patient.id, clearReason, flagId })
+    setClearingFlagId(null)
     setClearReason("")
   }
 
@@ -6589,35 +6645,109 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     {activeTab === "overview" && (
                       <>
                         {(latestFlag ?? patient.flagReason) && patient.isFlagged && (
-                          <div className="rounded-2xl border border-red-200 bg-red-50/70 p-4 sm:p-5">
+                          <div
+                            className={cn(
+                              "rounded-2xl border p-4 sm:p-5",
+                              isAdminFlag(latestFlag)
+                                ? "border-amber-200 bg-amber-50/70 border-l-4 border-l-amber-400"
+                                : latestFlag?.type === "positive"
+                                  ? "border-emerald-200 bg-emerald-50/70 border-l-4 border-l-emerald-400"
+                                  : "border-red-200 bg-red-50/70 border-l-4 border-l-red-400",
+                            )}
+                          >
                             <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                              <p className="text-xs font-bold text-red-700 flex items-center gap-1.5">
-                                <Flag className="w-3.5 h-3.5" fill="#EF4444" /> Flag Reason
+                              <p
+                                className={cn(
+                                  "text-xs font-bold flex items-center gap-1.5",
+                                  isAdminFlag(latestFlag)
+                                    ? "text-amber-700"
+                                    : latestFlag?.type === "positive"
+                                      ? "text-emerald-700"
+                                      : "text-red-700",
+                                )}
+                              >
+                                {isAdminFlag(latestFlag) ? (
+                                  <>
+                                    <Shield className="w-3.5 h-3.5" fill="#F59E0B" /> Admin Flag
+                                  </>
+                                ) : (
+                                  <>
+                                    <Flag className="w-3.5 h-3.5" fill="#EF4444" /> Flag Reason
+                                  </>
+                                )}
                               </p>
                               <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full whitespace-nowrap">
+                                <span
+                                  className={cn(
+                                    "px-2 py-0.5 text-[10px] font-bold rounded-full whitespace-nowrap",
+                                    isAdminFlag(latestFlag)
+                                      ? "bg-amber-100 text-amber-700"
+                                      : latestFlag?.type === "positive"
+                                        ? "bg-emerald-100 text-emerald-700"
+                                        : "bg-red-100 text-red-700",
+                                  )}
+                                >
                                   {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""}
                                 </span>
                                 {flagStageCount > 0 && (
-                                  <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full whitespace-nowrap">
+                                  <span className="px-2 py-0.5 text-[10px] font-bold bg-white/70 text-gray-600 border border-gray-200 rounded-full whitespace-nowrap">
                                     {flagStageCount} on this stage
                                   </span>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-red-900">{latestFlag?.reason ?? patient.flagReason}</p>
-                            <p className="text-[11px] text-red-700/70 mt-1">
-                              by {latestFlag?.flaggedByUser?.name ?? patient.flaggedByUser?.name} -{" "}
+                            <p className={cn("text-sm", isAdminFlag(latestFlag) ? "text-amber-900" : latestFlag?.type === "positive" ? "text-emerald-900" : "text-red-900")}>
+                              {latestFlag?.reason ?? patient.flagReason}
+                            </p>
+                            <p
+                              className={cn(
+                                "text-[11px] mt-1",
+                                isAdminFlag(latestFlag)
+                                  ? "text-amber-700/70"
+                                  : latestFlag?.type === "positive"
+                                    ? "text-emerald-700/70"
+                                    : "text-red-700/70",
+                              )}
+                            >
+                              by {latestFlag?.flaggedByUser?.name ?? patient.flaggedByUser?.name}
+                              {isAdminFlag(latestFlag) ? " (Admin)" : ""} -{" "}
                               {timeAgo((latestFlag?.createdAt ?? patient.flaggedAt?.toString()) || "")}
                             </p>
                             {flagTotalCount > 1 && (
                               <button
                                 onClick={scrollToFlagHistory}
-                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-red-700 underline underline-offset-2 hover:text-red-900 transition-colors"
+                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-gray-600 underline underline-offset-2 hover:text-gray-900 transition-colors"
                               >
                                 View All Flags ({flagTotalCount}) <ChevronDown className="w-3 h-3" />
                               </button>
                             )}
+                            {isAdmin &&
+                              (clearingFlagId === "current" ? (
+                                <FlagClearForm
+                                  clearReason={clearReason}
+                                  setClearReason={setClearReason}
+                                  isPending={clearFlag.isPending}
+                                  onClear={handleClearFlag}
+                                  onCancel={() => {
+                                    setClearingFlagId(null)
+                                    setClearReason("")
+                                  }}
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => setClearingFlagId("current")}
+                                  className={cn(
+                                    "mt-3 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors",
+                                    isAdminFlag(latestFlag)
+                                      ? "text-amber-700 border-amber-200 bg-white/70 hover:bg-amber-50"
+                                      : latestFlag?.type === "positive"
+                                        ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50"
+                                        : "text-red-600 border-red-200 bg-white/70 hover:bg-red-50",
+                                  )}
+                                >
+                                  <FlagOff className="w-3.5 h-3.5" /> Clear Flag
+                                </button>
+                              ))}
                           </div>
                         )}
 
@@ -7083,12 +7213,19 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                     )}
                                   >
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                                      <span className={cn(
-                                        "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                        flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600",
-                                      )}>
-                                        {flag.type === "positive" ? "Positive" : "Alert"}
-                                      </span>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={cn(
+                                          "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                          flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600",
+                                        )}>
+                                          {flag.type === "positive" ? "Positive" : "Alert"}
+                                        </span>
+                                        {isAdminFlag(flag) && (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                            <Shield className="w-3 h-3" /> Admin Flag
+                                          </span>
+                                        )}
+                                      </div>
                                       <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
                                         {new Date(flag.createdAt).toLocaleString()}
                                       </span>
@@ -7097,17 +7234,44 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                                     <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
                                       <span className="text-gray-500">
                                         by <span className="font-semibold text-gray-700">{flag.flaggedByUser?.name ?? "Unknown"}</span>
+                                        {isAdminFlag(flag) && <span className="font-semibold text-amber-700"> (Admin)</span>}
                                         {stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}
                                       </span>
                                       {flag.clearedAt ? (
                                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">
                                           Cleared by {flag.clearedByUser?.name ?? "Unknown"}
+                                          {flag.clearedByUser?.role ? ` (${roleLabel(flag.clearedByUser.role)})` : ""}
                                           {flag.clearedReason ? ` - ${flag.clearedReason}` : ""}
                                         </span>
                                       ) : (
                                         <span className="px-2 py-0.5 bg-red-100 text-red-600 font-semibold rounded-full whitespace-nowrap">Open</span>
                                       )}
                                     </div>
+                                    {isAdmin && !flag.clearedAt &&
+                                      (clearingFlagId === flag.id ? (
+                                        <FlagClearForm
+                                          clearReason={clearReason}
+                                          setClearReason={setClearReason}
+                                          isPending={clearFlag.isPending}
+                                          onClear={handleClearFlag}
+                                          onCancel={() => {
+                                            setClearingFlagId(null)
+                                            setClearReason("")
+                                          }}
+                                        />
+                                      ) : (
+                                        <button
+                                          onClick={() => setClearingFlagId(flag.id)}
+                                          className={cn(
+                                            "mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors",
+                                            flag.type === "positive"
+                                              ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50"
+                                              : "text-red-600 border-red-200 bg-white/70 hover:bg-red-50",
+                                          )}
+                                        >
+                                          <FlagOff className="w-3.5 h-3.5" /> Clear Flag
+                                        </button>
+                                      ))}
                                   </div>
                                 ))
                               ) : (
@@ -7152,37 +7316,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                 Back
               </button>
               <div className="flex items-center gap-2.5">
-                {(!!vaList && (isAdmin || !patient.assignedUser)) && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowAssignDropdown((v) => !v)}
-                      disabled={assigning}
-                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#12141A] border border-gray-200 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      <User className="w-4 h-4 text-emerald-600" />
-                      {patient.assignedUser ? "Reassign" : "Assign V."}
-                    </button>
-                    {showAssignDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setShowAssignDropdown(false)} />
-                        <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 max-h-52 overflow-y-auto">
-                          {assignableVas.length === 0 && (
-                            <p className="px-3 py-2 text-xs text-gray-400 italic">No VAs available</p>
-                          )}
-                          {assignableVas.map((va) => (
-                            <button
-                              key={va.id}
-                              onClick={() => handleAssignTo(va.id)}
-                              className="w-full text-left px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-emerald-50 transition-colors"
-                            >
-                              {va.name}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+               
                 {currentStageIdx < stageOrder.length - 1 && (
                   <button
                     onClick={() => handleMoveStage(stageOrder[currentStageIdx + 1])}

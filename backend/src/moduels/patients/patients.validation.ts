@@ -37,6 +37,10 @@ export const FlagSchema = z.object({
 export const ClearFlagSchema = z.object({
 	body: z.object({
 		clearReason: z.string().min(1, "Clear reason is required").max(500, "Clear reason must be at most 500 characters"),
+		// Optional — when the UI clears a specific flag from the history list,
+		// only that flag is cleared. Without it, only the most recent open flag
+		// is cleared (never all open flags at once).
+		flagId: z.string().uuid().optional(),
 	}),
 });
 

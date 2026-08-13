@@ -108,7 +108,10 @@ export default function AdminBoardPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    // Bound the page to the viewport (desktop header h-16 + main padding) and
+    // clip overflow so only the kanban board's own green scrollbars ever show
+    // — the parent page scrollbar is removed.
+    <div className="flex flex-col h-full sm:h-[calc(100vh-7.5rem)] sm:overflow-hidden no-scrollbar">
       {/* Stale-data banner — a background refetch failed but we're still showing the last good board */}
       {error && patients && (
         <div className="mb-3 px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-xs font-medium text-amber-800">
@@ -158,8 +161,8 @@ export default function AdminBoardPage() {
         onJump={handleQuickJump}
       />
 
-      {/* - Kanban Board - */}
-      <div className="sm:h-[calc(100vh-14rem)] sm:-mx-6 sm:-mb-6 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
+      {/* - Kanban Board - (height flexes to the page; only its green scrollbars show) */}
+      <div className="sm:flex-1 sm:min-h-0 sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
         <div className="flex sm:inline-flex flex-col sm:flex-row h-auto sm:h-full gap-4 p-0 sm:p-6 sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []

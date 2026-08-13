@@ -378,7 +378,7 @@ button{
 .ech-toast {
   position: relative;
   overflow: hidden;
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   border: 1px solid rgba(3, 102, 56, 0.10) !important;
   background: rgba(255, 255, 255, 0.94) !important;
   backdrop-filter: blur(20px) saturate(1.4);
@@ -496,3 +496,12 @@ button{
   color: #036638 !important;
   box-shadow: none !important;
 }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
