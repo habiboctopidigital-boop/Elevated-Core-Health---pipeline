@@ -220,12 +220,13 @@ export function AddPatientDialog() {
       <DialogTrigger asChild>
         <Button
           size="sm"
-          className="h-9 rounded-xl px-4 gap-1.5 bg-gradient-to-r from-[#036638] to-emerald-600 text-white shadow-md shadow-emerald-500/25 hover:from-[#025030] hover:to-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
+          className="h-9 rounded-xl px-3 gap-1.5 bg-gradient-to-r from-[#036638] to-emerald-600 text-white shadow-md shadow-emerald-500/25 hover:from-[#025030] hover:to-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30 transition-all"
         >
-          <span className="flex items-center justify-center w-5 h-5 rounded-md bg-white/15">
-            <Plus className="w-3.5 h-3.5" />
+          <span className="flex items-center justify-center w-4 h-4 rounded-md bg-white/15">
+            <Plus className="w-3 h-3" />
           </span>
-          Add Patient
+          <span className="hidden sm:inline">Add Patient</span>
+          <span className="sm:hidden">Add</span>
         </Button>
       </DialogTrigger>
 

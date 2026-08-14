@@ -19,10 +19,11 @@ export function StageSettingsDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="cursor-pointer gap-1.5 h-9 rounded-xl bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all border border-[#E5E7EB]"
+          className="cursor-pointer gap-1.5 h-9 px-3 rounded-xl bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all border border-[#E5E7EB]"
         >
           <SlidersHorizontal className="w-3.5 h-3.5 text-[#036638]" />
-          Stage Settings
+          <span className="hidden sm:inline">Stage Settings</span>
+          <span className="sm:hidden">Settings</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-3xl gap-0 p-0 overflow-hidden max-h-[calc(100dvh-2rem)] overflow-y-auto border-0 shadow-2xl rounded-3xl" hideAccent>

@@ -113,10 +113,11 @@ export function ImportDialog() {
         <Button
           variant="outline"
           size="sm"
-          className="cursor-pointer gap-1.5 h-9 rounded-xl  bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all"
+          className="cursor-pointer gap-1.5 h-9 px-3 rounded-xl bg-white text-[#374151] hover:bg-[#EBF7EC] hover:border-[#036638]/30 hover:text-[#036638] hover:shadow-sm transition-all"
         >
           <Upload className="w-3.5 h-3.5 text-[#036638]" />
-          Patients Import
+          <span className="hidden sm:inline">Patients Import</span>
+          <span className="sm:hidden">Import</span>
         </Button>
       </DialogTrigger>
       <DialogContent

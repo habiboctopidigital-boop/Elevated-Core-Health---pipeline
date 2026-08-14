@@ -340,7 +340,7 @@ export function ProfilePage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowPasswordForm(true)}
-                    className="text-xs border-[#036638]/30 text-[#036638] shrink-0 hover:bg-[#EBF7EC] hover:border-[#036638]/40"
+                    className="text-xs border-[#036638]/30 text-[#036638] shrink-0 hover:bg-[#EBF7EC] hover:text-black hover:border-[#036638]/40"
                   >
                     <LockKeyhole className="w-3.5 h-3.5 mr-1" />
                     Change

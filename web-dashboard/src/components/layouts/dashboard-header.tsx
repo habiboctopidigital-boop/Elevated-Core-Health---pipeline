@@ -98,7 +98,7 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="hidden lg:block   bg-white border-b border-[#E5E7EB] shadow-sm w-full" >
+    <header className="hidden lg:block   bg-white border-b border-[#E5E7EB] shadow-sm w-full overflow-x-hidden" >
       <div className="flex items-center justify-between px-6 py-3.5 h-16">
         {/* Left: Search */}
         <div className="flex-1 max-w-sm">

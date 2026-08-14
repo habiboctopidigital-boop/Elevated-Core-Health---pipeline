@@ -8,9 +8,9 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
   const queryClient = getQueryClient()
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider  client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   )
 }

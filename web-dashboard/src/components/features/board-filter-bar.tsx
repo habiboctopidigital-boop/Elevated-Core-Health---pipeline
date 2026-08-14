@@ -80,7 +80,22 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
   const [searchOpen, setSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchBarRef = useRef<HTMLDivElement>(null)
+  const searchBtnRef = useRef<HTMLButtonElement>(null)
   const searchExpanded = searchOpen || Boolean(filters.search)
+
+  // The row scrolls horizontally on narrow screens, so the expanded search is
+  // positioned fixed (from the button's rect at open time) — an absolutely
+  // positioned child would be clipped by the scroll container.
+  const [searchPos, setSearchPos] = useState<{ top: number; left: number } | null>(null)
+
+  const toggleSearch = () => {
+    const willOpen = !searchExpanded
+    if (willOpen) {
+      const r = searchBtnRef.current?.getBoundingClientRect()
+      if (r) setSearchPos({ top: r.bottom + 8, left: Math.min(r.left, window.innerWidth - 370) })
+    }
+    setSearchOpen(willOpen)
+  }
 
   // Close the floating search when clicking anywhere outside it.
   useEffect(() => {
@@ -129,13 +144,18 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
 
   return (
     <div className={cn("relative", bare ? "" : "rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)]")}>
-      <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-3", bare ? "px-0 py-0" : "px-4 py-3")}>
-        {/* - Search — round icon button; expanded input floats absolutely so the row never shifts - */}
+      {/* Phone: the controls wrap onto as many lines as they need so nothing
+          is hidden (search / status / VA on line 1, date ranges + Apply/Reset
+          on line 2). sm+: single non-wrapping line that scrolls horizontally
+          inside the row when there isn't enough room. */}
+      <div className={cn("flex flex-wrap items-center gap-x-1.5 sm:gap-x-2 gap-y-2 sm:flex-nowrap sm:overflow-x-auto sm:no-scrollbar", bare ? "px-0 py-0" : "px-2 py-3 sm:px-2.5")}>
+        {/* - Search — round icon button; expanded input floats fixed so the row never shifts - */}
         <button
+          ref={searchBtnRef}
           type="button"
-          onClick={() => setSearchOpen((v) => !v)}
+          onClick={toggleSearch}
           className={cn(
-            "w-10 h-10 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer",
+            "w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer",
             searchExpanded
               ? "bg-[#036638] text-white shadow-sm shadow-emerald-500/30"
               : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#EBF7EC] hover:text-[#036638] hover:ring-2 hover:ring-[#036638]/15",
@@ -147,9 +167,14 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
           <Search className="w-4 h-4" />
         </button>
 
-        {/* Expanded search — absolutely positioned, overlays content, breaks nothing */}
-        {searchExpanded && (
-          <div ref={searchBarRef} className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-[min(360px,calc(100vw-3rem))]">
+        {/* Expanded search — fixed to the viewport (from the button's rect) so
+            it overlays content and is never clipped by the scrollable row. */}
+        {searchExpanded && searchPos && (
+          <div
+            ref={searchBarRef}
+            style={{ position: "fixed", top: searchPos.top, left: searchPos.left }}
+            className="z-50 w-[min(360px,calc(100vw-2rem))]"
+          >
             <div className="flex items-center gap-2 pl-3.5 pr-2 h-11 rounded-full border border-[#036638]/25 bg-white shadow-xl shadow-emerald-900/10 focus-within:ring-2 focus-within:ring-[#036638]/25">
               <Search className="w-4 h-4 text-[#036638] shrink-0" />
               <input
@@ -185,10 +210,10 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
           </div>
         )}
 
-        <div className="hidden xl:block h-6 w-px bg-[#E5E7EB]" />
+        <div className="hidden xl:block h-5 w-px bg-[#E5E7EB] shrink-0" />
 
         {/* - Status segmented — instant - */}
-        <div className="flex items-center gap-0.5 rounded-full bg-[#F3FAF4] border border-[#E5E7EB]/60 p-1">
+        <div className="flex items-center gap-0.5 rounded-full bg-[#F3FAF4] border border-[#E5E7EB]/60 p-0.5 shrink-0">
           {MODE_OPTIONS.map((opt) => {
             const Icon = opt.icon
             const isActive = filters.mode === opt.value
@@ -197,7 +222,7 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
                 key={opt.value}
                 onClick={() => onChange({ ...filters, mode: opt.value })}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer whitespace-nowrap",
+                  "flex items-center gap-1 px-2 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer whitespace-nowrap",
                   isActive ? opt.active : cn("text-[#6B7280]", opt.hover),
                 )}
               >
@@ -210,7 +235,7 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
 
         {/* - VA filter — admin board only, instant - */}
         {vas && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Radix Select disallows empty-string item values, so "all" is a
                 sentinel mapped to assignedTo="" in onChange. */}
             <Select
@@ -220,7 +245,7 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
               }
             >
               <SelectTrigger
-                className="w-[150px] h-10 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25"
+                className="w-[96px] h-9 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25"
                 title="Filter by assigned VA"
               >
                 <UserRound className="w-3.5 h-3.5 text-[#036638] shrink-0" />
@@ -240,10 +265,10 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
           </div>
         )}
 
-        <div className="hidden xl:block h-6 w-px bg-[#E5E7EB]" />
+        <div className="hidden xl:block h-5 w-px bg-[#E5E7EB] shrink-0" />
 
         {/* - Date ranges — Apply-gated - */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <DateRangePicker
             label="Appointment"
             pending={apptPending}
@@ -262,27 +287,27 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
           />
         </div>
 
-        {/* - Apply — commits the pending date ranges only - */}
+        {/* - Apply + Reset — inline at the end of the line, so they can never
+             wrap onto a second row by themselves. - */}
         {datesDirty && (
           <button
             onClick={applyDraft}
-            className="flex items-center gap-1.5 h-10 px-4 text-xs font-bold bg-gradient-to-r from-[#036638] to-emerald-600 text-white rounded-xl hover:from-[#025030] hover:to-emerald-700 shadow-sm shadow-emerald-500/30 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 h-9 px-3 text-xs font-bold bg-gradient-to-r from-[#036638] to-emerald-600 text-white rounded-xl hover:from-[#025030] hover:to-emerald-700 shadow-sm shadow-emerald-500/30 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
             <Check className="w-3.5 h-3.5" />
             Apply
           </button>
         )}
 
-        {/* - Reset all - */}
         {activeCount > 0 && (
           <button
             onClick={resetAll}
-            className="flex items-center gap-1.5 h-10 px-3 text-xs font-semibold text-[#6B7280] rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center gap-1.5 h-9 px-2.5 text-xs font-semibold text-[#6B7280] rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             title="Clear all filters"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Reset
-            <span className="text-[10px] font-bold bg-[#F3F4F6] rounded-full w-5 h-5 flex items-center justify-center">
+            <span className="text-[10px] font-bold bg-[#F3F4F6] rounded-full w-4.5 h-4.5 flex items-center justify-center">
               {activeCount}
             </span>
           </button>

@@ -4,12 +4,13 @@ import { useState, useCallback, useRef } from "react"
 import { usePatients, useMoveStage } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
+import { PatientListView } from "@/components/features/patient-list-view"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useStageJump } from "@/hooks/useStageJump"
 import { filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
-import { Loader2, GripVertical, Filter } from "lucide-react"
+import { CheckCircle2, ChevronDown, Filter, GripVertical, Loader2, SearchX } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useMemo } from "react"
@@ -17,9 +18,12 @@ import { useMemo } from "react"
 export function KanbanBoard({
   initialPatientId,
   filters,
+  view = "grid",
 }: {
   initialPatientId?: string
   filters: BoardFilters
+  /** "grid" = kanban columns, "list" = compact vertical list (phone default). */
+  view: "grid" | "list"
 }) {
   const { data: patients, isLoading, error } = usePatients()
   const moveStage = useMoveStage()
@@ -28,6 +32,9 @@ export function KanbanBoard({
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
+  // Stages whose filter matched 0 — the column keeps its cards and the error
+  // is shown only in the stage header.
+  const [filterNotFound, setFilterNotFound] = useState<Record<string, boolean>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
   const pendingMoves = useRef<Set<string>>(new Set())
   const { activeStage: quickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
@@ -51,10 +58,12 @@ export function KanbanBoard({
     // Apply per-stage filters if they exist (mirrors the admin board). The
     // snapshot is intersected with the live stage patients so a card that has
     // since been moved/deleted (e.g. via drag-and-drop) can't ghost in the
-    // filtered column and render in two stages at once.
+    // filtered column and render in two stages at once. A filter that matched
+    // nothing is skipped — the stage keeps its cards and the error shows in
+    // the header instead.
     if (Object.keys(stageFilters).length > 0) {
       Object.keys(result).forEach((stage) => {
-        if (stageFilters[stage]) {
+        if (stageFilters[stage] && !filterNotFound[stage]) {
           result[stage] = stageFilters[stage].filter((p) =>
             filteredPatients.some((live) => live.id === p.id),
           )
@@ -63,7 +72,7 @@ export function KanbanBoard({
     }
 
     return result
-  }, [filteredPatients, stageFilters])
+  }, [filteredPatients, stageFilters, filterNotFound])
 
   const handleDragStart = useCallback((e: React.DragEvent, patientId: string) => {
     setDraggingId(patientId)
@@ -175,10 +184,11 @@ export function KanbanBoard({
         </div>
       )}
 
-      {/* Quick Jump Selector — single scrollable row on phones (no wrapping) */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-sm font-medium text-[#6B7280] shrink-0">Jump to stage:</span>
-        <div className="flex gap-2 overflow-x-auto scrollbar-thin py-1 -my-1 flex-1">
+      {/* Quick Jump Selector — scrollable pills on sm+; on phones it collapses
+          to a native dropdown so it can never squeeze or clip. */}
+      <div className="mb-4 flex items-center gap-2 w-full min-w-0">
+        <span className="hidden sm:inline text-sm font-medium text-[#6B7280] shrink-0">Jump to stage:</span>
+        <div className="hidden sm:flex gap-2 overflow-x-auto scrollbar-thin py-1 -my-1 flex-1 min-w-0">
           {stageOrder.map((stage) => (
             <button
               key={stage}
@@ -194,21 +204,49 @@ export function KanbanBoard({
             </button>
           ))}
         </div>
+
+        {/* Phone (< sm): native dropdown instead of the scrollable pill row —
+            fixed width, it doesn't need to fill the row */}
+        <div className="sm:hidden flex items-center gap-2 w-full min-w-0">
+          <span className="text-sm font-medium text-[#6B7280] shrink-0">Jump to stage:</span>
+          <div className="relative w-56 max-w-full shrink-0">
+            <select
+              value={quickJumpStage ?? ""}
+              onChange={(e) => {
+                if (e.target.value) handleQuickJump(e.target.value)
+              }}
+              aria-label="Jump to stage"
+              className="w-full h-9 appearance-none rounded-xl border border-[#E5E7EB] bg-white pl-3 pr-8 text-xs font-semibold text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50"
+            >
+              <option value="" disabled>
+                Select stage…
+              </option>
+              {stageOrder.map((stage) => (
+                <option key={stage} value={stage}>
+                  {stageLabels[stage]}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+          </div>
+        </div>
       </div>
 
-      {/* Phone: stages stack vertically (flex-col), ~90% width with a small
-          gap, no horizontal scrollbar. sm+: the board fills the browser width
-          (w-full sm:min-w-max) with fixed 450px columns — as many as fit are
-          shown side by side, and the area scrolls horizontally when the
-          columns exceed the viewport. On lg+ the board locks to the page
-          height (flex-1) with internal scrollbars; below lg it flows
-          naturally. */}
+      {/* Grid view: stages as side-by-side columns (stacks vertically on
+          phone). List view: one compact vertical list of all stages. */}
+      {view === "grid" ? (
       <div className="flex-1 min-h-0 overflow-x-hidden sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-thin ">
         <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-5 w-full sm:min-w-max ">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             const isOver = dropTarget === stage
             const isDisabled = stageByKey.get(stage)?.isFinal ?? false
+            // Per-stage filter state — active means the popup's Apply was
+            // pressed. A 0-match filter keeps the stage's cards and shows the
+            // error only in the header.
+            const stageFilterActive = Object.prototype.hasOwnProperty.call(stageFilters, stage)
+            const filterHasNoResults = stageFilterActive && filterNotFound[stage] === true
+            const matchedCount = stageFilterActive && !filterHasNoResults ? stagePatients.length : null
             return (
               <div
                 key={stage}
@@ -234,6 +272,17 @@ quickJumpStage === stage && "animate-jump-flash",
                       <p className="text-[10px] text-[#6B7280] mt-0.5">
                         {stageHints[stage]}
                       </p>
+                      {filterHasNoResults ? (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-red-50 text-[10px] font-bold text-red-500">
+                          <SearchX className="w-3 h-3" />
+                          Search result 0
+                        </span>
+                      ) : stageFilterActive && (matchedCount ?? 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-[#EBF7EC] text-[10px] font-bold text-[#036638]">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {matchedCount} item{matchedCount === 1 ? "" : "s"} found
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
@@ -262,6 +311,10 @@ quickJumpStage === stage && "animate-jump-flash",
                       setStageFilters(prev => ({
                         ...prev,
                         [stage]: filtered
+                      }))
+                      setFilterNotFound(prev => ({
+                        ...prev,
+                        [stage]: filtered.length === 0
                       }))
                     }}
                     isOpen={openStageFilterPopup === stage}
@@ -319,6 +372,17 @@ quickJumpStage === stage && "animate-jump-flash",
           })}
         </div>
       </div>
+      ) : (
+        <PatientListView
+          patients={filteredPatients}
+          stageOrder={stageOrder}
+          stageLabels={stageLabels}
+          onMoveStage={handleMoveStage}
+          onSelect={(p) => setSelectedPatientId(p.id)}
+          pendingIds={pendingMoves.current}
+          registerStageRef={registerStageRef}
+        />
+      )}
 
       <PatientModal
         patientId={selectedPatientId}

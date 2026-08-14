@@ -338,7 +338,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
           </div>
         )}
 
-        {patient.appointmentDatetime && (
+        {patient.appointmentDatetime ? (
           <div className="flex items-center gap-2.5 rounded-2xl bg-[#F3FAF4] px-3 py-2.5 sm:px-3.5 sm:py-3 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-[#E1F4E3] flex items-center justify-center shrink-0">
               <Calendar className="w-3.5 h-3.5 text-emerald-600" />
@@ -358,6 +358,18 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
                   minute: "2-digit",
                 })}
               </p>
+            </div>
+          </div>
+        ) : (
+          /* No appointment scheduled — show a muted placeholder instead of an
+             empty cell so the card always looks complete. */
+          <div className="flex items-center gap-2.5 rounded-2xl bg-[#F6F8F7] px-3 py-2.5 sm:px-3.5 sm:py-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-[#E9ECEA] flex items-center justify-center shrink-0">
+              <Calendar className="w-3.5 h-3.5 text-[#9CA3AF]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-[#8A93A3] font-medium">Appointment</p>
+              <p className="text-xs font-semibold text-[#9CA3AF]">No appointment scheduled</p>
             </div>
           </div>
         )}

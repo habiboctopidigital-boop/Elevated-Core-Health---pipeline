@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo, useRef, useState } from "react"
 import { usePatients, useMoveStage, useListVas } from "@/hooks/query/usePatients"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
@@ -10,11 +10,13 @@ import { AddPatientDialog } from "@/components/features/add-patient-dialog"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
 import { StageJumpBar } from "@/components/features/stage-jump-bar"
 import { BoardHeaderBar } from "@/components/features/board-header-bar"
+import { BoardViewToolbar, useBoardView } from "@/components/features/board-view-toolbar"
+import { PatientListView } from "@/components/features/patient-list-view"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useStageJump } from "@/hooks/useStageJump"
 import { EMPTY_BOARD_FILTERS, filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
-import { Loader2, ShieldCheck, AlertTriangle, RefreshCw, Filter, Users } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Filter, Loader2, RefreshCw, SearchX, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminBoardPage() {
@@ -25,8 +27,14 @@ export default function AdminBoardPage() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_BOARD_FILTERS)
   const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
+  // Stages whose filter matched 0 — the column keeps its cards and the error
+  // is shown only in the stage header.
+  const [filterNotFound, setFilterNotFound] = useState<Record<string, boolean>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
   const { activeStage: quickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
+  const [view, changeView] = useBoardView()
+  // In-flight stage moves — list view shows a spinner on the row being moved.
+  const pendingMoves = useRef<Set<string>>(new Set())
 
   // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
@@ -44,20 +52,27 @@ export default function AdminBoardPage() {
       {} as Record<string, Patient[]>,
     )
 
-    // Apply per-stage filters if they exist
+    // Apply per-stage filters if they exist. A filter that matched nothing
+    // is skipped — the stage keeps its cards and the error shows in the
+    // header instead.
     if (Object.keys(stageFilters).length > 0) {
       Object.keys(result).forEach(stage => {
-        if (stageFilters[stage]) {
+        if (stageFilters[stage] && !filterNotFound[stage]) {
           result[stage] = stageFilters[stage]
         }
       })
     }
 
     return result || {}
-  }, [filteredPatients, stageFilters])
+  }, [filteredPatients, stageFilters, filterNotFound])
 
   const handleMoveStage = (id: string, target: PatientStage) => {
-    moveStage.mutate({ id, targetStage: target })
+    if (pendingMoves.current.has(id)) return
+    pendingMoves.current.add(id)
+    moveStage.mutate(
+      { id, targetStage: target },
+      { onSettled: () => pendingMoves.current.delete(id) },
+    )
   }
 
   // Live patient count per stage — feeds the jump-bar pills.
@@ -123,12 +138,6 @@ export default function AdminBoardPage() {
       <div className="mb-4">
         <BoardHeaderBar
           icon={ShieldCheck}
-          count={
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EBF7EC] border border-[#65BD6C]/30 text-[11px] font-bold text-[#036638]">
-              <Users className="w-3 h-3" />
-              {patients?.length ?? 0} patients
-            </span>
-          }
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <AddPatientDialog />
@@ -139,10 +148,15 @@ export default function AdminBoardPage() {
           filters={filters}
           onChange={setFilters}
           vas={vas}
-          total={patients?.length ?? 0}
-          resultCount={filteredPatients.length}
         />
       </div>
+
+      {/* - Count chip + List/Grid view toggle (right corner) - */}
+      <BoardViewToolbar
+        count={patients?.length ?? 0}
+        view={view}
+        onViewChange={changeView}
+      />
 
       {/* - Jump-to-stage bar - */}
       <StageJumpBar
@@ -153,12 +167,19 @@ export default function AdminBoardPage() {
         onJump={handleQuickJump}
       />
 
-      {/* - Kanban Board - (height flexes to the page; only its green scrollbars show)
-          Phone: stages stack vertically, ~90% width, no horizontal scrollbar. */}
+      {/* - Grid view: kanban columns (stacks vertically on phone).
+          List view: one compact vertical list of all stages. */}
+      {view === "grid" ? (
       <div className="flex-1 min-h-0 overflow-x-hidden sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
         <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-6 w-full sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
+            // Per-stage filter state — active means the popup's Apply was
+            // pressed. A 0-match filter keeps the stage's cards and shows the
+            // error only in the header.
+            const stageFilterActive = Object.prototype.hasOwnProperty.call(stageFilters, stage)
+            const filterHasNoResults = stageFilterActive && filterNotFound[stage] === true
+            const matchedCount = stageFilterActive && !filterHasNoResults ? stagePatients.length : null
             return (
               <div
                 key={stage}
@@ -177,6 +198,17 @@ export default function AdminBoardPage() {
                       <p className="text-[10px] text-[#6B7280] mt-0.5">
                         {stageHints[stage]}
                       </p>
+                      {filterHasNoResults ? (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-red-50 text-[10px] font-bold text-red-500">
+                          <SearchX className="w-3 h-3" />
+                          Search result 0
+                        </span>
+                      ) : stageFilterActive && (matchedCount ?? 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-[#EBF7EC] text-[10px] font-bold text-[#036638]">
+                          <CheckCircle2 className="w-3 h-3" />
+                          {matchedCount} item{matchedCount === 1 ? "" : "s"} found
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
@@ -206,6 +238,10 @@ export default function AdminBoardPage() {
                         ...prev,
                         [stage]: filtered
                       }))
+                      setFilterNotFound(prev => ({
+                        ...prev,
+                        [stage]: filtered.length === 0
+                      }))
                     }}
                     isOpen={openStageFilterPopup === stage}
                     onOpenChange={(open) => {
@@ -234,13 +270,24 @@ export default function AdminBoardPage() {
             )
           })}
         </div>
-
-        <PatientModal
-          patientId={selectedPatientId}
-          open={!!selectedPatientId}
-          onClose={() => setSelectedPatientId(null)}
-        />
       </div>
+      ) : (
+        <PatientListView
+          patients={filteredPatients}
+          stageOrder={stageOrder}
+          stageLabels={stageLabels}
+          onMoveStage={handleMoveStage}
+          onSelect={(p) => setSelectedPatientId(p.id)}
+          pendingIds={pendingMoves.current}
+          registerStageRef={registerStageRef}
+        />
+      )}
+
+      <PatientModal
+        patientId={selectedPatientId}
+        open={!!selectedPatientId}
+        onClose={() => setSelectedPatientId(null)}
+      />
     </div>
   )
 }

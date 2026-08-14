@@ -8,6 +8,7 @@ import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { ROUTES } from "@/constants"
 import { cn } from "@/lib/utils"
 import { isAdminOrAbove, roleLabel } from "@/lib/roles"
+import Link from "next/link"
 
 function getNotificationIcon(type: string) {
   const className = "w-4 h-4"
@@ -65,18 +66,20 @@ export function MobileTopbar() {
   }
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#E5E7EB] px-2 z-30 flex items-center gap-1">
+    <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#E5E7EB] px-2 z-30 flex items-center justify-between gap-1">
       {/* Brand */}
-      <button
+      <Link
+      href={"/"}
         onClick={() => router.push(isAdminOrAbove(user?.role) ? ROUTES.ADMIN.HOME : ROUTES.DASHBOARD.HOME)}
-        className="flex items-center gap-2 min-w-0 flex-1 rounded-lg px-1 py-1 hover:bg-[#F3F4F6] transition-colors"
+        className="flex items-center gap-2 min-w-0 max-w-fit flex-1 rounded-lg px-1 py-1 hover:bg-[#F3F4F6] transition-colors"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- small static brand mark */}
         <img src="/logo.png" alt="" className="w-10 h-10 object-contain shrink-0" />
        
-      </button>
+      </Link>
 
-      {/* Notifications */}
+     <div className="flex items-center gap-x-2">
+       {/* Notifications */}
       <div ref={notificationsRef} className="relative shrink-0">
         <button
           onClick={() => {
@@ -186,6 +189,7 @@ export function MobileTopbar() {
           </div>
         )}
       </div>
+     </div>
     </header>
   )
 }
