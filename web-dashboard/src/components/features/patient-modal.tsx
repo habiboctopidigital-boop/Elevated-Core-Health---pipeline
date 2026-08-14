@@ -492,6 +492,17 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     return () => window.removeEventListener("keydown", handleEscape)
   }, [open, onClose, assigning, showEligibilityCheck])
 
+  // Hide the floating bottom nav while the full-screen patient modal is open.
+  // The layout's `div.relative.z-10` wrapper traps the modal's z-100 inside a
+  // stacking context that sits BELOW the nav's z-50, so the nav can float
+  // over the modal backdrop — flag it with a body class instead of chasing
+  // z-indexes.
+  useEffect(() => {
+    if (!open) return
+    document.body.classList.add("patient-modal-open")
+    return () => document.body.classList.remove("patient-modal-open")
+  }, [open])
+
   const handleSaveNotes = async () => {
     if (!patient) return
     setSavingNotes(true)
@@ -747,9 +758,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       </span>
                     )}
                     {patient.email && (
-                      <span className="inline-flex items-center gap-1.5 truncate">
-                        <Mail className="w-3.5 h-3.5" />
-                        {patient.email}
+                      <span className="flex items-center gap-1.5 w-full sm:w-auto min-w-0 max-w-full overflow-hidden">
+                        <Mail className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate min-w-0 flex-1">{patient.email}</span>
                       </span>
                     )}
                   </div>
@@ -1920,101 +1931,44 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
           </div>
         ) : (
           <>
-            {/* Header */}
-            <div className="shrink-0 relative bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600 border-b border-white/10 px-4 sm:px-8 py-4 flex items-start justify-between gap-3 sm:gap-4">
+            {/* Header — phone layout: avatar + name + actions on row 1, then
+                contact details and status badges in their own full-width rows
+                so nothing gets squeezed next to the avatar. */}
+            <div className="shrink-0 relative bg-gradient-to-r from-[#036638] via-[#0a7a44] to-emerald-600 border-b border-white/10 px-3 py-3">
               <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
               <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
-              <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
-                {avatarError ? (
-                  <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full shadow-sm shrink-0 bg-gradient-to-br from-lime-400 to-green-500 flex items-center justify-center text-white font-bold text-base sm:text-lg">
-                    {getInitials(patient.name)}
-                  </div>
-                ) : (
-                  <img
-                    src={getAvatarUrl(patient)}
-                    onError={() => setAvatarError(true)}
-                    alt={patient.name}
-                    className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover shadow-sm shrink-0 bg-gray-50"
-                  />
-                )}
-                <div className="min-w-0">
-                  <h2 className="text-lg sm:text-2xl font-bold text-white truncate">{patient.name}</h2>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-white/90">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5" />
-                      {patient.source === "webhook" ? "Web" : "Manual"}
-                    </span>
-                    {patient.phone && (
-                      <span className="inline-flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5" />
-                        {patient.phone}
-                      </span>
-                    )}
-                    {patient.email && (
-                      <span className="inline-flex items-center gap-1.5 truncate">
-                        <Mail className="w-3.5 h-3.5" />
-                        {patient.email}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 border border-white/25 text-white">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      {stageLabels[patient.stage]}
-                    </span>
-                    {patient.eligibilityStatus === "eligible" ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 border border-white/25 text-white">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Eligible
-                      </span>
-                    ) : patient.eligibilityStatus === "not_eligible" ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-[#CC3333]/30 border border-[#FF8A8A]/40 text-white">
-                        <XCircle className="w-3.5 h-3.5" />
-                        Not Eligible
-                      </span>
-                    ) : null}
-                    {patient.isFlagged && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-red-400 border border-red-400 text-white">
-                        <Flag className="w-3.5 h-3.5" fill="currentColor" />
-                        Flagged
-                      </span>
-                    )}
-                    {stale && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        Stale
-                      </span>
-                    )}
-                    {patient.status !== "active" && (
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border",
-                          patient.status === "completed"
-                            ? "bg-sky-400/25 border-sky-300/40 text-sky-50"
-                            : "bg-[#CC3333]/30 border-[#FF8A8A]/40 text-white",
-                        )}
-                      >
-                        {patient.status === "completed" ? "Completed" : "Cancelled"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex flex-col items-end gap-2.5 shrink-0 min-w-0 max-w-full">
-                <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* Row 1 — avatar + name + action buttons */}
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {avatarError ? (
+                    <div className="w-10 h-10 rounded-full shadow-sm shrink-0 bg-gradient-to-br from-lime-400 to-green-500 flex items-center justify-center text-white font-bold text-sm">
+                      {getInitials(patient.name)}
+                    </div>
+                  ) : (
+                    <img
+                      src={getAvatarUrl(patient)}
+                      onError={() => setAvatarError(true)}
+                      alt={patient.name}
+                      className="w-10 h-10 rounded-full object-cover shadow-sm shrink-0 bg-gray-50"
+                    />
+                  )}
+                  <h2 className="text-lg font-bold text-white truncate">{patient.name}</h2>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => setShowFlagPopup(true)}
-                    className="flex items-center gap-1.5 px-3 py-2 sm:px-3.5 rounded-xl bg-white border border-white text-xs sm:text-sm font-semibold text-[#036638] hover:bg-emerald-50 transition-colors shadow-sm"
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-white text-[11px] font-semibold text-[#036638] hover:bg-emerald-50 transition-colors shadow-sm"
                     title="Raise flag"
                   >
-                    <Flag className="w-4 h-4 text-[#036638]" />
+                    <Flag className="w-3.5 h-3.5 text-[#036638]" />
                     Flag
                   </button>
                   <div className="relative">
                     <button
                       onClick={() => setShowMenu((v) => !v)}
-                      className="p-2 sm:p-2.5 rounded-xl border border-white/30 text-white hover:bg-white/10 transition-colors"
+                      className="p-1.5 rounded-xl border border-white/30 text-white hover:bg-white/10 transition-colors"
                       title="More actions"
                     >
                       <MoreVertical className="w-4 h-4" />
@@ -2111,18 +2065,82 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </button>
                 </div>
               </div>
+
+              {/* Row 2 — contact details, full-width so the email can never
+                  get squeezed or clipped next to the avatar */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/90">
+                <span className="inline-flex items-center gap-1.5">
+                  <Globe className="w-3 h-3 shrink-0" />
+                  {patient.source === "webhook" ? "Web" : "Manual"}
+                </span>
+                {patient.phone && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Phone className="w-3 h-3 shrink-0" />
+                    {patient.phone}
+                  </span>
+                )}
+                {patient.email && (
+                  <span className="flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden">
+                    <Mail className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{patient.email}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Row 3 — status badges, full-width wrap row */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white">
+                  <CheckCircle className="w-3 h-3" />
+                  {stageLabels[patient.stage]}
+                </span>
+                {patient.eligibilityStatus === "eligible" ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white">
+                    <CheckCircle className="w-3 h-3" />
+                    Eligible
+                  </span>
+                ) : patient.eligibilityStatus === "not_eligible" ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#CC3333]/30 border border-[#FF8A8A]/40 text-white">
+                    <XCircle className="w-3 h-3" />
+                    Not Eligible
+                  </span>
+                ) : null}
+                {patient.isFlagged && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-400 border border-red-400 text-white">
+                    <Flag className="w-3 h-3" fill="currentColor" />
+                    Flagged
+                  </span>
+                )}
+                {stale && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
+                    <AlertTriangle className="w-3 h-3" />
+                    Stale
+                  </span>
+                )}
+                {patient.status !== "active" && (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                      patient.status === "completed"
+                        ? "bg-sky-400/25 border-sky-300/40 text-sky-50"
+                        : "bg-[#CC3333]/30 border-[#FF8A8A]/40 text-white",
+                    )}
+                  >
+                    {patient.status === "completed" ? "Completed" : "Cancelled"}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Body: Stats Grid + Tabs + Content */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
               
                      {/* Stats Grid (Mobile/Tablet View) */}
-          <div className="shrink-0 px-4 py-2.5 border-b border-gray-100">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+          <div className="shrink-0 px-2.5 py-1.5 border-b border-gray-100">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 sm:gap-2.5">
               {/* Card 1: Appointment */}
-              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
+              <div className="relative bg-white rounded-xl border border-gray-100 p-1.5 shadow-sm">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="w-5 h-5 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
                     <Calendar className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-[8px] font-bold text-gray-400 uppercase">Appointment</span>
@@ -2149,9 +2167,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Card 2: Eligibility */}
-              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-[#CC3333]/10 flex items-center justify-center text-[#CC3333]">
+              <div className="relative bg-white rounded-xl border border-gray-100 p-1.5 shadow-sm">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="w-5 h-5 rounded-lg bg-[#CC3333]/10 flex items-center justify-center text-[#CC3333]">
                     <Shield className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-[8px] font-bold text-gray-400 uppercase">Eligibility</span>
@@ -2165,9 +2183,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Card 3: Assigned To */}
-              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600">
+              <div className="relative bg-white rounded-xl border border-gray-100 p-1.5 shadow-sm">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="w-5 h-5 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600">
                     <User className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-[8px] font-bold text-gray-400 uppercase">Assigned To</span>
@@ -2195,9 +2213,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Card 4: Insurance */}
-              <div className="relative bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
+              <div className="relative bg-white rounded-xl border border-gray-100 p-1.5 shadow-sm">
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="w-5 h-5 rounded-lg bg-[#E1F4E3] flex items-center justify-center text-emerald-600">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-[8px] font-bold text-gray-400 uppercase">Insurance</span>
@@ -2214,7 +2232,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
                     className={cn(
-                      "flex items-center gap-2 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 transition-colors",
+                      "flex items-center gap-2 py-2.5 text-[11px] sm:text-sm font-semibold whitespace-nowrap border-b-2 transition-colors",
                       activeTab === tab.key
                         ? "border-emerald-600 text-emerald-700"
                         : "border-transparent text-gray-500 hover:text-gray-700",
@@ -2227,14 +2245,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 p-4 sm:p-6 space-y-5 bg-[#F9FAFB]">
+              <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 p-3 sm:p-5 space-y-3 bg-[#F9FAFB]">
 
                 {/* OVERVIEW TAB */}
                 {activeTab === "overview" && (
                   <>
                    {/* Checklist card */}
-                        <div className="relative rounded-2xl border border-blue-100 bg-blue-50/60 p-4 sm:p-5 overflow-hidden">
-                          <div className="flex items-center justify-between mb-4">
+                        <div className="relative rounded-2xl border border-blue-100 bg-blue-50/60 p-3 sm:p-4 overflow-hidden">
+                          <div className="flex items-center justify-between mb-3">
                             <h4 className="text-sm font-bold text-blue-800 uppercase tracking-wide flex items-center gap-2">
                               <CheckCheck className="w-5 h-5 text-blue-600" />
                               Checklist
@@ -2362,7 +2380,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     )}
 
                     {/* SOP */}
-                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 overflow-hidden">
+                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4 overflow-hidden">
                       <ClipboardList className="absolute -right-3 -bottom-3 w-28 h-28 text-amber-500/10 pointer-events-none" />
                       <div className="relative flex flex-col sm:flex-row items-start gap-6">
                         <div className="flex-1 min-w-0">
@@ -2395,7 +2413,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
                     {/* Status, Source, Last Updated Cards */}
                     <div className="space-y-3">
-                      <div className="bg-amber-50/80 rounded-xl border border-amber-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="bg-amber-50/80 rounded-xl border border-amber-200 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-start sm:items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 shrink-0">
                             <HelpCircle className="w-4 h-4" />
@@ -2412,7 +2430,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         )}
                       </div>
 
-                      <div className="bg-purple-50/80 rounded-xl border border-purple-200 p-4 flex items-center justify-between">
+                      <div className="bg-purple-50/80 rounded-xl border border-purple-200 p-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center text-purple-700 shrink-0">
                             <Globe className="w-4 h-4" />
@@ -2424,7 +2442,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         </div>
                       </div>
 
-                      <div className="bg-gray-50/80 rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+                      <div className="bg-gray-50/80 rounded-xl border border-gray-200 p-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 shrink-0">
                             <Clock className="w-4 h-4" />
@@ -2438,7 +2456,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </div>
 
                     {/* Contact & Payment Info Card */}
-                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+                    <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm">
                       <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
                         <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
@@ -2483,7 +2501,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     </div>
 
                     {/* Notes */}
-                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 shadow-sm">
+                    <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm">
                       <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-3">Operational Notes</h4>
                       <Textarea placeholder="Add notes..." value={notesText} onChange={(e) => setNotesText(e.target.value)} className="text-sm min-h-[100px] rounded-xl border-gray-200 focus:ring-emerald-400/30" />
                       <div className="flex justify-end mt-3">

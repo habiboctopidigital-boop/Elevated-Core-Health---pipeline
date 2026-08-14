@@ -162,7 +162,7 @@ export function MobileBottomNav() {
   return (
     <div
       className={cn(
-        "lg:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] transition-all duration-300 ease-out",
+        "ech-bottom-nav lg:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] transition-all duration-300 ease-out",
         hidden
           ? "translate-y-[calc(100%+0.75rem)] opacity-0 pointer-events-none"
           : "translate-y-0 opacity-100",

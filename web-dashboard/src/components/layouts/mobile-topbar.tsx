@@ -74,7 +74,7 @@ export function MobileTopbar() {
         className="flex items-center gap-2 min-w-0 max-w-fit flex-1 rounded-lg px-1 py-1 hover:bg-[#F3F4F6] transition-colors"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- small static brand mark */}
-        <img src="/logo.png" alt="" className="w-10 h-10 object-contain shrink-0" />
+        <img src="/logo.png" alt="" className="w-14 h-14 object-contain shrink-0" />
        
       </Link>
 

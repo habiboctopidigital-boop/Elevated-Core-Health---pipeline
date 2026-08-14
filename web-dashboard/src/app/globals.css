@@ -587,3 +587,12 @@ button{
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+
+  /* While the full-screen patient modal is open, slide the floating phone
+     bottom nav out of view. The modal overlay can't cover it itself — the
+     layout's z-10 wrapper traps the modal's z-100 below the nav's z-50. */
+  body.patient-modal-open .ech-bottom-nav {
+    transform: translateY(calc(100% + 0.75rem)) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
