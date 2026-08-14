@@ -56,12 +56,22 @@ export const patientsController = {
 		handleServiceResponse(serviceResponse, res);
 	},
 
-	async updateNotes(req: Request, res: Response): Promise<void> {
+	async createNote(req: Request, res: Response): Promise<void> {
 		if (!req.user) {
 			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
 			return;
 		}
-		const serviceResponse = await patientsService.updateNotes(paramId(req), req.body, req.user);
+		const serviceResponse = await patientsService.createNote(paramId(req), req.body, req.user);
+		handleServiceResponse(serviceResponse, res);
+	},
+
+	async deleteNote(req: Request, res: Response): Promise<void> {
+		if (!req.user) {
+			handleServiceResponse(ServiceResponse.failure("Not authenticated", null, 401), res);
+			return;
+		}
+		const noteId = req.params.noteId;
+		const serviceResponse = await patientsService.deleteNote(paramId(req), Array.isArray(noteId) ? noteId[0] : noteId, req.user);
 		handleServiceResponse(serviceResponse, res);
 	},
 

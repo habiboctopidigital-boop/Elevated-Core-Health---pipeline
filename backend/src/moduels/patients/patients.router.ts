@@ -12,6 +12,7 @@ import {
 	ClaimSchema,
 	ClearFlagSchema,
 	CreatePatientSchema,
+	DeleteNoteSchema,
 	FlagSchema,
 	IntakeSchema,
 	NotesSchema,
@@ -61,7 +62,8 @@ patientsRouter.patch(
 	patientsController.updateStatus,
 );
 patientsRouter.patch("/:id/checklist", validateRequest(ChecklistToggleSchema), patientsController.toggleChecklist);
-patientsRouter.post("/:id/notes", validateRequest(NotesSchema), patientsController.updateNotes);
+patientsRouter.post("/:id/notes", validateRequest(NotesSchema), patientsController.createNote);
+patientsRouter.delete("/:id/notes/:noteId", validateRequest(DeleteNoteSchema), patientsController.deleteNote);
 patientsRouter.patch("/:id/appointment", validateRequest(UpdateAppointmentSchema), patientsController.updateAppointment);
 patientsRouter.post("/:id/flag", validateRequest(FlagSchema), patientsController.flag);
 patientsRouter.post(

@@ -35,6 +35,8 @@ export const ACTION_META: Record<string, { label: string; icon: typeof Activity;
   "assignment.change": { label: "Assignment", icon: UserCog, color: "#7C3AED" },
   "assignment.claim": { label: "Claim", icon: UserCheck, color: "#7C3AED" },
   "notes.update": { label: "Notes", icon: MessageSquare, color: "#6B7280" },
+  "notes.create": { label: "Note Added", icon: MessageSquare, color: "#6B7280" },
+  "notes.delete": { label: "Note Deleted", icon: MessageSquare, color: "#6B7280" },
   "flag.create": { label: "Flag Raised", icon: Flag, color: "#DC2626" },
   "flag.clear": { label: "Flag Cleared", icon: FlagOff, color: "#16A34A" },
   "eligibility.check": { label: "Eligibility", icon: ShieldCheck, color: "#0891B2" },

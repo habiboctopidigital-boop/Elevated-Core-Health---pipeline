@@ -22,7 +22,13 @@ export const ChecklistToggleSchema = z.object({
 
 export const NotesSchema = z.object({
 	body: z.object({
-		notes: z.string().max(2000, "Notes must be at most 2000 characters"),
+		content: z.string().trim().min(1, "Note content is required").max(2000, "Note must be at most 2000 characters"),
+	}),
+});
+
+export const DeleteNoteSchema = z.object({
+	params: z.object({
+		noteId: z.string().uuid("Invalid note id"),
 	}),
 });
 

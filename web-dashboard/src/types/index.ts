@@ -78,6 +78,15 @@ export interface PatientFlag {
   createdAt: string
 }
 
+export interface PatientNote {
+  id: string
+  patientId: string
+  content: string
+  createdByUser?: Pick<User, "id" | "name" | "role"> | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Patient {
   id: string
   name: string
@@ -104,6 +113,7 @@ export interface Patient {
   flagClearedByUser?: Pick<User, "id" | "name" | "role"> | null
   flagClearedAt?: string | null
   flags?: PatientFlag[]
+  patientNotes?: PatientNote[]
   completedAt?: string | null
   cancelledAt?: string | null
   cancelledReason?: string | null

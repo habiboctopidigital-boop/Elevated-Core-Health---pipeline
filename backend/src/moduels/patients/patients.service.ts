@@ -193,6 +193,15 @@ const patientInclude = {
 			clearedByUser: { select: { id: true, name: true, role: true } },
 		},
 	},
+	// Full note history (newest first), same pattern as flags — each note is
+	// its own row. The legacy `notes` scalar still exists for old rows but is
+	// no longer written; the UI reads this array instead.
+	patientNotes: {
+		orderBy: { createdAt: "desc" },
+		include: {
+			createdByUser: { select: { id: true, name: true, role: true } },
+		},
+	},
 } as const;
 
 export const patientsService = {
@@ -388,7 +397,11 @@ export const patientsService = {
 		return ServiceResponse.success("Checklist updated.", updated);
 	},
 
-	async updateNotes(id: string, input: NotesInput, user: AuthenticatedUser) {
+	/**
+	 * Adds a new note to the patient's note history (each note is its own row,
+	 * like PatientFlag). The legacy single `notes` scalar is no longer written.
+	 */
+	async createNote(id: string, input: NotesInput, user: AuthenticatedUser) {
 		const patient = await prisma.patient.findUnique({ where: { id } });
 		if (!patient) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
@@ -402,23 +415,84 @@ export const patientsService = {
 			);
 		}
 
-		const updated = await prisma.patient.update({
+		await prisma.patientNote.create({
+			data: {
+				patientId: id,
+				content: input.content,
+				createdById: user.id,
+			},
+		});
+
+		// Touch the patient so the board's stale flag stays accurate.
+		await prisma.patient.update({
 			where: { id },
-			data: { notes: input.notes, updatedAt: new Date(), updatedById: user.id },
+			data: { updatedAt: new Date(), updatedById: user.id },
+		});
+
+		const updated = await prisma.patient.findUniqueOrThrow({
+			where: { id },
+			include: patientInclude,
 		});
 
 		await audit({
 			patientId: id,
 			user,
-			action: "notes.update",
+			action: "notes.create",
 			entityType: "patient",
 			entityId: id,
-			prevValue: { notes: patient.notes },
-			newValue: { notes: input.notes },
-			message: `Note updated: "${input.notes.slice(0, 60)}${input.notes.length > 60 ? "..." : ""}"`,
+			newValue: { content: input.content },
+			message: `Note added: "${input.content.slice(0, 60)}${input.content.length > 60 ? "..." : ""}"`,
 		});
 
-		return ServiceResponse.success("Notes updated.", updated);
+		return ServiceResponse.success("Note added.", updated);
+	},
+
+	/** Deletes a single note from the patient's note history. */
+	async deleteNote(id: string, noteId: string, user: AuthenticatedUser) {
+		const patient = await prisma.patient.findUnique({ where: { id } });
+		if (!patient) {
+			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		if (!canEditPatient(patient, user)) {
+			return ServiceResponse.failure(
+				"This patient is assigned to another VA, or currently locked. Only the assigned VA or an admin can update it.",
+				null,
+				StatusCodes.FORBIDDEN,
+			);
+		}
+
+		const note = await prisma.patientNote.findFirst({
+			where: { id: noteId, patientId: id },
+		});
+		if (!note) {
+			return ServiceResponse.failure("Note not found.", null, StatusCodes.NOT_FOUND);
+		}
+
+		await prisma.patientNote.delete({ where: { id: noteId } });
+
+		// Touch the patient so the board's stale flag stays accurate.
+		await prisma.patient.update({
+			where: { id },
+			data: { updatedAt: new Date(), updatedById: user.id },
+		});
+
+		const updated = await prisma.patient.findUniqueOrThrow({
+			where: { id },
+			include: patientInclude,
+		});
+
+		await audit({
+			patientId: id,
+			user,
+			action: "notes.delete",
+			entityType: "patient",
+			entityId: id,
+			prevValue: { noteId, content: note.content },
+			message: `Note deleted: "${note.content.slice(0, 60)}${note.content.length > 60 ? "..." : ""}"`,
+		});
+
+		return ServiceResponse.success("Note deleted.", updated);
 	},
 
 	async flag(id: string, input: FlagInput, user: AuthenticatedUser) {

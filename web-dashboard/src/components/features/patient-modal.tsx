@@ -46,6 +46,7 @@ import {
   ArrowRight,
   Clock,
   Info,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -56,7 +57,8 @@ import { isAdminOrAbove, roleLabel } from "@/lib/roles"
 import {
   useMoveStage,
   useToggleChecklist,
-  useUpdateNotes,
+  useAddNote,
+  useDeleteNote,
   useFlagPatient,
   useClearFlag,
   useClaimPatient,
@@ -206,7 +208,7 @@ function splitPatientName(fullName: string): { firstName: string; lastName: stri
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") }
 }
 
-type TabKey = "overview" | "contact" | "eligibility" | "checklist" | "activity"
+type TabKey = "overview" | "contact" | "eligibility" | "checklist" | "activity" | "notes"
 
 // Small donut/ring progress indicator used in the Overview → SOP card.
 function ProgressRing({ percent, label, sublabel }: { percent: number; label: string; sublabel: string }) {
@@ -327,7 +329,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const moveStage = useMoveStage()
   const toggleChecklist = useToggleChecklist()
-  const updateNotes = useUpdateNotes()
+  const addNote = useAddNote()
+  const deleteNote = useDeleteNote()
   const flagPatient = useFlagPatient()
   const clearFlag = useClearFlag()
   const claimPatient = useClaimPatient()
@@ -366,7 +369,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
   const [showMenu, setShowMenu] = useState(false)
   const [menuPending, setMenuPending] = useState<"reactivate" | "unlock" | "lock" | null>(null)
-  const [notesText, setNotesText] = useState("")
+  const [newNoteText, setNewNoteText] = useState("")
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
   const [flagReason, setFlagReason] = useState("")
   const [showFlagInput, setShowFlagInput] = useState(false)
   const [flagStage, setFlagStage] = useState<PatientStage | "">("")
@@ -375,7 +379,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   const [newFlagType, setNewFlagType] = useState<"positive" | "negative">("positive")
   const [clearReason, setClearReason] = useState("")
   const [clearingFlagId, setClearingFlagId] = useState<string | null>(null)
-  const [savingNotes, setSavingNotes] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("")
   const [insuranceProvider, setInsuranceProvider] = useState("")
   const [paymentMethodOther, setPaymentMethodOther] = useState(false)
@@ -439,8 +442,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   }, [])
 
   useEffect(() => {
-    if (patient?.notes) setNotesText(patient.notes)
-    else setNotesText("")
     const pm = patient?.paymentMethod ?? ""
     const ip = patient?.insuranceProvider ?? ""
     setPaymentMethod(pm)
@@ -472,6 +473,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setShowMenu(false)
     setMenuPending(null)
     setShowAssignDropdown(false)
+    setNewNoteText("")
+    setDeletingNoteId(null)
     if (patient?.appointmentDatetime) {
       const dt = new Date(patient.appointmentDatetime)
       setNewAppointmentDatetime(toLocalDatetimeLocal(dt))
@@ -480,7 +483,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     }
     setAssigning(false)
     setAssignFeedback(null)
-  }, [patient?.id, patient?.notes, patient?.paymentMethod, patient?.insuranceProvider, patient?.appointmentDatetime])
+  }, [patient?.id, patient?.paymentMethod, patient?.insuranceProvider, patient?.appointmentDatetime])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -503,11 +506,17 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     return () => document.body.classList.remove("patient-modal-open")
   }, [open])
 
-  const handleSaveNotes = async () => {
+  const handleAddNote = async () => {
+    if (!patient || !newNoteText.trim()) return
+    await addNote.mutateAsync({ id: patient.id, content: newNoteText.trim() })
+    setNewNoteText("")
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
     if (!patient) return
-    setSavingNotes(true)
-    await updateNotes.mutateAsync({ id: patient.id, notes: notesText })
-    setSavingNotes(false)
+    setDeletingNoteId(noteId)
+    await deleteNote.mutateAsync({ id: patient.id, noteId })
+    setDeletingNoteId(null)
   }
 
   const handleFlag = async () => {
@@ -676,6 +685,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     { key: "contact", label: "Contact & Payment", icon: <User className="w-4 h-4" /> },
     { key: "eligibility", label: "Eligibility Details", icon: <ShieldCheck className="w-4 h-4" /> },
     { key: "activity", label: "Activity Log", icon: <Clock className="w-4 h-4" /> },
+    { key: "notes", label: "Notes", icon: <MessageSquare className="w-4 h-4" /> },
   ]
 
   return (
@@ -1444,23 +1454,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
                     
 
-                        {/* Notes */}
-                        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
-                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Operational Notes</h4>
-                          <Textarea
-                            placeholder="Add notes..."
-                            value={notesText}
-                            onChange={(e) => setNotesText(e.target.value)}
-                            className="text-sm min-h-[100px] rounded-xl border-gray-200 focus:ring-emerald-400/30"
-                          />
-                          <div className="flex justify-end mt-3">
-                            <Button size="sm" onClick={handleSaveNotes} disabled={savingNotes}
-                              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow">
-                              {savingNotes ? "Saving..." : "Save Notes"}
-                            </Button>
-                          </div>
-                        </div>
-
                         {isAdmin && showCancelInput && (
                           <div className="space-y-2 bg-[#CC3333]/10 p-3 rounded-xl border border-[#CC3333]/30">
                             <Textarea placeholder="Cancellation reason..." value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className="text-sm min-h-[70px]" />
@@ -1634,6 +1627,80 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         )}
                       </div>
                   )}
+
+                    {/* ---------------------------------------------------- */}
+                    {/* Notes tab                                             */}
+                    {/* ---------------------------------------------------- */}
+                    {activeTab === "notes" && (
+                      <>
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
+                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4">
+                            <MessageSquare className="w-5 h-5 text-indigo-500" /> Notes
+                          </h4>
+
+                          {/* Composer */}
+                          <div className="flex items-start gap-2 mb-4">
+                            <Textarea
+                              placeholder="Add an operational note..."
+                              value={newNoteText}
+                              onChange={(e) => setNewNoteText(e.target.value)}
+                              className="text-sm min-h-[80px] rounded-xl border-gray-200 focus:ring-emerald-400/30 flex-1"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={handleAddNote}
+                              disabled={addNote.isPending || !newNoteText.trim()}
+                              className="mt-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow shrink-0"
+                            >
+                              {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                              Add Note
+                            </Button>
+                          </div>
+
+                          {/* Note list (newest first) */}
+                          <div className="space-y-3">
+                            {(patient.patientNotes?.length ?? 0) > 0 ? (
+                              patient.patientNotes!.map((note) => (
+                                <div key={note.id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[11px] font-semibold text-gray-700">
+                                        {note.createdByUser?.name ?? "Unknown"}
+                                      </span>
+                                      {note.createdByUser?.role ? (
+                                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                                          {roleLabel(note.createdByUser.role)}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+                                        {new Date(note.createdAt).toLocaleString()}
+                                      </span>
+                                      <button
+                                        onClick={() => handleDeleteNote(note.id)}
+                                        disabled={deletingNoteId === note.id}
+                                        className="p-1 rounded-lg text-gray-400 hover:text-[#CC3333] hover:bg-[#CC3333]/10 transition-colors"
+                                        title="Delete note"
+                                      >
+                                        {deletingNoteId === note.id ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-gray-800 mt-2 whitespace-pre-wrap break-words">{note.content}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-gray-400 italic">No notes yet — add the first note above.</p>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* ---------------------------------------------------- */}
                     {/* Activity Log tab                                     */}
@@ -2500,17 +2567,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                       </div>
                     </div>
 
-                    {/* Notes */}
-                    <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm">
-                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-3">Operational Notes</h4>
-                      <Textarea placeholder="Add notes..." value={notesText} onChange={(e) => setNotesText(e.target.value)} className="text-sm min-h-[100px] rounded-xl border-gray-200 focus:ring-emerald-400/30" />
-                      <div className="flex justify-end mt-3">
-                        <Button size="sm" onClick={handleSaveNotes} disabled={savingNotes} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow">
-                          {savingNotes ? "Saving..." : "Save Notes"}
-                        </Button>
-                      </div>
-                    </div>
-
                     {isAdmin && showCancelInput && (
                       <div className="space-y-2 bg-[#CC3333]/10 p-3 rounded-xl border border-[#CC3333]/30">
                         <Textarea placeholder="Cancellation reason..." value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className="text-sm min-h-[70px]" />
@@ -2595,7 +2651,46 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   </div>
                 )}
 
-                {/* CHECKLIST TAB */}
+                {/* NOTES TAB */}
+                {activeTab === "notes" && (
+                  <>
+                    <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm">
+                      <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2 mb-3"><MessageSquare className="w-4 h-4 text-indigo-500" /> Notes</h4>
+                      <div className="flex items-start gap-2 mb-3">
+                        <Textarea placeholder="Add an operational note..." value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} className="text-sm min-h-[70px] rounded-xl border-gray-200 focus:ring-emerald-400/30 flex-1" />
+                        <Button size="sm" onClick={handleAddNote} disabled={addNote.isPending || !newNoteText.trim()} className="mt-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow shrink-0">
+                          {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                          Add
+                        </Button>
+                      </div>
+                      <div className="space-y-2.5">
+                        {(patient.patientNotes?.length ?? 0) > 0 ? (
+                          patient.patientNotes!.map((note) => (
+                            <div key={note.id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-2.5">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[11px] font-semibold text-gray-700">{note.createdByUser?.name ?? "Unknown"}</span>
+                                  {note.createdByUser?.role ? <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{roleLabel(note.createdByUser.role)}</span> : null}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">{new Date(note.createdAt).toLocaleString()}</span>
+                                  <button onClick={() => handleDeleteNote(note.id)} disabled={deletingNoteId === note.id} className="p-1 rounded-lg text-gray-400 hover:text-[#CC3333] hover:bg-[#CC3333]/10 transition-colors" title="Delete note">
+                                    {deletingNoteId === note.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-800 mt-1.5 whitespace-pre-wrap break-words">{note.content}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-400 italic">No notes yet — add the first note above.</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ACTIVITY TAB */}
                 {activeTab === "activity" && (
                   <>
                     {flagTotalCount > 0 && (

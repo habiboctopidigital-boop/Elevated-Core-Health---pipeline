@@ -168,18 +168,34 @@ export function useToggleChecklist() {
   })
 }
 
-export function useUpdateNotes() {
+export function useAddNote() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, notes }: { id: string; notes: string }) =>
-      PatientsService.updateNotes(id, notes),
+    mutationFn: ({ id, content }: { id: string; content: string }) =>
+      PatientsService.addNote(id, content),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
-      toast.success("Notes updated")
+      toast.success("Note added")
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to update notes")
+      toast.error(err?.response?.data?.message || "Failed to add note")
+    },
+  })
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, noteId }: { id: string; noteId: string }) =>
+      PatientsService.deleteNote(id, noteId),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      toast.success("Note deleted")
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to delete note")
     },
   })
 }

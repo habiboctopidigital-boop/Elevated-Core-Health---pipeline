@@ -108,6 +108,7 @@ model User {
   flagClearedPatients   Patient[]        @relation("PatientFlagClearedBy")
   flagsRaised           PatientFlag[]    @relation("FlagRaisedBy")
   flagsCleared          PatientFlag[]    @relation("FlagClearedBy")
+  notesCreated          PatientNote[]    @relation("PatientNotesCreatedBy")
   updatedPatients       Patient[]        @relation("PatientUpdatedBy")
   cancelledPatients     Patient[]        @relation("PatientCancelledBy")
   privateLockedPatients Patient[]        @relation("PatientPrivateLockedBy")
@@ -183,6 +184,7 @@ model Patient {
 
   activityLogs ActivityLog[]
   flags        PatientFlag[] @relation("PatientFlags")
+  patientNotes PatientNote[] @relation("PatientNotes")
 
   @@index([stage])
   @@index([isFlagged])
@@ -199,6 +201,28 @@ model Patient {
  * board badge and stale logic stay cheap — each raise/clear also writes a row
  * here for the modal's flag history (latest flag + count + view-all list).
  */
+/**
+ * Full note history for a patient (multiple notes allowed, newest first).
+ * Mirrors the PatientFlag pattern — each note is its own row so the modal can
+ * render a list instead of one overwritten scalar value. The legacy
+ * `patients.notes` scalar is kept for backward compatibility with old rows
+ * but no longer written by the app; migration backfills it into this table.
+ */
+model PatientNote {
+  id          String    @id @default(uuid())
+  patientId   String    @map("patient_id")
+  content     String
+  createdById String?   @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  patient       Patient @relation("PatientNotes", fields: [patientId], references: [id], onDelete: Cascade)
+  createdByUser User?   @relation("PatientNotesCreatedBy", fields: [createdById], references: [id])
+
+  @@index([patientId])
+  @@map("patient_notes")
+}
+
 model PatientFlag {
   id            String    @id @default(uuid())
   patientId     String    @map("patient_id")

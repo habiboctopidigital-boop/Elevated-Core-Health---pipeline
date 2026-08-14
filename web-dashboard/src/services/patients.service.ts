@@ -43,10 +43,17 @@ export const PatientsService = {
     return data.data
   },
 
-  async updateNotes(id: string, notes: string): Promise<Patient> {
+  async addNote(id: string, content: string): Promise<Patient> {
     const { data } = await axiosInstance.post<ApiResponse<Patient>>(
       `${API_ENDPOINTS.PATIENTS}/${id}/notes`,
-      { notes },
+      { content },
+    )
+    return data.data
+  },
+
+  async deleteNote(id: string, noteId: string): Promise<Patient> {
+    const { data } = await axiosInstance.delete<ApiResponse<Patient>>(
+      `${API_ENDPOINTS.PATIENTS}/${id}/notes/${noteId}`,
     )
     return data.data
   },

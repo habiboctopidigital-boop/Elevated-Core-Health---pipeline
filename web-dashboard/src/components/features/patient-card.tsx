@@ -219,7 +219,7 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
       )}
     >
       {/* - Colored top accent bar (stage color; red/amber for attention states) - */}
-      <div className={cn("absolute top-0 left-0 right-0 h-2 rounded-t-3xl pointer-events-none", accentBar)} />
+      {/* <div className={cn("absolute top-0 left-0 right-0 h-2 rounded-t-3xl pointer-events-none", accentBar)} /> */}
 
       {/* - Header: avatar + name + badges - */}
       <div className="flex items-start justify-between gap-3 pt-1">
