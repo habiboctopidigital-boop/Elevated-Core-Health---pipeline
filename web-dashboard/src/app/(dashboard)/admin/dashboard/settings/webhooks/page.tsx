@@ -148,16 +148,22 @@ export default function WebhooksSettingsPage() {
 
   return (
     <>
-      <SettingsNav currentPage="webhooks" />
+      {/* Tabs + page title scroll together as one pinned unit — otherwise the
+          title/breadcrumb (which explain what page you're even on) disappear
+          the moment you scroll past them, leaving only the bare tab bar. */}
+      <div className="sticky top-0 z-40 bg-[#F4F5F7]">
+        <SettingsNav currentPage="webhooks" />
+        <div className="max-w-5xl mx-auto px-1 pt-4 pb-4">
+          <PageHeader
+            breadcrumb="Settings · Webhooks"
+            title="Webhook Integration"
+            subtitle="Manage the Make.com intake endpoint, rotate the secret key, and send test bookings"
+            icon={Webhook}
+          />
+        </div>
+      </div>
 
-      <div className="max-w-5xl mx-auto mt-8 pb-16 space-y-6">
-        <PageHeader
-          breadcrumb="Settings · Webhooks"
-          title="Webhook Integration"
-          subtitle="Manage the Make.com intake endpoint, rotate the secret key, and send test bookings"
-          icon={Webhook}
-        />
-
+      <div className="max-w-5xl mx-auto pt-2 pb-16 space-y-6">
         {/* Endpoint */}
         <div className="rounded-2xl border border-[#EDEFF2] bg-white shadow-[0_1px_3px_rgba(16,24,40,0.06)] p-5 sm:p-6">
           <div className="flex items-center gap-3 mb-4">
