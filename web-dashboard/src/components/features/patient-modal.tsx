@@ -1105,19 +1105,6 @@ const isExpired = () => {
                   iconColor="text-amber-500"
                   label="Status"
                   labelColor="text-amber-500"
-                  action={
-                    !patient.assignedUser && vaList && vaList.length > 0 ? (
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowAssignDropdown((v) => !v)}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-full transition-colors"
-                        >
-                          Assign Now
-                          <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : undefined
-                  }
                 >
                   {patient.assignedUser ? (
                     <span className="capitalize">{patient.status}</span>

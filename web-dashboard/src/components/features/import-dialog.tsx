@@ -10,11 +10,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { ImportService, type ParsedRow } from "@/services/import.service"
 import { useApplyImport } from "@/hooks/query/useCrm"
+import type { ImportBatch } from "@/types"
 import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  XCircle,
   X,
   Loader2,
   ArrowDown,
@@ -123,10 +126,10 @@ export function ImportDialog() {
       <DialogContent
         hideAccent
         closeButtonClassName="bg-white/15 text-white hover:bg-white/25 hover:text-white"
-        className="sm:max-w-lg gap-0 p-0 overflow-hidden border-0 shadow-2xl rounded-3xl"
+        className="sm:max-w-2xl lg:max-w-3xl gap-0 p-0 overflow-hidden border-0 shadow-2xl rounded-3xl flex flex-col max-h-[88vh]"
       >
         {/* Gradient brand header band */}
-        <div className="relative overflow-hidden bg-gradient-to-r border-none from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">
+        <div className="relative overflow-hidden bg-gradient-to-r border-none from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12 shrink-0">
           {/* Decorative bubbles */}
           <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
           <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
@@ -141,7 +144,7 @@ export function ImportDialog() {
           </div>
         </div>
 
-        <div className="p-5">
+        <div className="p-5 overflow-y-auto flex-1 min-h-0">
           {state.status === "success" ? (
             <SuccessView result={state.result} file={state.file} onReset={reset} />
           ) : (
@@ -258,7 +261,7 @@ export function ImportDialog() {
           )}
         </div>
 
-      <div className="px-5 py-3 bg-[#F8FAF9] border-t border-[#EDEFF2] flex items-center gap-4 text-[10px] text-[#6B7280]">
+      <div className="px-5 py-3 bg-[#F8FAF9] border-t border-[#EDEFF2] flex items-center gap-4 text-[10px] text-[#6B7280] shrink-0">
         <span className="flex items-center gap-1">
           <CheckCircle2 className="w-3 h-3 text-green-500" />
           Max 10 MB
@@ -288,8 +291,13 @@ function SuccessView({
 }) {
   const applyImport = useApplyImport()
   const [importing, setImporting] = useState(false)
-  const previewRows = result.data.slice(0, 5)
+  const [applied, setApplied] = useState<ImportBatch | null>(null)
+  const previewRows = result.data.slice(0, 8)
   const columns = result.data.length > 0 ? Object.keys(result.data[0]) : []
+
+  if (applied) {
+    return <ImportResultsView batch={applied} onDone={onReset} />
+  }
 
   return (
     <div className="space-y-4">
@@ -342,7 +350,7 @@ function SuccessView({
               <thead>
                 <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
                   <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-3 py-2">#</th>
-                  {columns.slice(0, 5).map((col) => (
+                  {columns.slice(0, 8).map((col) => (
                     <th
                       key={col}
                       className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-3 py-2 whitespace-nowrap"
@@ -350,9 +358,9 @@ function SuccessView({
                       {col}
                     </th>
                   ))}
-                  {columns.length > 5 && (
+                  {columns.length > 8 && (
                     <th className="text-left text-[10px] font-semibold text-[#6B7280] px-3 py-2">
-                      +{columns.length - 5} more
+                      +{columns.length - 8} more
                     </th>
                   )}
                 </tr>
@@ -361,12 +369,12 @@ function SuccessView({
                 {previewRows.map((row, i) => (
                   <tr key={i} className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#EBF7EC]/20">
                     <td className="text-[#6B7280] px-3 py-2">{i + 1}</td>
-                    {columns.slice(0, 5).map((col) => (
-                      <td key={col} className="text-[#374151] px-3 py-2 max-w-[160px] truncate whitespace-nowrap">
+                    {columns.slice(0, 8).map((col) => (
+                      <td key={col} className="text-[#374151] px-3 py-2 max-w-[200px] truncate whitespace-nowrap">
                         {row[col] || <span className="text-[#B0B0B0] italic">-</span>}
                       </td>
                     ))}
-                    {columns.length > 5 && <td className="text-[#6B7280] px-3 py-2">-</td>}
+                    {columns.length > 8 && <td className="text-[#6B7280] px-3 py-2">-</td>}
                   </tr>
                 ))}
               </tbody>
@@ -390,12 +398,16 @@ function SuccessView({
             onClick={async () => {
               setImporting(true)
               try {
-                await applyImport.mutateAsync({
+                const batch = await applyImport.mutateAsync({
                   rows: result.data,
                   fileName: file.name,
                   fileType: (file.name.split(".").pop() || "csv").toLowerCase() as "csv" | "xlsx" | "xls",
                 })
-                onReset()
+                // Show what happened row-by-row instead of jumping straight back
+                // to the upload screen — "0 imported, 2 duplicates skipped" reads
+                // as a bug report until you can see *which* existing patient each
+                // row matched.
+                setApplied(batch)
               } finally {
                 setImporting(false)
               }
@@ -409,6 +421,82 @@ function SuccessView({
               : `Import ${result.totalRows} Contact${result.totalRows === 1 ? "" : "s"}`}
           </Button>
         )}
+      </div>
+    </div>
+  )
+}
+
+/** Shown right after "Import" — a per-row breakdown so a duplicate skip is
+ *  something the user can verify (which existing patient it matched), not an
+ *  unexplained "0 imported". */
+function ImportResultsView({ batch, onDone }: { batch: ImportBatch; onDone: () => void }) {
+  const details = batch.errorDetails ?? []
+  const duplicates = details.filter((d) => d.type === "duplicate")
+  const failures = details.filter((d) => d.type !== "duplicate")
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border border-green-100 bg-green-50 px-3 py-3 text-center">
+          <p className="text-2xl font-bold text-green-700 tabular-nums">{batch.successCount}</p>
+          <p className="text-[10px] font-semibold text-green-700/80 uppercase tracking-wider mt-0.5">Imported</p>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-3 text-center">
+          <p className="text-2xl font-bold text-amber-700 tabular-nums">{batch.duplicateCount}</p>
+          <p className="text-[10px] font-semibold text-amber-700/80 uppercase tracking-wider mt-0.5">Duplicates</p>
+        </div>
+        <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-3 text-center">
+          <p className="text-2xl font-bold text-red-700 tabular-nums">{batch.failCount}</p>
+          <p className="text-[10px] font-semibold text-red-700/80 uppercase tracking-wider mt-0.5">Failed</p>
+        </div>
+      </div>
+
+      {duplicates.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-[11px] font-semibold text-[#374151] uppercase tracking-wider">
+              Skipped as duplicates ({duplicates.length})
+            </span>
+          </div>
+          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            {duplicates.map((d, i) => (
+              <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-100">
+                <span className="text-[10px] font-bold text-amber-700 shrink-0 mt-0.5">Row {d.row}</span>
+                <span className="text-xs text-amber-800">{d.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {failures.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <XCircle className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-[11px] font-semibold text-[#374151] uppercase tracking-wider">
+              Failed rows ({failures.length})
+            </span>
+          </div>
+          <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            {failures.map((d, i) => (
+              <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-100">
+                <span className="text-[10px] font-bold text-red-700 shrink-0 mt-0.5">Row {d.row}</span>
+                <span className="text-xs text-red-800">{d.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {batch.successCount === 0 && duplicates.length === 0 && failures.length === 0 && (
+        <p className="text-sm text-[#6B7280] italic">No rows were processed.</p>
+      )}
+
+      <div className="flex justify-end">
+        <Button size="sm" onClick={onDone} className="bg-[#036638] hover:bg-[#025030] text-white text-xs">
+          Done
+        </Button>
       </div>
     </div>
   )

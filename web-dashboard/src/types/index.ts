@@ -174,7 +174,7 @@ export interface ImportBatch {
   failCount: number
   duplicateCount: number
   status: "processing" | "completed" | "completed_with_errors" | "failed"
-  errorDetails?: Array<{ row: number; message: string }> | null
+  errorDetails?: Array<{ row: number; message: string; type?: "error" | "duplicate" }> | null
   importedByUser?: Pick<User, "id" | "name"> | null
   createdAt: string
   completedAt?: string | null

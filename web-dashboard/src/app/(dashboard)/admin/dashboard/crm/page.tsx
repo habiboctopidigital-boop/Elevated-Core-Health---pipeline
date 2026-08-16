@@ -209,7 +209,8 @@ export default function AdminCrmPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#F9FAFB] border-b border-[#E5E7EB]">
-                <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-5 py-3">Contact</th>
+                <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-5 py-3">First Name</th>
+                <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-4 py-3">Last Name</th>
                 <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-4 py-3">Phone</th>
                 <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-4 py-3">Email</th>
                 <th className="text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider px-4 py-3">Location</th>
@@ -223,13 +224,13 @@ export default function AdminCrmPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center">
+                  <td colSpan={10} className="px-4 py-16 text-center">
                     <Loader2 className="w-6 h-6 text-[#036638] animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : contacts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center text-sm text-[#6B7280]">
+                  <td colSpan={10} className="px-4 py-16 text-center text-sm text-[#6B7280]">
                     No contacts found
                   </td>
                 </tr>
@@ -240,35 +241,10 @@ export default function AdminCrmPage() {
                     onClick={() => setSelectedPatientId(patient.id)}
                     className="border-b border-[#E5E7EB]/50 last:border-0 hover:bg-[#EBF7EC]/30 transition-colors cursor-pointer group"
                   >
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#036638] to-emerald-500 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-white">
-                            {(patient.firstName || patient.name || "?").charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#1A1B1E] truncate flex items-center gap-1.5">
-                            {[patient.firstName, patient.lastName].filter(Boolean).join(" ") || patient.name}
-                            {patient.isPrivate && (
-                              <span title="Locked by assigned VA" className="shrink-0">
-                                <Lock className="w-3 h-3 text-amber-600" />
-                              </span>
-                            )}
-                            {patient.isFlagged && (
-                              <span title="Flagged for Donna" className="shrink-0">
-                                <Flag className="w-3 h-3 text-[#036638]" fill="#036638" />
-                              </span>
-                            )}
-                          </p>
-                          {patient.firstName && (
-                            <p className="text-[11px] text-[#6B7280] truncate">{patient.name}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[#374151] whitespace-nowrap">{patient.phone || "-"}</td>
-                    <td className="px-4 py-3 text-xs text-[#374151] max-w-[200px] truncate">{patient.email || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-[#374151] truncate">{patient.firstName || ""}</td>
+                 
+                    <td className="px-4 py-3 text-xs text-[#374151] whitespace-nowrap">{patient.phone || ""}</td>
+                    <td className="px-4 py-3 text-xs text-[#374151] max-w-[200px] truncate">{patient.email || ""}</td>
                     <td className="px-4 py-3 text-xs text-[#374151]">{patient.location || "-"}</td>
                     <td className="px-4 py-3">
                       <span className="text-[11px] font-semibold bg-[#EBF7EC] text-[#036638] px-2.5 py-1 rounded-full">

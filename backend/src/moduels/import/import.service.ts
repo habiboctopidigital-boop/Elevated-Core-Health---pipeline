@@ -132,7 +132,12 @@ export const importService = {
 		let success = 0;
 		let fail = 0;
 		let dup = 0;
-		const errors: { row: number; message: string }[] = [];
+		// Duplicates and hard failures share one list so the UI can show a single
+		// per-row reason for every skipped row — previously a duplicate skip only
+		// incremented a counter with no explanation of *which* existing patient it
+		// matched, which is indistinguishable from a silent bug to whoever's
+		// reading "0 imported, 2 duplicates skipped" with no other context.
+		const errors: { row: number; message: string; type: "error" | "duplicate" }[] = [];
 
 		try {
 			for (let i = 0; i < rows.length; i++) {
@@ -148,7 +153,7 @@ export const importService = {
 
 					if (!name && !email && !phone) {
 						fail++;
-						errors.push({ row: i + 1, message: "Row has no name, email or phone - skipped" });
+						errors.push({ row: i + 1, message: "Row has no name, email or phone - skipped", type: "error" });
 						continue;
 					}
 
@@ -161,10 +166,19 @@ export const importService = {
 									...(phone ? [{ phone }] : []),
 								],
 							},
-							select: { id: true },
+							select: { id: true, name: true, email: true, phone: true },
 						});
 						if (existing) {
 							dup++;
+							const matchedOn =
+								email && existing.email?.toLowerCase() === email.toLowerCase()
+									? `email ${existing.email}`
+									: `phone ${existing.phone}`;
+							errors.push({
+								row: i + 1,
+								message: `Skipped — already a patient: "${existing.name}" (matched by ${matchedOn})`,
+								type: "duplicate",
+							});
 							continue;
 						}
 					}
@@ -211,7 +225,11 @@ export const importService = {
 					success++;
 				} catch (err) {
 					fail++;
-					errors.push({ row: i + 1, message: err instanceof Error ? err.message : "Failed to create patient" });
+					errors.push({
+						row: i + 1,
+						message: err instanceof Error ? err.message : "Failed to create patient",
+						type: "error",
+					});
 				}
 			}
 		} catch (err) {
