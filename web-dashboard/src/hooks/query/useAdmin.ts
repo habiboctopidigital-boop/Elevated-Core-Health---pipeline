@@ -29,6 +29,10 @@ export function useCreateUser() {
     }) => AdminService.createUser(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.USERS })
+      // The admin Users page and the board's "Assign to VA" dropdowns read from
+      // two different caches — without this, a newly created VA shows up on
+      // the Users page but stays invisible everywhere else until a hard reload.
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.VAS })
       toast.success("User created")
     },
     onError: (err: any) => {
@@ -52,6 +56,7 @@ export function useUpdateUser() {
     }>) => AdminService.updateUser(id, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.USERS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.VAS })
       toast.success("User updated")
     },
     onError: (err: any) => {
@@ -66,6 +71,7 @@ export function useDeleteUser() {
     mutationFn: (id: string) => AdminService.deleteUser(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.USERS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.VAS })
       toast.success("User deleted")
     },
     onError: (err: any) => {

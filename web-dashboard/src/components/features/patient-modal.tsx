@@ -172,20 +172,32 @@ function getAvatarUrl(patient: Patient): string {
 // ---------------------------------------------------------------------------
 // Patient contact info validation (react-hook-form + zod)
 // ---------------------------------------------------------------------------
+// Accepts any of the punctuation a VA would actually type — (555) 123-4567,
+// 555-123-4567, 555.123.4567, +1 555 123 4567, 15551234567 — by stripping
+// everything but digits first, then checking real NANP shape: 10 digits (or
+// 11 starting with the US/Canada country code 1), with the area code and
+// exchange code never starting with 0 or 1. The old regex only checked that
+// the characters *looked* phone-shaped, so "12-3" passed as "valid".
+function isValidUsPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "")
+  const local = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits
+  return /^[2-9]\d{2}[2-9]\d{6}$/.test(local)
+}
+
 const contactSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .email("Enter a valid email address"),
+  // Optional, not required: the field is disabled/read-only in this form (see
+  // the input below), so a patient with no email on file must still be able
+  // to save every other change instead of getting permanently stuck on a
+  // required field they have no way to fill in here.
+  email: z.string().trim().email("Enter a valid email address").optional().or(z.literal("")),
   phone: z
     .string()
     .trim()
     .min(1, "Phone is required")
-    .refine((v) => /^[+()\-.\s\d]{7,20}$/.test(v), {
-      message: "Enter a valid phone number",
+    .refine(isValidUsPhone, {
+      message: "Enter a valid US phone number, e.g. (555) 123-4567",
     }),
   location: z.string().trim().max(120, "Location is too long").optional().or(z.literal("")),
   dateOfBirth: z
@@ -208,7 +220,7 @@ function splitPatientName(fullName: string): { firstName: string; lastName: stri
   return { firstName: parts[0], lastName: parts.slice(1).join(" ") }
 }
 
-type TabKey = "overview" | "contact" | "eligibility" | "checklist" | "activity" | "notes"
+type TabKey = "overview" | "contact" | "eligibility" | "checklist" | "flags" | "activity" | "notes"
 
 // Small donut/ring progress indicator used in the Overview → SOP card.
 function ProgressRing({ percent, label, sublabel }: { percent: number; label: string; sublabel: string }) {
@@ -403,8 +415,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       phone: "",
       email: "",
       dateOfBirth: "",
-      copayAmount: "",
-      amountPaid: "",
+      copayAmount: "0",
+      amountPaid: "0",
     },
   })
 
@@ -441,6 +453,37 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
   }, [])
 
+  // Desktop vs. mobile layout below used to be picked with CSS alone
+  // (`hidden lg:block` / `lg:hidden`) while BOTH copies stayed mounted in the
+  // DOM at once. Every Contact & Payment field is `register()`-ed once in
+  // each copy, so react-hook-form ended up with two refs sharing one field
+  // name — outside of checkbox/radio groups that's unsupported, and in
+  // practice RHF's submitted value came from whichever ref it considered
+  // canonical, which was not reliably the one the user was actually typing
+  // into. Symptom: typing looks fine in the visible input, but Save sends
+  // stale/old data because the hidden copy's untouched value wins. Fixing
+  // this at the root means only ever mounting ONE of the two layouts.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1024,
+  )
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mql = window.matchMedia("(min-width: 1024px)")
+    const sync = () => setIsDesktop(mql.matches)
+    sync()
+    mql.addEventListener("change", sync)
+    return () => mql.removeEventListener("change", sync)
+  }, [])
+
+  // Full reset — ONLY when switching to look at a different patient (or the
+  // modal opens on this one for the first time). This must stay scoped to
+  // `patient?.id` alone: it used to also depend on paymentMethod/
+  // insuranceProvider/appointmentDatetime, which are exactly the fields the
+  // Contact & Payment form itself saves — so every successful save on THIS
+  // patient re-triggered this same effect, which called reset() (blanking
+  // whatever was just typed) and setActiveTab("overview") (forcing the tab
+  // back), making a successful save look like it silently failed and lost
+  // your edits.
   useEffect(() => {
     const pm = patient?.paymentMethod ?? ""
     const ip = patient?.insuranceProvider ?? ""
@@ -458,8 +501,8 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
       phone: patient?.phone ?? "",
       email: patient?.email ?? "",
       dateOfBirth: patient?.dateOfBirth ?? "",
-      copayAmount: patient?.copayAmount ?? "",
-      amountPaid: patient?.amountPaid ?? "",
+      copayAmount: patient?.copayAmount ?? "0",
+      amountPaid: patient?.amountPaid ?? "0",
     })
     setShowFlagInput(false)
     setFlagReason("")
@@ -483,7 +526,31 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     }
     setAssigning(false)
     setAssignFeedback(null)
-  }, [patient?.id, patient?.paymentMethod, patient?.insuranceProvider, patient?.appointmentDatetime])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient?.id])
+
+  // Narrow sync — keeps the payment/insurance/visit-status mini-state (and
+  // the appointment field) matching the patient record whenever THOSE
+  // specific fields change, e.g. right after this modal's own save, or
+  // another VA editing the same card in another tab. Deliberately does NOT
+  // touch activeTab, the form, or any other in-progress UI state.
+  useEffect(() => {
+    const pm = patient?.paymentMethod ?? ""
+    const ip = patient?.insuranceProvider ?? ""
+    setPaymentMethod(pm)
+    setInsuranceProvider(ip)
+    setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
+    setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
+    setVisitStatus(patient?.visitStatus ?? "not_visited")
+  }, [patient?.paymentMethod, patient?.insuranceProvider, patient?.visitStatus])
+
+  useEffect(() => {
+    if (patient?.appointmentDatetime) {
+      setNewAppointmentDatetime(toLocalDatetimeLocal(new Date(patient.appointmentDatetime)))
+    } else {
+      setNewAppointmentDatetime("")
+    }
+  }, [patient?.appointmentDatetime])
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -540,7 +607,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
 
   const flagHistoryRef = useRef<HTMLDivElement | null>(null)
   const scrollToFlagHistory = () => {
-    setActiveTab("activity")
+    setActiveTab("flags")
     requestAnimationFrame(() => {
       flagHistoryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     })
@@ -559,23 +626,34 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     await claimPatient.mutateAsync({ id: patient.id, userId: user.id })
   }
 
-  const onSaveContact = handleSubmit(async (values) => {
-    if (!patient) return
-    await updatePatient.mutateAsync({
-      id: patient.id,
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      location: values.location?.trim() || null,
-      phone: values.phone.trim(),
-      email: values.email.trim(),
-      dateOfBirth: values.dateOfBirth?.trim() || null,
-      copayAmount: values.copayAmount?.trim() || null,
-      amountPaid: values.amountPaid?.trim() || null,
-      paymentMethod: paymentMethod.trim() || null,
-      insuranceProvider: insuranceProvider.trim() || null,
-      visitStatus,
-    })
-  })
+  const onSaveContact = handleSubmit(
+    async (values) => {
+      if (!patient) return
+      await updatePatient.mutateAsync({
+        id: patient.id,
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        location: values.location?.trim() || null,
+        phone: values.phone.trim(),
+        email: values.email?.trim() || null,
+        dateOfBirth: values.dateOfBirth?.trim() || null,
+        copayAmount: values.copayAmount?.trim() || null,
+        amountPaid: values.amountPaid?.trim() || null,
+        paymentMethod: paymentMethod.trim() || null,
+        insuranceProvider: insuranceProvider.trim() || null,
+        visitStatus,
+      })
+    },
+    // react-hook-form blocks the submit entirely when validation fails and,
+    // by default, gives no feedback at all — clicking Save just does nothing,
+    // which is indistinguishable from a broken button. This can trigger for a
+    // field the user never touched (e.g. a date of birth already on file from
+    // before this validation existed), so surface exactly which field and why.
+    (formErrors) => {
+      const first = Object.values(formErrors)[0]
+      toast.error(first?.message ?? "Please fix the highlighted fields before saving")
+    },
+  )
 
   const handleCancelPatient = async () => {
     if (!patient) return
@@ -706,15 +784,19 @@ const isExpired = () => {
     { key: "overview", label: "Overview", icon: <LayoutGrid className="w-4 h-4" /> },
     { key: "contact", label: "Contact & Payment", icon: <User className="w-4 h-4" /> },
     { key: "eligibility", label: "Eligibility Details", icon: <ShieldCheck className="w-4 h-4" /> },
+    { key: "flags", label: "Flags", icon: <Flag className="w-4 h-4" /> },
     { key: "activity", label: "Activity Log", icon: <Clock className="w-4 h-4" /> },
     { key: "notes", label: "Notes", icon: <MessageSquare className="w-4 h-4" /> },
   ]
 
   return (
     <>
-      {/* Desktop (lg+) — original desktop layout */}
-      <div className="hidden lg:block">
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-2 sm:p-4 lg:pl-[calc(var(--ech-sidebar-offset,8rem)*2)] 
+      {/* Desktop (lg+) — original desktop layout. Only mounted when the
+          viewport is actually desktop-width — see the isDesktop effect
+          above for why this can no longer be CSS-only (hidden lg:block). */}
+      {isDesktop && (
+      <div>
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-2 sm:p-4 lg:pl-[calc(var(--ech-sidebar-offset,8rem)*2)]
 ">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -1150,6 +1232,11 @@ const isExpired = () => {
                     >
                       {tab.icon}
                       {tab.label}
+                      {tab.key === "flags" && flagTotalCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#CC3333]/15 text-[#CC3333] text-[10px] font-bold">
+                          {flagTotalCount}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1551,9 +1638,14 @@ const isExpired = () => {
                             {errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}
                           </div>
                           <div>
-                            <label className={contactLabelClass(!!errors.email)}>Email <span className="text-[#CC3333]">*</span></label>
-                            <input type="email" {...register("email")} aria-invalid={!!errors.email} className={contactInputClass(!!errors.email)} />
-                            {errors.email && <p className="text-[11px] text-[#CC3333] mt-1">{errors.email.message}</p>}
+                            <label className={contactLabelClass(false)}>Email</label>
+                            <input
+                              type="email"
+                              readOnly
+                              title="Email can't be changed here"
+                              {...register("email")}
+                              className={cn(contactInputClass(false), "bg-gray-50 text-gray-500 cursor-not-allowed")}
+                            />
                           </div>
                           <div>
                             <label className={contactLabelClass(false)}>Copay Amount</label>
@@ -1714,134 +1806,132 @@ const isExpired = () => {
                     {/* ---------------------------------------------------- */}
                     {/* Activity Log tab                                     */}
                     {/* ---------------------------------------------------- */}
-                    {activeTab === "activity" && (
-                      <>
-                        {flagTotalCount > 0 && (
-                          <div ref={flagHistoryRef} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm scroll-mt-4">
-                            <div className="flex items-center gap-2 mb-4 flex-wrap">
-                              <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-                                <Flag className="w-5 h-5 text-[#CC3333]" /> Flag History
-                              </h4>
-                              <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                                {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} | {flagStageCount} on this stage
-                              </span>
-                            </div>
-                            <div className="space-y-3">
-                              {flagHistory.length > 0 ? (
-                                flagHistory.map((flag) => (
-                                  <div
-                                    key={flag.id}
-                                    className={cn(
-                                      "rounded-xl border p-3",
-                                      flag.type === "positive" ? "bg-emerald-50/60 border-emerald-200" : "bg-[#CC3333]/10 border-[#CC3333]/30",
-                                    )}
-                                  >
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <span className={cn(
-                                          "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
-                                          flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-[#CC3333]/15 text-[#CC3333]",
-                                        )}>
-                                          {flag.type === "positive" ? "Positive" : "Alert"}
-                                        </span>
-                                        {isAdminFlag(flag) && (
-                                          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                                            <Shield className="w-3 h-3" /> Admin Flag
-                                          </span>
-                                        )}
-                                      </div>
-                                      <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
-                                        {new Date(flag.createdAt).toLocaleString()}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-gray-800 mt-2">{flag.reason}</p>
-                                    <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
-                                      <span className="text-gray-500">
-                                        by <span className="font-semibold text-gray-700">{flag.flaggedByUser?.name ?? "Unknown"}</span>
-                                        {isAdminFlag(flag) && <span className="font-semibold text-amber-700"> (Admin)</span>}
-                                        {stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}
-                                      </span>
-                                      {flag.clearedAt ? (
-                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">
-                                          Cleared by {flag.clearedByUser?.name ?? "Unknown"}
-                                          {flag.clearedByUser?.role ? ` (${roleLabel(flag.clearedByUser.role)})` : ""}
-                                          {flag.clearedReason ? ` - ${flag.clearedReason}` : ""}
-                                        </span>
-                                      ) : (
-                                        <span className="px-2 py-0.5 bg-[#CC3333]/15 text-[#CC3333] font-semibold rounded-full whitespace-nowrap">Open</span>
-                                      )}
-                                    </div>
-                                    {isAdmin && !flag.clearedAt &&
-                                      (clearingFlagId === flag.id ? (
-                                        <FlagClearForm
-                                          clearReason={clearReason}
-                                          setClearReason={setClearReason}
-                                          isPending={clearFlag.isPending}
-                                          onClear={handleClearFlag}
-                                          onCancel={() => {
-                                            setClearingFlagId(null)
-                                            setClearReason("")
-                                          }}
-                                        />
-                                      ) : (
-                                        <button
-                                          onClick={() => setClearingFlagId(flag.id)}
-                                          className={cn(
-                                            "mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors",
-                                            flag.type === "positive"
-                                              ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50"
-                                              : "text-[#CC3333] border-[#CC3333]/30 bg-white/70 hover:bg-[#CC3333]/10",
-                                          )}
-                                        >
-                                          <FlagOff className="w-3.5 h-3.5" /> Clear Flag
-                                        </button>
-                                      ))}
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-sm text-gray-400 italic">No flags raised yet</p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm">
-                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4">
-                            <MessageSquare className="w-5 h-5 text-indigo-400" /> Activity Log
+                    {activeTab === "flags" && (
+                      <div ref={flagHistoryRef} className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm scroll-mt-4">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                            <Flag className="w-5 h-5 text-[#CC3333]" /> Flag History
                           </h4>
-                          <div className="space-y-1 max-h-[28rem] overflow-y-auto pr-1">
-                            {logData?.logs?.length ? logData.logs.map((log) => {
-                              const meta = actionMeta(log.action)
-                              const Icon = meta.icon
-                              return (
-                                <div key={log.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#EBF7EC]/30 transition-colors">
-                                  <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                                    style={{ backgroundColor: `${meta.color}1A` }}
-                                  >
-                                    <Icon className="w-4 h-4" style={{ color: meta.color }} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span>
-                                      <span
-                                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                        style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}
-                                      >
-                                        {meta.label}
-                                      </span>
-                                      <span className="text-[11px] text-[#9CA3AF] ml-auto shrink-0 whitespace-nowrap">
-                                        {fullDateTime(log.createdAt)}
-                                      </span>
-                                    </div>
-                                    <p className="text-sm text-[#374151] mt-1 leading-relaxed">{log.message}</p>
-                                  </div>
-                                </div>
-                              )
-                            }) : <p className="text-sm text-gray-400 italic px-2 py-4">No activity yet</p>}
-                          </div>
+                          <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                            {flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} | {flagStageCount} on this stage
+                          </span>
                         </div>
-                      </>
+                        <div className="space-y-3">
+                          {flagHistory.length > 0 ? (
+                            flagHistory.map((flag) => (
+                              <div
+                                key={flag.id}
+                                className={cn(
+                                  "rounded-xl border p-3",
+                                  flag.type === "positive" ? "bg-emerald-50/60 border-emerald-200" : "bg-[#CC3333]/10 border-[#CC3333]/30",
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={cn(
+                                      "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full",
+                                      flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-[#CC3333]/15 text-[#CC3333]",
+                                    )}>
+                                      {flag.type === "positive" ? "Positive" : "Alert"}
+                                    </span>
+                                    {isAdminFlag(flag) && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                        <Shield className="w-3 h-3" /> Admin Flag
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">
+                                    {new Date(flag.createdAt).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-800 mt-2">{flag.reason}</p>
+                                <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
+                                  <span className="text-gray-500">
+                                    by <span className="font-semibold text-gray-700">{flag.flaggedByUser?.name ?? "Unknown"}</span>
+                                    {isAdminFlag(flag) && <span className="font-semibold text-amber-700"> (Admin)</span>}
+                                    {stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}
+                                  </span>
+                                  {flag.clearedAt ? (
+                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">
+                                      Cleared by {flag.clearedByUser?.name ?? "Unknown"}
+                                      {flag.clearedByUser?.role ? ` (${roleLabel(flag.clearedByUser.role)})` : ""}
+                                      {flag.clearedReason ? ` - ${flag.clearedReason}` : ""}
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 bg-[#CC3333]/15 text-[#CC3333] font-semibold rounded-full whitespace-nowrap">Open</span>
+                                  )}
+                                </div>
+                                {isAdmin && !flag.clearedAt &&
+                                  (clearingFlagId === flag.id ? (
+                                    <FlagClearForm
+                                      clearReason={clearReason}
+                                      setClearReason={setClearReason}
+                                      isPending={clearFlag.isPending}
+                                      onClear={handleClearFlag}
+                                      onCancel={() => {
+                                        setClearingFlagId(null)
+                                        setClearReason("")
+                                      }}
+                                    />
+                                  ) : (
+                                    <button
+                                      onClick={() => setClearingFlagId(flag.id)}
+                                      className={cn(
+                                        "mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors",
+                                        flag.type === "positive"
+                                          ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50"
+                                          : "text-[#CC3333] border-[#CC3333]/30 bg-white/70 hover:bg-[#CC3333]/10",
+                                      )}
+                                    >
+                                      <FlagOff className="w-3.5 h-3.5" /> Clear Flag
+                                    </button>
+                                  ))}
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-gray-400 italic">No flags raised yet</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "activity" && (
+                      <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 shadow-sm min-h-full">
+                        <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4">
+                          <MessageSquare className="w-5 h-5 text-indigo-400" /> Activity Log
+                        </h4>
+                        <div className="space-y-1  overflow-y-auto pr-1">
+                          {logData?.logs?.length ? logData.logs.map((log) => {
+                            const meta = actionMeta(log.action)
+                            const Icon = meta.icon
+                            return (
+                              <div key={log.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#EBF7EC]/30 transition-colors">
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                                  style={{ backgroundColor: `${meta.color}1A` }}
+                                >
+                                  <Icon className="w-4 h-4" style={{ color: meta.color }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span>
+                                    <span
+                                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                      style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}
+                                    >
+                                      {meta.label}
+                                    </span>
+                                    <span className="text-[11px] text-[#9CA3AF] ml-auto shrink-0 whitespace-nowrap">
+                                      {fullDateTime(log.createdAt)}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-[#374151] mt-1 leading-relaxed">{log.message}</p>
+                                </div>
+                              </div>
+                            )
+                          }) : <p className="text-sm text-gray-400 italic px-2 py-4">No activity yet</p>}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1906,12 +1996,12 @@ const isExpired = () => {
                   <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Type</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="flagType" value="positive" checked={newFlagType === "positive"}
+                      <input type="radio" name="flagType-desktop" value="positive" checked={newFlagType === "positive"}
                         onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-emerald-600" />
                       <span className="text-sm font-medium">Positive Note</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="flagType" value="negative" checked={newFlagType === "negative"}
+                      <input type="radio" name="flagType-desktop" value="negative" checked={newFlagType === "negative"}
                         onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-[#CC3333]" />
                       <span className="text-sm font-medium">Alert/Issue</span>
                     </label>
@@ -1964,9 +2054,12 @@ const isExpired = () => {
         </div>
       </div>
       </div>
+      )}
 
-      {/* Mobile & tablet — new responsive layout */}
-      <div className="lg:hidden">
+      {/* Mobile & tablet — new responsive layout. Only mounted when the
+          viewport is below desktop width — see the isDesktop effect above. */}
+      {!isDesktop && (
+      <div>
     <div className="fixed inset-0  top-[80px] z-100 flex items-center justify-center p-2 sm:p-4 lg:pl-[calc(var(--ech-sidebar-offset,8rem)*2)]">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -2316,6 +2409,11 @@ const isExpired = () => {
                   >
                     {tab.icon}
                     {tab.label}
+                    {tab.key === "flags" && flagTotalCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#CC3333]/15 text-[#CC3333] text-[10px] font-bold">
+                        {flagTotalCount}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -2623,10 +2721,10 @@ const isExpired = () => {
                         {errors.lastName && <p className="text-[11px] text-[#CC3333] mt-1">{errors.lastName.message}</p>}
                       </div>
                       <div><label className={contactLabelClass(false)}>Location</label><input {...register("location")} className={contactInputClass(false)} /></div>
-                      <div><label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label><input {...register("phone")} aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />{errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}</div>
-                      <div><label className={contactLabelClass(!!errors.email)}>Email <span className="text-[#CC3333]">*</span></label><input type="email" {...register("email")} aria-invalid={!!errors.email} className={contactInputClass(!!errors.email)} />{errors.email && <p className="text-[11px] text-[#CC3333] mt-1">{errors.email.message}</p>}</div>
-                      <div><label className={contactLabelClass(false)}>Copay Amount</label><input {...register("copayAmount")} className={contactInputClass(false)} /></div>
-                      <div><label className={contactLabelClass(false)}>Amount Paid</label><input {...register("amountPaid")} className={contactInputClass(false)} /></div>
+                      <div><label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label><input {...register("phone")} type="number" aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />{errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}</div>
+                      <div><label className={contactLabelClass(false)}>Email</label><input type="email" readOnly title="Email can't be changed here" {...register("email")}  className={cn(contactInputClass(false), "bg-gray-50 text-gray-500 cursor-not-allowed")} /></div>
+                      <div><label className={contactLabelClass(false)}>Copay Amount</label><input {...register("copayAmount")} type="number" className={contactInputClass(false)} /></div>
+                      <div><label className={contactLabelClass(false)}>Amount Paid</label><input {...register("amountPaid")} type="number" className={contactInputClass(false)} /></div>
                       <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Payment Type</label><SelectOrOther value={paymentMethod} onChange={setPaymentMethod} otherMode={paymentMethodOther} onOtherModeChange={setPaymentMethodOther} options={PAYMENT_METHOD_OPTIONS} placeholder="Select..." /></div>
                       <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Insurance</label><SelectOrOther value={insuranceProvider} onChange={setInsuranceProvider} otherMode={insuranceProviderOther} onOtherModeChange={setInsuranceProviderOther} options={INSURANCE_PROVIDER_OPTIONS} placeholder="Select..." /></div>
                       <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Visit Status</label><select value={visitStatus} onChange={(e) => setVisitStatus(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400/30">{VISIT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
@@ -2698,54 +2796,53 @@ const isExpired = () => {
                 )}
 
                 {/* ACTIVITY TAB */}
-                {activeTab === "activity" && (
-                  <>
-                    {flagTotalCount > 0 && (
-                      <div ref={flagHistoryRef} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm scroll-mt-4">
-                        <div className="flex items-center gap-2 mb-4 flex-wrap">
-                          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2"><Flag className="w-5 h-5 text-[#CC3333]" /> Flag History</h4>
-                          <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">{flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} | {flagStageCount} on this stage</span>
-                        </div>
-                        <div className="space-y-3">
-                          {flagHistory.length > 0 ? (flagHistory.map((flag) => (
-                            <div key={flag.id} className={cn("rounded-xl border p-3", flag.type === "positive" ? "bg-emerald-50/60 border-emerald-200" : "bg-[#CC3333]/10 border-[#CC3333]/30")}>
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full", flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-[#CC3333]/15 text-[#CC3333]")}>{flag.type === "positive" ? "Positive" : "Alert"}</span>
-                                  {isAdminFlag(flag) && (<span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Shield className="w-3 h-3" /> Admin Flag</span>)}
-                                </div>
-                                <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">{new Date(flag.createdAt).toLocaleString()}</span>
-                              </div>
-                              <p className="text-sm text-gray-800 mt-2">{flag.reason}</p>
-                              <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
-                                <span className="text-gray-500">by <span className="font-semibold text-gray-700">{flag.flaggedByUser?.name ?? "Unknown"}</span>{isAdminFlag(flag) && <span className="font-semibold text-amber-700"> (Admin)</span>}{stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}</span>
-                                {flag.clearedAt ? (<span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">Cleared by {flag.clearedByUser?.name ?? "Unknown"}{flag.clearedByUser?.role ? ` (${roleLabel(flag.clearedByUser.role)})` : ""}{flag.clearedReason ? ` - ${flag.clearedReason}` : ""}</span>) : (<span className="px-2 py-0.5 bg-[#CC3333]/15 text-[#CC3333] font-semibold rounded-full whitespace-nowrap">Open</span>)}
-                              </div>
-                              {isAdmin && !flag.clearedAt && (clearingFlagId === flag.id ? (<FlagClearForm clearReason={clearReason} setClearReason={setClearReason} isPending={clearFlag.isPending} onClear={handleClearFlag} onCancel={() => { setClearingFlagId(null); setClearReason(""); }} />) : (<button onClick={() => setClearingFlagId(flag.id)} className={cn("mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors", flag.type === "positive" ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50" : "text-[#CC3333] border-[#CC3333]/30 bg-white/70 hover:bg-[#CC3333]/10")}><FlagOff className="w-3.5 h-3.5" /> Clear Flag</button>))}
-                            </div>
-                          ))) : (<p className="text-sm text-gray-400 italic">No flags raised yet</p>)}
-                        </div>
-                      </div>
-                    )}
-                    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4"><MessageSquare className="w-5 h-5 text-indigo-400" /> Activity Log</h4>
-                      <div className="space-y-1 max-h-[28rem] overflow-y-auto pr-1">
-                        {logData?.logs?.length ? logData.logs.map((log) => {
-                          const meta = actionMeta(log.action)
-                          const Icon = meta.icon
-                          return (
-                            <div key={log.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#EBF7EC]/30 transition-colors">
-                              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${meta.color}1A` }}><Icon className="w-4 h-4" style={{ color: meta.color }} /></div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap"><span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span><span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}>{meta.label}</span><span className="text-[11px] text-[#9CA3AF] ml-auto shrink-0 whitespace-nowrap">{fullDateTime(log.createdAt)}</span></div>
-                                <p className="text-sm text-[#374151] mt-1 leading-relaxed">{log.message}</p>
-                              </div>
-                            </div>
-                          )
-                        }) : <p className="text-sm text-gray-400 italic px-2 py-4">No activity yet</p>}
-                      </div>
+                {activeTab === "flags" && (
+                  <div ref={flagHistoryRef} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm scroll-mt-4">
+                    <div className="flex items-center gap-2 mb-4 flex-wrap">
+                      <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2"><Flag className="w-5 h-5 text-[#CC3333]" /> Flag History</h4>
+                      <span className="ml-auto text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap">{flagTotalCount} flag{flagTotalCount !== 1 ? "s" : ""} | {flagStageCount} on this stage</span>
                     </div>
-                  </>
+                    <div className="space-y-3">
+                      {flagHistory.length > 0 ? (flagHistory.map((flag) => (
+                        <div key={flag.id} className={cn("rounded-xl border p-3", flag.type === "positive" ? "bg-emerald-50/60 border-emerald-200" : "bg-[#CC3333]/10 border-[#CC3333]/30")}>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full", flag.type === "positive" ? "bg-emerald-100 text-emerald-700" : "bg-[#CC3333]/15 text-[#CC3333]")}>{flag.type === "positive" ? "Positive" : "Alert"}</span>
+                              {isAdminFlag(flag) && (<span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"><Shield className="w-3 h-3" /> Admin Flag</span>)}
+                            </div>
+                            <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap">{new Date(flag.createdAt).toLocaleString()}</span>
+                          </div>
+                          <p className="text-sm text-gray-800 mt-2">{flag.reason}</p>
+                          <div className="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
+                            <span className="text-gray-500">by <span className="font-semibold text-gray-700">{flag.flaggedByUser?.name ?? "Unknown"}</span>{isAdminFlag(flag) && <span className="font-semibold text-amber-700"> (Admin)</span>}{stageLabels[flag.stage] ? ` | ${stageLabels[flag.stage]}` : ""}</span>
+                            {flag.clearedAt ? (<span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-semibold rounded-full whitespace-nowrap">Cleared by {flag.clearedByUser?.name ?? "Unknown"}{flag.clearedByUser?.role ? ` (${roleLabel(flag.clearedByUser.role)})` : ""}{flag.clearedReason ? ` - ${flag.clearedReason}` : ""}</span>) : (<span className="px-2 py-0.5 bg-[#CC3333]/15 text-[#CC3333] font-semibold rounded-full whitespace-nowrap">Open</span>)}
+                          </div>
+                          {isAdmin && !flag.clearedAt && (clearingFlagId === flag.id ? (<FlagClearForm clearReason={clearReason} setClearReason={setClearReason} isPending={clearFlag.isPending} onClear={handleClearFlag} onCancel={() => { setClearingFlagId(null); setClearReason(""); }} />) : (<button onClick={() => setClearingFlagId(flag.id)} className={cn("mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors", flag.type === "positive" ? "text-emerald-700 border-emerald-200 bg-white/70 hover:bg-emerald-50" : "text-[#CC3333] border-[#CC3333]/30 bg-white/70 hover:bg-[#CC3333]/10")}><FlagOff className="w-3.5 h-3.5" /> Clear Flag</button>))}
+                        </div>
+                      ))) : (<p className="text-sm text-gray-400 italic">No flags raised yet</p>)}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "activity" && (
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                    <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 mb-4"><MessageSquare className="w-5 h-5 text-indigo-400" /> Activity Log</h4>
+                    <div className="space-y-1 max-h-[28rem] overflow-y-auto pr-1">
+                      {logData?.logs?.length ? logData.logs.map((log) => {
+                        const meta = actionMeta(log.action)
+                        const Icon = meta.icon
+                        return (
+                          <div key={log.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#EBF7EC]/30 transition-colors">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${meta.color}1A` }}><Icon className="w-4 h-4" style={{ color: meta.color }} /></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap"><span className="font-semibold text-sm text-[#1A1B1E]">{log.author}</span><span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: `${meta.color}1A`, color: meta.color }}>{meta.label}</span><span className="text-[11px] text-[#9CA3AF] ml-auto shrink-0 whitespace-nowrap">{fullDateTime(log.createdAt)}</span></div>
+                              <p className="text-sm text-[#374151] mt-1 leading-relaxed">{log.message}</p>
+                            </div>
+                          </div>
+                        )
+                      }) : <p className="text-sm text-gray-400 italic px-2 py-4">No activity yet</p>}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -2787,11 +2884,11 @@ const isExpired = () => {
                   <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Type</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="flagType" value="positive" checked={newFlagType === "positive"} onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-emerald-600" />
+                      <input type="radio" name="flagType-mobile" value="positive" checked={newFlagType === "positive"} onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-emerald-600" />
                       <span className="text-sm font-medium">Positive Note</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="flagType" value="negative" checked={newFlagType === "negative"} onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-[#CC3333]" />
+                      <input type="radio" name="flagType-mobile" value="negative" checked={newFlagType === "negative"} onChange={(e) => setNewFlagType(e.target.value as "positive" | "negative")} className="w-4 h-4 accent-[#CC3333]" />
                       <span className="text-sm font-medium">Alert/Issue</span>
                     </label>
                   </div>
@@ -2817,6 +2914,7 @@ const isExpired = () => {
       </div>
     </div>
       </div>
+      )}
     </>
   )
 }
