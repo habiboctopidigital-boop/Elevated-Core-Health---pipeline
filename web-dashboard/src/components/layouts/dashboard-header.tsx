@@ -98,7 +98,7 @@ export function DashboardHeader() {
   }
 
   return (
-    <header className="hidden lg:block   bg-white border-b border-[#E5E7EB] shadow-sm w-full overflow-x-hidden overflow-y-auto" >
+    <header className="hidden lg:block bg-white border-b border-[#E5E7EB] shadow-sm w-full">
       <div className="flex items-center justify-between px-6 py-3.5 h-16">
         {/* Left: Search */}
         <div className="flex-1 max-w-sm">
@@ -137,7 +137,7 @@ export function DashboardHeader() {
           </button>
 
           {/* Notifications */}
-          <div ref={notificationsRef} className="relative">
+          {/* <div ref={notificationsRef} className="relative">
             <button
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               className="relative flex items-center justify-center w-9 h-9 rounded-xl border border-transparent text-[#6B7280] hover:border-[#E5E7EB] hover:bg-[#F9FAFB] hover:text-[#036638] transition-all active:scale-95"
@@ -151,11 +151,11 @@ export function DashboardHeader() {
               )}
             </button>
 
-            {/* Notifications Dropdown */}
+           
             {notificationsOpen && (
               <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E5E7EB] rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200" style={{ zIndex: 60 }}>
                 <div className="relative bg-gradient-to-r from-[#036638] to-[#025030] px-4 py-3.5 overflow-hidden">
-                  {/* Decorative bubbles */}
+              
                   <span aria-hidden className="absolute -right-4 -top-6 w-20 h-20 rounded-full bg-white/10" />
                   <span aria-hidden className="absolute right-10 -bottom-8 w-14 h-14 rounded-full bg-white/5" />
                   <div className="relative flex items-center justify-between gap-3">
@@ -234,7 +234,7 @@ export function DashboardHeader() {
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Profile Dropdown */}
           <div ref={profileRef} className="relative ml-1 sm:ml-2 pl-2 sm:pl-3 border-l border-[#E5E7EB]">

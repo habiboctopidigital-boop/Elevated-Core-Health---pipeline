@@ -51,6 +51,9 @@ interface DateRangePickerProps {
   pending: boolean
   onFrom: (value: string) => void
   onTo: (value: string) => void
+  /** Fills its container instead of the compact pill sizing used when this
+   *  sits alongside other filter chips in the board's filter bar. */
+  fullWidth?: boolean
 }
 
 /**
@@ -64,7 +67,7 @@ interface DateRangePickerProps {
  * date works reliably on touch devices where the hover-driven calendar and
  * custom month/year dropdowns are flaky.
  */
-export function DateRangePicker({ label, from, to, pending, onFrom, onTo }: DateRangePickerProps) {
+export function DateRangePicker({ label, from, to, pending, onFrom, onTo, fullWidth }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState<Date>(() => (from ? startOfMonth(parseISO(from)) : defaultViewDate()))
   const [hoverDate, setHoverDate] = useState<Date | null>(null)
@@ -179,7 +182,8 @@ export function DateRangePicker({ label, from, to, pending, onFrom, onTo }: Date
         <button
           type="button"
           className={cn(
-            "flex items-center gap-1.5 h-9 px-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer max-w-[150px] min-w-[98px]",
+            "flex items-center gap-1.5 h-9 px-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer",
+            fullWidth ? "w-full" : "max-w-[150px] min-w-[98px]",
             pending
               ? "border-amber-300 bg-amber-50/60 text-amber-700"
               : from || to

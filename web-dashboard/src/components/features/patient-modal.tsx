@@ -664,11 +664,33 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     !!patient &&
     (isAdmin || patient.assignedTo === user?.id || patient.privateLockedByUser?.id === user?.id)
 
-  const stale =
-    patient &&
-    !(stageByKey.get(patient.stage)?.isFinal ?? false) &&
-    (Date.now() - new Date(patient.updatedAt).getTime()) / (1000 * 60 * 60) >
-      STALE_HOURS
+// 1. Check if patient exists
+// 2. Calculate the difference in hours between now and the appointment
+// 3. Compare that difference against stale_hours
+
+const isExpired = () => {
+  // 1. Ensure patient exists and the specific property name matches your data source
+  if (!patient || !patient.appointmentDatetime) {
+    return false;
+  }
+
+  const appointmentTime = new Date(patient.appointmentDatetime).getTime();
+  
+  // 2. Check for invalid date
+  if (isNaN(appointmentTime)) {
+    return false; 
+  }
+
+  const currentTime = Date.now();
+  
+  // Calculate difference in hours
+  const hoursDifference = (currentTime - appointmentTime) / (1000 * 60 * 60);
+  
+  // 3. Ensure 'stale_hours' is defined, or use a literal like 1
+  const stale_hours = 1; 
+  
+  return hoursDifference > stale_hours;
+};   
 
   const currentStageIdx = patient ? stageOrder.indexOf(patient.stage) : -1
 
@@ -796,10 +818,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                         Flagged
                       </span>
                     )}
-                    {stale && (
+                    {isExpired() && (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
                         <AlertTriangle className="w-3.5 h-3.5" />
-                        Stale
+                        Appointment Date Expired
                       </span>
                     )}
                     {patient.status !== "active" && (
@@ -2177,12 +2199,12 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                     Flagged
                   </span>
                 )}
-                {stale && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
-                    <AlertTriangle className="w-3 h-3" />
-                    Stale
-                  </span>
-                )}
+          {isExpired() && (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Appointment Date Expired
+                      </span>
+                    )}
                 {patient.status !== "active" && (
                   <span
                     className={cn(
@@ -2656,12 +2678,10 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
                   <>
                     <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm">
                       <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2 mb-3"><MessageSquare className="w-4 h-4 text-indigo-500" /> Notes</h4>
-                      <div className="flex items-start gap-2 mb-3">
+                      <div className=" items-start gap-2 mb-3">
                         <Textarea placeholder="Add an operational note..." value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} className="text-sm min-h-[70px] rounded-xl border-gray-200 focus:ring-emerald-400/30 flex-1" />
-                        <Button size="sm" onClick={handleAddNote} disabled={addNote.isPending || !newNoteText.trim()} className="mt-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow shrink-0">
-                          {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                          Add
-                        </Button>
+                        
+                       
                       </div>
                       <div className="space-y-2.5">
                         {(patient.patientNotes?.length ?? 0) > 0 ? (

@@ -263,7 +263,7 @@ quickJumpStage === stage && "animate-jump-flash",
                     : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",
                 )}
               >
-                <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50 relative">
+                <div className="px-3.5 py-1 border-b border-[#E5E7EB]/50 relative">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-bold text-[#036638] truncate">
@@ -290,7 +290,7 @@ quickJumpStage === stage && "animate-jump-flash",
                         className={cn(
                           "p-1.5 rounded-lg transition-all cursor-pointer",
                           openStageFilterPopup === stage
-                            ? "bg-[#036638]/15 text-[#036638]"
+                            ? "bg-[#036638]/80 text-[#036638]"
                             : "text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280]"
                         )}
                         title="Filter and sort"

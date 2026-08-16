@@ -15,6 +15,7 @@ import {
   X,
   Globe,
   User,
+  AlertTriangle,
 } from "lucide-react"
 import { cn, getInitials } from "@/lib/utils"
 import { STALE_HOURS } from "@/constants"
@@ -280,8 +281,16 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
 
       <div className="my-3 border-t border-[#EDEFF2]" />
 
-      {/* - Checklist: required count + progress + collapsible item list - */}
-      {totalCount > 0 || stageDefs.length > 0 ? (
+      {/* - Checklist: required count + progress + collapsible item list -
+          or, if this stage has no checklist items configured at all, a
+          visible warning rather than silently showing nothing (a stage with
+          zero items still lets cards move through it unchecked). */}
+      {stageDefs.length === 0 ? (
+        <div className="flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-2 py-1">
+          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+          <p className="text-sm font-medium text-amber-700">No checklist configured for this stage</p>
+        </div>
+      ) : (
         <div className="rounded-2xl bg-[#F6F8F7] px-2.5 py-2">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-sm font-bold text-[#12141A]">Required</span>
@@ -301,59 +310,53 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
             />
           </div>
 
-          {stageDefs.length > 0 ? (
-            <>
-              <div className="space-y-1">
-                {visibleDefs.map((item) => {
-                  const checked = stageState[item.id] === true
-                  return (
-                    <label
-                      key={item.id}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-2 cursor-default"
-                    >
-                      <span
-                        className={cn(
-                          "w-4 h-4 rounded border shrink-0 flex items-center justify-center",
-                          checked ? "bg-[#036638] border-[#036638]" : "border-[#C7CDC9] bg-white",
-                        )}
-                      >
-                        {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                      </span>
-                      <span className="text-sm text-[#1A1B1E] truncate">{item.label}</span>
-                    </label>
-                  )
-                })}
-              </div>
-              {hiddenCount > 0 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded(true)
-                  }}
-                  className="mt-2 flex items-center gap-1 text-sm font-semibold text-[#036638] hover:underline"
+          <div className="space-y-1">
+            {visibleDefs.map((item) => {
+              const checked = stageState[item.id] === true
+              return (
+                <label
+                  key={item.id}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 cursor-default"
                 >
-                  + {hiddenCount} more requirement{hiddenCount > 1 ? "s" : ""}
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              )}
-              {expanded && stageDefs.length > VISIBLE_ITEMS && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setExpanded(false)
-                  }}
-                  className="mt-2 text-sm font-semibold text-[#6B7280] hover:underline"
-                >
-                  Show less
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-[#9CA3AF]">No checklist required at this stage</p>
+                  <span
+                    className={cn(
+                      "w-4 h-4 rounded border shrink-0 flex items-center justify-center",
+                      checked ? "bg-[#036638] border-[#036638]" : "border-[#C7CDC9] bg-white",
+                    )}
+                  >
+                    {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                  </span>
+                  <span className="text-sm text-[#1A1B1E] truncate">{item.label}</span>
+                </label>
+              )
+            })}
+          </div>
+          {hiddenCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpanded(true)
+              }}
+              className="mt-2 flex items-center gap-1 text-sm font-semibold text-[#036638] hover:underline"
+            >
+              + {hiddenCount} more requirement{hiddenCount > 1 ? "s" : ""}
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {expanded && stageDefs.length > VISIBLE_ITEMS && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setExpanded(false)
+              }}
+              className="mt-2 text-sm font-semibold text-[#6B7280] hover:underline"
+            >
+              Show less
+            </button>
           )}
         </div>
-      ) : null}
+      )}
 
       <div className="my-3 border-t border-[#EDEFF2]" />
 

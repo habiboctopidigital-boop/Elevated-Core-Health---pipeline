@@ -171,7 +171,7 @@ export default function AdminBoardPage() {
           List view: one compact vertical list of all stages. */}
       {view === "grid" ? (
       <div className="flex-1 min-h-0 overflow-x-hidden sm:overflow-x-auto sm:snap-x sm:snap-mandatory scrollbar-brand">
-        <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-6 w-full sm:min-w-max">
+        <div className="flex flex-col sm:flex-row h-auto lg:h-full gap-3 sm:gap-4 p-0 sm:p-6 sm:pl-0 w-full sm:min-w-max">
           {stageOrder.map((stage) => {
             const stagePatients = groupedPatients[stage] || []
             // Per-stage filter state — active means the popup's Apply was

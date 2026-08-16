@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DateFilterPicker, EMPTY_DATE_FILTER, type DateFilterValue } from "@/components/ui/date-time-picker"
+import { DateRangePicker } from "@/components/features/date-range-picker"
 import type { Patient } from "@/types"
 
 interface StageFilterPopupProps {
@@ -25,7 +25,11 @@ export function StageFilterPopup({
 }: StageFilterPopupProps) {
   const [sortOrder, setSortOrder] = useState<SortOrder>(null)
   const [searchName, setSearchName] = useState("")
-  const [dateFilter, setDateFilter] = useState<DateFilterValue>(EMPTY_DATE_FILTER)
+  // "YYYY-MM-DD" pair — a single day is just a range where from === to, same
+  // one-calendar pattern the board filter bar already uses (DateRangePicker),
+  // rather than a separate single/range mode toggle.
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const popupRef = useRef<HTMLDivElement>(null)
 
@@ -77,17 +81,13 @@ export function StageFilterPopup({
       )
     }
 
-    // Filter by date — a single day (exact match) or an inclusive range.
-    if (dateFilter.mode === "single" && dateFilter.date) {
-      const targetDate = new Date(dateFilter.date)
-      result = result.filter(p => {
-        const patientDate = new Date(p.appointmentDatetime || p.createdAt)
-        return patientDate.toDateString() === targetDate.toDateString()
-      })
-    } else if (dateFilter.mode === "range" && dateFilter.from && dateFilter.to) {
-      const from = new Date(dateFilter.from)
+    // Filter by date — from/to are always both set or both empty (a single
+    // day is just a range where from === to), so one inclusive-range check
+    // covers both cases.
+    if (dateFrom && dateTo) {
+      const from = new Date(dateFrom)
       from.setHours(0, 0, 0, 0)
-      const to = new Date(dateFilter.to)
+      const to = new Date(dateTo)
       to.setHours(23, 59, 59, 999)
       result = result.filter(p => {
         const patientDate = new Date(p.appointmentDatetime || p.createdAt)
@@ -123,13 +123,14 @@ export function StageFilterPopup({
 
     setSortOrder(null)
     setSearchName("")
-    setDateFilter(EMPTY_DATE_FILTER)
+    setDateFrom("")
+    setDateTo("")
     setIsLoading(false)
     onFilterChange(patients)
     onOpenChange(false)
   }
 
-  const hasActiveFilters = sortOrder || searchName || dateFilter.date || dateFilter.from
+  const hasActiveFilters = sortOrder || searchName || dateFrom || dateTo
 
   return (
     <>
@@ -196,16 +197,20 @@ export function StageFilterPopup({
               />
             </div>
 
-            {/* Filter by Specific Date */}
-            <div>
+            {/* Filter by Date — one calendar, click a single day or click two
+                for a range (same picker the board filter bar uses). */}
+            <div className="w-full flex flex-col ">
               <label className="text-xs font-semibold text-[#374151] uppercase tracking-wider block mb-2">
                 Filter by Date
               </label>
-              <DateFilterPicker
-                value={dateFilter}
-                onChange={setDateFilter}
-                placeholder="Filter by date"
-                disabled={isLoading}
+              <DateRangePicker
+                label="Filter by date"
+                pending={false}
+                fullWidth
+                from={dateFrom}
+                to={dateTo}
+                onFrom={setDateFrom}
+                onTo={setDateTo}
               />
             </div>
           </div>
