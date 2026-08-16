@@ -126,8 +126,11 @@ model User {
 
 model Patient {
   id                   String            @id @default(uuid())
-  name                 String
-  firstName            String?           @map("first_name")
+  // firstName/lastName are the source of truth — the legacy single `name`
+  // column was dropped (migration backfilled first/last from it). The API
+  // still returns a computed `name` (full name) so existing display code
+  // keeps working; it is never stored.
+  firstName            String            @map("first_name")
   lastName             String?           @map("last_name")
   location             String?
   email                String?

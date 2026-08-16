@@ -7,7 +7,10 @@ export const AdminService = {
     const { data } = await axiosInstance.get<ApiResponse<User[]>>(
       API_ENDPOINTS.ADMIN.USERS,
     )
-    return data.data
+    return (data.data ?? []).map((u: any) => ({
+      ...u,
+      assignedPatientCount: u._count?.assignedPatients ?? 0,
+    }))
   },
 
   async createUser(input: {

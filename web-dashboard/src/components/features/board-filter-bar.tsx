@@ -235,7 +235,7 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
 
         {/* - VA filter — admin board only, instant - */}
         {vas && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 w-[110px]">
             {/* Radix Select disallows empty-string item values, so "all" is a
                 sentinel mapped to assignedTo="" in onChange. */}
             <Select
@@ -243,15 +243,17 @@ export function BoardFilterBar({ filters, onChange, vas, bare = false }: BoardFi
               onValueChange={(v) =>
                 onChange({ ...filters, assignedTo: v === "all" ? "" : v })
               }
+              
+              
             >
               <SelectTrigger
-                className="w-[96px] h-9 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25"
+                className="w-[110px] h-9 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-xs font-semibold text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25"
                 title="Filter by assigned VA"
               >
                 <UserRound className="w-3.5 h-3.5 text-[#036638] shrink-0" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-lg">
+              <SelectContent className="rounded-xl shadow-lg w-full">
                 <SelectItem value="all" className="text-xs cursor-pointer">
                   All VAs
                 </SelectItem>

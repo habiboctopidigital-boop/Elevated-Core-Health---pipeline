@@ -52,10 +52,15 @@ export const ClearFlagSchema = z.object({
 
 export const IntakeSchema = z.object({
 	body: z.object({
+		// Webhook sends a single `name` (parsed from booking emails) — split
+		// into first/last server-side. Explicit firstName/lastName overrides
+		// win when provided.
 		name: z.string().trim().min(1, "Patient name is required").refine(
 			(name) => name.trim().length > 0,
 			"Patient name cannot be empty"
 		),
+		firstName: z.string().trim().max(100).optional(),
+		lastName: z.string().trim().max(100).optional(),
 		email: z.string().email().optional().nullable(),
 		phone: z.string().optional().nullable(),
 		location: z.string().trim().max(200).optional().nullable(),
@@ -143,12 +148,19 @@ export type ClearFlagInput = z.infer<typeof ClearFlagSchema>["body"];
 // the webhook intake (minus webhook-only fields) but the patient is created
 // by a logged-in user, so the audit log records their identity.
 export const CreatePatientSchema = z.object({
-	body: z.object({
-		name: z.string().trim().min(1, "Patient name is required").refine(
-			(name) => name.trim().length > 0,
-			"Patient name cannot be empty"
-		),
-		email: z.string().email().optional().nullable(),
+	body: z
+		.object({
+			// firstName/lastName are the source of truth — the Add Patient form
+			// sends them separately. `name` is still accepted as a legacy fallback
+			// and is split server-side when the parts aren't provided.
+			firstName: z.string().trim().min(1, "First name is required").max(100).optional(),
+			lastName: z.string().trim().max(100).optional(),
+			name: z
+				.string()
+				.trim()
+				.refine((v) => v.trim().length > 0, "Patient name cannot be empty")
+				.optional(),
+			email: z.string().email().optional().nullable(),
 		phone: z.string().optional().nullable(),
 		dateOfBirth: dateOfBirthValue,
 		location: z.string().trim().max(200).optional().nullable(),
@@ -159,7 +171,13 @@ export const CreatePatientSchema = z.object({
 		paymentMethod: z.string().max(100).optional().nullable(),
 		insuranceProvider: z.string().max(200).optional().nullable(),
 		visitStatus: z.enum(["not_visited", "arrived", "no_show", "rescheduled"]).optional(),
-	}),
+		})
+		.superRefine((val, ctx) => {
+			// At least one of firstName or legacy `name` must be present.
+			if (!val.firstName?.trim() && !val.name?.trim()) {
+				ctx.addIssue({ code: "custom", path: ["firstName"], message: "First name is required" });
+			}
+		}),
 });
 
 export type IntakeInput = z.infer<typeof IntakeSchema>["body"];

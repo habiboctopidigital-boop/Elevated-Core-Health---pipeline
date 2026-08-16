@@ -28,6 +28,8 @@ export interface User {
   shift?: string | null
   avatar?: string | null
   createdAt?: string
+  /** Assigned-patient count returned by the admin users list (delete guard). */
+  assignedPatientCount?: number
 }
 
 export type ChecklistStatus = "required" | "optional"

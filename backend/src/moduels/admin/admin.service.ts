@@ -54,7 +54,22 @@ export const adminService = {
 	// User management
 	async listUsers() {
 		const users = await prisma.user.findMany({
-			select: { id: true, name: true, email: true, role: true, shift: true, status: true, lastLoginAt: true, createdAt: true },
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				role: true,
+				shift: true,
+				status: true,
+				lastLoginAt: true,
+				createdAt: true,
+				// Real avatar URL (Cloudinary) uploaded via the profile page, so the
+				// user-management UI shows the person's photo instead of a letter.
+				avatar: true,
+				// Used by the user-management UI to block deleting a VA who still
+				// has assigned patients (deleteUser enforces this server-side too).
+				_count: { select: { assignedPatients: true } },
+			},
 			orderBy: { createdAt: "asc" },
 		});
 		return ServiceResponse.success("Users retrieved.", users);
@@ -228,6 +243,19 @@ export const adminService = {
 				"You do not have permission to delete a user with this role.",
 				null,
 				StatusCodes.FORBIDDEN,
+			);
+		}
+
+		// Deleting a user who still has patients assigned would orphan those
+		// patients (they'd silently fall out of every VA's scope). The admin must
+		// reassign them to another VA first. Counted at delete-time so a stale
+		// frontend list can never bypass this.
+		const assignedCount = await prisma.patient.count({ where: { assignedTo: id } });
+		if (assignedCount > 0) {
+			return ServiceResponse.failure(
+				`Cannot delete ${existing.name}: ${assignedCount} patient${assignedCount === 1 ? " is" : "s are"} still assigned to ${existing.role === "va" ? "this VA" : "this account"}. Reassign ${assignedCount === 1 ? "the patient" : "those patients"} to another VA first.`,
+				null,
+				StatusCodes.CONFLICT,
 			);
 		}
 

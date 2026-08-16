@@ -61,7 +61,10 @@ export const activityLogService = {
 					{ message: { contains: q, mode: "insensitive" } },
 					{ author: { contains: q, mode: "insensitive" } },
 					{ actorName: { contains: q, mode: "insensitive" } },
-					{ patient: { name: { contains: q, mode: "insensitive" } } },
+					// Patient names are stored as firstName/lastName (no single `name`
+					// column) — match either part.
+					{ patient: { firstName: { contains: q, mode: "insensitive" } } },
+					{ patient: { lastName: { contains: q, mode: "insensitive" } } },
 				],
 			});
 		}
@@ -86,15 +89,27 @@ export const activityLogService = {
 				skip: (page - 1) * limit,
 				take: limit,
 				include: {
-					patient: { select: { id: true, name: true } },
+					patient: { select: { id: true, firstName: true, lastName: true } },
 					actor: { select: { id: true, name: true, role: true } },
 				},
 			}),
 			prisma.activityLog.count({ where }),
 		]);
 
+		// The patient relation no longer has a stored `name` — derive the full
+		// name so the log UI's existing `patient.name` display keeps working.
+		const logsWithName = logs.map((log) => ({
+			...log,
+			patient: log.patient
+				? {
+						...log.patient,
+						name: [log.patient.firstName, log.patient.lastName].filter(Boolean).join(" ").trim(),
+				  }
+				: null,
+		}));
+
 		return ServiceResponse.success("Activity logs retrieved.", {
-			logs,
+			logs: logsWithName,
 			total,
 			page,
 			limit,

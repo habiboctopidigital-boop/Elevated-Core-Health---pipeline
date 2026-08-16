@@ -27,6 +27,35 @@ import type {
 } from "./patients.validation";
 
 /**
+ * The DB no longer stores a single patient `name` — firstName/lastName are the
+ * source of truth (legacy column dropped; migration backfilled first/last from
+ * it). These helpers derive the full name for messages/emails and re-add it to
+ * API responses so existing frontend code that reads `patient.name` keeps
+ * working unchanged.
+ */
+function fullName(p: { firstName?: string | null; lastName?: string | null }): string {
+	return [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
+}
+
+/** Split a single full-name string into first name + rest (webhook/legacy input). */
+function splitName(full: string | null | undefined): { firstName: string; lastName: string | null } {
+	const trimmed = (full ?? "").trim();
+	if (!trimmed) return { firstName: "", lastName: null };
+	const space = trimmed.indexOf(" ");
+	if (space === -1) return { firstName: trimmed, lastName: null };
+	return { firstName: trimmed.slice(0, space), lastName: trimmed.slice(space + 1).trim() || null };
+}
+
+/** Add the computed full `name` back onto a patient row for API responses. */
+function toPatientDto<T extends { firstName?: string | null; lastName?: string | null }>(p: T): T & { name: string } {
+	return { ...p, name: fullName(p) };
+}
+
+function toPatientListDto<T extends { firstName?: string | null; lastName?: string | null }>(list: T[]): Array<T & { name: string }> {
+	return list.map((p) => ({ ...p, name: fullName(p) }));
+}
+
+/**
  * Server-side simulated verification of benefits. In a later phase this will
  * call a real payer/clearinghouse API; for now it synthesizes realistic values
  * from the patient's stored payment data so the eligibility flow can be tested.
@@ -218,7 +247,7 @@ export const patientsService = {
 			orderBy: { updatedAt: "desc" },
 			include: patientInclude,
 		});
-		return ServiceResponse.success("Patients retrieved.", patients);
+		return ServiceResponse.success("Patients retrieved.", toPatientListDto(patients));
 	},
 
 	async getById(id: string, user: AuthenticatedUser) {
@@ -234,7 +263,7 @@ export const patientsService = {
 		if (!patient || !isPatientInScope(patient, user)) {
 			return ServiceResponse.failure("Patient not found.", null, StatusCodes.NOT_FOUND);
 		}
-		return ServiceResponse.success("Patient retrieved.", patient);
+		return ServiceResponse.success("Patient retrieved.", toPatientDto(patient));
 	},
 
 	async moveStage(id: string, input: StageMoveInput, user: AuthenticatedUser) {
@@ -309,7 +338,7 @@ export const patientsService = {
 			type: "auto",
 		});
 
-		return ServiceResponse.success("Stage updated.", updated);
+		return ServiceResponse.success("Stage updated.", toPatientDto(updated));
 	},
 
 	async assign(id: string, input: AssignInput, user: AuthenticatedUser) {
@@ -347,7 +376,7 @@ export const patientsService = {
 			message: assignedName ? `Assigned patient to ${assignedName}` : "Unassigned patient",
 		});
 
-		return ServiceResponse.success("Assignment updated.", updated);
+		return ServiceResponse.success("Assignment updated.", toPatientDto(updated));
 	},
 
 	async toggleChecklist(id: string, input: ChecklistToggleInput, user: AuthenticatedUser) {
@@ -394,7 +423,7 @@ export const patientsService = {
 			type: "auto",
 		});
 
-		return ServiceResponse.success("Checklist updated.", updated);
+		return ServiceResponse.success("Checklist updated.", toPatientDto(updated));
 	},
 
 	/**
@@ -444,7 +473,7 @@ export const patientsService = {
 			message: `Note added: "${input.content.slice(0, 60)}${input.content.length > 60 ? "..." : ""}"`,
 		});
 
-		return ServiceResponse.success("Note added.", updated);
+		return ServiceResponse.success("Note added.", toPatientDto(updated));
 	},
 
 	/** Deletes a single note from the patient's note history. */
@@ -492,7 +521,7 @@ export const patientsService = {
 			message: `Note deleted: "${note.content.slice(0, 60)}${note.content.length > 60 ? "..." : ""}"`,
 		});
 
-		return ServiceResponse.success("Note deleted.", updated);
+		return ServiceResponse.success("Note deleted.", toPatientDto(updated));
 	},
 
 	async flag(id: string, input: FlagInput, user: AuthenticatedUser) {
@@ -541,13 +570,13 @@ export const patientsService = {
 				select: { email: true },
 			});
 			if (admin) {
-				await emailService.notifyFlagged(patient.name, user.name, input.reason, admin.email);
+				await emailService.notifyFlagged(fullName(patient), user.name, input.reason, admin.email);
 			}
 		} catch (err) {
 			logger.error({ err, patientId: id }, "Failed to send flag notification email");
 		}
 
-		return ServiceResponse.success("Patient flagged.", updated);
+		return ServiceResponse.success("Patient flagged.", toPatientDto(updated));
 	},
 
 	async clearFlag(id: string, input: ClearFlagInput, user: AuthenticatedUser) {
@@ -648,13 +677,13 @@ export const patientsService = {
 					})
 				: null;
 			if (clearedFlag?.flaggedByUser?.email) {
-				await emailService.notifyFlagCleared(patient.name, user.name, input.clearReason, clearedFlag.flaggedByUser.email);
+				await emailService.notifyFlagCleared(fullName(patient), user.name, input.clearReason, clearedFlag.flaggedByUser.email);
 			}
 		} catch (err) {
 			logger.error({ err, patientId: id }, "Failed to send flag-cleared notification email");
 		}
 
-		return ServiceResponse.success("Flag cleared.", updated);
+		return ServiceResponse.success("Flag cleared.", toPatientDto(updated));
 	},
 
 	async deletePatient(id: string) {
@@ -697,11 +726,8 @@ export const patientsService = {
 			prev.lastName = patient.lastName;
 			next.lastName = input.lastName;
 		}
-		// Keep the display `name` in sync when name parts change.
-		if (input.firstName !== undefined || input.lastName !== undefined) {
-			const derived = `${firstName ?? patient.firstName ?? ""} ${lastName ?? patient.lastName ?? ""}`.trim();
-			if (derived) data.name = derived;
-		}
+		// NOTE: no `name` sync needed — firstName/lastName are the source of
+		// truth in the DB; the API derives the full name at serialization time.
 		if (input.location !== undefined) {
 			data.location = input.location;
 			prev.location = patient.location;
@@ -764,7 +790,7 @@ export const patientsService = {
 			message: "Updated patient details",
 		});
 
-		return ServiceResponse.success("Patient updated.", updated);
+		return ServiceResponse.success("Patient updated.", toPatientDto(updated));
 	},
 
 	async lockPatient(id: string, user: AuthenticatedUser) {
@@ -803,7 +829,7 @@ export const patientsService = {
 			message: "Locked patient - only the assigned VA or an admin can edit",
 		});
 
-		return ServiceResponse.success("Patient locked.", updated);
+		return ServiceResponse.success("Patient locked.", toPatientDto(updated));
 	},
 
 	async unlockPatient(id: string, user: AuthenticatedUser) {
@@ -844,7 +870,7 @@ export const patientsService = {
 			message: "Unlocked patient - open for all VAs again",
 		});
 
-		return ServiceResponse.success("Patient unlocked.", updated);
+		return ServiceResponse.success("Patient unlocked.", toPatientDto(updated));
 	},
 
 	async updateStatus(id: string, input: UpdateStatusInput, user: AuthenticatedUser) {
@@ -882,7 +908,7 @@ export const patientsService = {
 			message: `Status changed from ${patient.status} to ${input.status}${input.reason ? ` - ${input.reason}` : ""}`,
 		});
 
-		return ServiceResponse.success("Status updated.", updated);
+		return ServiceResponse.success("Status updated.", toPatientDto(updated));
 	},
 
 	async claim(id: string, input: ClaimInput, user: AuthenticatedUser) {
@@ -915,13 +941,13 @@ export const patientsService = {
 			const vas = await prisma.user.findMany({ where: { role: "va" }, select: { id: true, name: true, email: true } });
 			const otherVa = vas.find((v) => v.id !== input.userId);
 			if (otherVa) {
-				await emailService.notifyClaimed(patient.name, user.name, otherVa.email);
+				await emailService.notifyClaimed(fullName(patient), user.name, otherVa.email);
 			}
 		} catch (err) {
 			logger.error({ err, patientId: id }, "Failed to send claim notification email");
 		}
 
-		return ServiceResponse.success("Patient claimed.", updated);
+		return ServiceResponse.success("Patient claimed.", toPatientDto(updated));
 	},
 
 	async listChecklistItems() {
@@ -1024,7 +1050,7 @@ export const patientsService = {
 
 		return ServiceResponse.success(
 			status === "eligible" ? "Patient is eligible." : "Patient is not eligible.",
-			updated,
+			toPatientDto(updated),
 		);
 	},
 
@@ -1037,7 +1063,11 @@ export const patientsService = {
 
 		const patient = await prisma.patient.create({
 			data: {
-				name: input.name,
+				// firstName/lastName are the source of truth. The webhook sends a
+				// single `name` (parsed from booking emails) — split it, or use
+				// explicit overrides when provided.
+				firstName: input.firstName?.trim() || splitName(input.name).firstName,
+				lastName: input.lastName?.trim() || splitName(input.name).lastName,
 				email: input.email ?? null,
 				phone: input.phone ?? null,
 				location: input.location ?? null,
@@ -1083,7 +1113,7 @@ export const patientsService = {
 							minute: "2-digit",
 						})
 					: undefined;
-				await emailService.notifyNewPatient(patient.name, patient.id, vaEmails, {
+				await emailService.notifyNewPatient(fullName(patient), patient.id, vaEmails, {
 					appointment: appointmentStr,
 					platform: platformLabel,
 				});
@@ -1092,7 +1122,7 @@ export const patientsService = {
 			logger.error({ err, patientId: patient.id }, "Failed to send new patient notification emails");
 		}
 
-		return ServiceResponse.success("Patient created from webhook intake.", patient, StatusCodes.CREATED);
+		return ServiceResponse.success("Patient created from webhook intake.", toPatientDto(patient), StatusCodes.CREATED);
 	},
 
 	/**
@@ -1109,7 +1139,11 @@ export const patientsService = {
 
 		const patient = await prisma.patient.create({
 			data: {
-				name: input.name,
+				// firstName/lastName are the source of truth — the Add Patient form
+				// sends them separately. A `name` fallback is still accepted and
+				// split for any client that sends the old merged field.
+				firstName: input.firstName?.trim() || splitName(input.name).firstName,
+				lastName: input.lastName?.trim() || splitName(input.name).lastName,
 				email: input.email ?? null,
 				phone: input.phone ?? null,
 				dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
@@ -1138,7 +1172,7 @@ export const patientsService = {
 			entityType: "patient",
 			entityId: patient.id,
 			newValue: { source: "manual", assignedTo, assignmentMethod },
-			message: `Added patient "${patient.name}"${assignmentNote}`,
+			message: `Added patient "${fullName(patient)}"${assignmentNote}`,
 		});
 
 		// Keep parity with webhook intake: notify the VAs a new patient landed.
@@ -1156,7 +1190,7 @@ export const patientsService = {
 							minute: "2-digit",
 						})
 					: undefined;
-				await emailService.notifyNewPatient(patient.name, patient.id, vaEmails, {
+				await emailService.notifyNewPatient(fullName(patient), patient.id, vaEmails, {
 					appointment: appointmentStr,
 					platform: input.bookingPlatform ?? "manual",
 				});
@@ -1165,7 +1199,7 @@ export const patientsService = {
 			logger.error({ err, patientId: patient.id }, "Failed to send new patient notification emails");
 		}
 
-		return ServiceResponse.success("Patient created.", patient, StatusCodes.CREATED);
+		return ServiceResponse.success("Patient created.", toPatientDto(patient), StatusCodes.CREATED);
 	},
 
 	async updateAppointment(id: string, input: UpdateAppointmentInput, user: AuthenticatedUser) {
@@ -1240,13 +1274,13 @@ export const patientsService = {
 				select: { email: true },
 			});
 			if (admin?.email && patient.email) {
-				await emailService.notifyAppointmentChanged(patient.name, patient.email, newDateTime, user.name, admin.email);
+				await emailService.notifyAppointmentChanged(fullName(patient), patient.email, newDateTime, user.name, admin.email);
 			}
 		} catch (err) {
 			logger.error({ err, patientId: id }, "Failed to send appointment change notification emails");
 			// Don't fail the update if email fails - still return success
 		}
 
-		return ServiceResponse.success("Appointment updated and notifications sent.", updated);
+		return ServiceResponse.success("Appointment updated and notifications sent.", toPatientDto(updated));
 	},
 };

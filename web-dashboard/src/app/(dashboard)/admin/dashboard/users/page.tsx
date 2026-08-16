@@ -35,6 +35,7 @@ export default function AdminUsersPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1)
   const [typedDeleteText, setTypedDeleteText] = useState("")
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const targetUser = confirmDelete ? users?.find((u) => u.id === confirmDelete) ?? null : null
 
@@ -137,14 +138,17 @@ export default function AdminUsersPage() {
     setConfirmDelete(null)
     setDeleteStep(1)
     setTypedDeleteText("")
+    setDeleteError(null)
   }
 
   const handleDelete = async (id: string) => {
     try {
       await deleteUser.mutateAsync(id)
       closeDeleteModal()
-    } catch {
-      // Keep the modal open so the user can retry — the hook already toasted the reason.
+    } catch (err: any) {
+      // Keep the modal open and surface the backend's reason inline (the hook
+      // also toasts it) — e.g. the VA still has assigned patients.
+      setDeleteError(err?.response?.data?.message || "Failed to delete user")
     }
   }
 
@@ -200,10 +204,13 @@ export default function AdminUsersPage() {
             users.map((user) => (
               <div key={user.id} className="flex flex-wrap items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-[#EBF7EC]/30 transition-colors group">
                 <div className={cn(
-                  "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm shadow-sm",
+                  "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-white font-bold text-sm shadow-sm overflow-hidden",
                   avatarClass(user.role),
                 )}>
-                  {user.role === "super_admin" ? (
+                  {user.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- real user avatar from DB (Cloudinary URL)
+                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                  ) : user.role === "super_admin" ? (
                     <ShieldCheck className="w-5 h-5" />
                   ) : (
                     user.name.charAt(0).toUpperCase()
@@ -260,6 +267,7 @@ export default function AdminUsersPage() {
                             setConfirmDelete(user.id)
                             setDeleteStep(1)
                             setTypedDeleteText("")
+                            setDeleteError(null)
                           }}
                           className="p-2 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 text-[#6B7280] hover:text-red-500 transition-colors"
                           title="Delete user"
@@ -298,6 +306,14 @@ export default function AdminUsersPage() {
             if (deleteUser.isPending) e.preventDefault()
           }}
         >
+          {deleteError && (
+            <div className="px-6 pt-4">
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-[12px] text-red-700 leading-relaxed">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-px text-red-500" />
+                <span>{deleteError}</span>
+              </div>
+            </div>
+          )}
           {targetUser && deleteStep === 1 ? (
             <>
               {/* Step 1 — Warning confirmation */}
@@ -318,8 +334,13 @@ export default function AdminUsersPage() {
 
                 {/* User summary card */}
                 <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
-                  <div className="w-9 h-9 rounded-full bg-[#036638] text-white flex items-center justify-center text-xs font-bold shrink-0">
-                    {targetUser.name.charAt(0).toUpperCase()}
+                  <div className="w-9 h-9 rounded-full bg-[#036638] text-white flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+                    {targetUser.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- real user avatar from DB (Cloudinary URL)
+                      <img src={targetUser.avatar} alt={targetUser.name} className="w-full h-full object-cover" />
+                    ) : (
+                      targetUser.name.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#1A1B1E] truncate">{targetUser.name}</p>
@@ -330,6 +351,18 @@ export default function AdminUsersPage() {
                   </span>
                 </div>
               </div>
+
+              {typeof targetUser.assignedPatientCount === "number" && targetUser.assignedPatientCount > 0 && (
+                <div className="px-6 py-3 bg-red-50 border-y border-red-200 text-[11px] text-red-700 leading-relaxed flex gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-red-500" />
+                  <span>
+                    <span className="font-bold">Deletion blocked:</span> {targetUser.assignedPatientCount}{" "}
+                    patient{targetUser.assignedPatientCount === 1 ? " is" : "s are"} still assigned to{" "}
+                    {targetUser.name}. Reassign {targetUser.assignedPatientCount === 1 ? "them" : "those patients"}{" "}
+                    to another VA first, then delete this account.
+                  </span>
+                </div>
+              )}
 
               <div className="px-6 py-3 bg-[#FEFCE8] border-y border-amber-100 text-[11px] text-amber-800 leading-relaxed flex gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -348,10 +381,24 @@ export default function AdminUsersPage() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => setDeleteStep(2)}
-                    className="text-xs"
+                    onClick={() => {
+                      setDeleteError(null)
+                      setDeleteStep(2)
+                    }}
+                    disabled={
+                      typeof targetUser.assignedPatientCount === "number" &&
+                      targetUser.assignedPatientCount > 0
+                    }
+                    title={
+                      targetUser.assignedPatientCount
+                        ? "Reassign this user's patients first"
+                        : undefined
+                    }
+                    className="text-xs disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Continue
+                    {typeof targetUser.assignedPatientCount === "number" && targetUser.assignedPatientCount > 0
+                      ? "Reassign Patients First"
+                      : "Continue"}
                   </Button>
                 </div>
               </div>

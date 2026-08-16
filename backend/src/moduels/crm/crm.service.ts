@@ -19,7 +19,6 @@ export function buildCrmWhere(filters: CrmFilters): Record<string, unknown> {
 	if (filters.assignedTo) where.assignedTo = filters.assignedTo;
 	if (filters.search) {
 		where.OR = [
-			{ name: { contains: filters.search, mode: "insensitive" } },
 			{ firstName: { contains: filters.search, mode: "insensitive" } },
 			{ lastName: { contains: filters.search, mode: "insensitive" } },
 			{ email: { contains: filters.search, mode: "insensitive" } },
@@ -35,6 +34,11 @@ const include = {
 	cancelledByUser: { select: { id: true, name: true } },
 	privateLockedByUser: { select: { id: true, name: true } },
 } as const;
+
+/** Derive the full display name — patients are stored as first/last, no `name` column. */
+function fullName(c: { firstName?: string | null; lastName?: string | null }): string {
+	return [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
+}
 
 function csvEscape(value: unknown): string {
 	const s = value === null || value === undefined ? "" : String(value);
@@ -95,7 +99,7 @@ export const crmService = {
 		]);
 
 		return ServiceResponse.success("Contacts retrieved.", {
-			contacts,
+			contacts: contacts.map((c) => ({ ...c, name: fullName(c) })),
 			total,
 			page,
 			limit,
@@ -141,7 +145,7 @@ export const crmService = {
 		const rows = contacts.map((c) => [
 			c.firstName ?? "",
 			c.lastName ?? "",
-			c.name,
+			fullName(c),
 			c.phone ?? "",
 			c.email ?? "",
 			c.location ?? "",

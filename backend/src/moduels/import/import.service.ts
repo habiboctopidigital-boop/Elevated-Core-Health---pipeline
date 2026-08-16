@@ -145,13 +145,16 @@ export const importService = {
 				const str = (v: unknown) => (typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim());
 
 				try {
-					const firstName = str(row.first_name) || null;
-					const lastName = str(row.last_name) || null;
-					const name = str(row.name) || [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+					// Patients are stored as firstName/lastName (no `name` column).
+					// CSV may provide separate columns, a single `name`, or neither
+					// (email/phone-only rows are allowed).
+					const fullName = str(row.name) || [str(row.first_name), str(row.last_name)].filter(Boolean).join(" ").trim() || null;
+					const firstName = str(row.first_name) || (fullName ? fullName.split(" ")[0] : null) || null;
+					const lastName = str(row.last_name) || (fullName && fullName.indexOf(" ") > -1 ? fullName.slice(fullName.indexOf(" ") + 1) : null);
 					const email = str(row.email).toLowerCase() || null;
 					const phone = str(row.phone) || null;
 
-					if (!name && !email && !phone) {
+					if (!fullName && !email && !phone) {
 						fail++;
 						errors.push({ row: i + 1, message: "Row has no name, email or phone - skipped", type: "error" });
 						continue;
@@ -166,7 +169,7 @@ export const importService = {
 									...(phone ? [{ phone }] : []),
 								],
 							},
-							select: { id: true, name: true, email: true, phone: true },
+							select: { id: true, firstName: true, lastName: true, email: true, phone: true },
 						});
 						if (existing) {
 							dup++;
@@ -176,7 +179,7 @@ export const importService = {
 									: `phone ${existing.phone}`;
 							errors.push({
 								row: i + 1,
-								message: `Skipped — already a patient: "${existing.name}" (matched by ${matchedOn})`,
+								message: `Skipped — already a patient: "${[existing.firstName, existing.lastName].filter(Boolean).join(" ").trim() || "Unknown"}" (matched by ${matchedOn})`,
 								type: "duplicate",
 							});
 							continue;
@@ -194,8 +197,7 @@ export const importService = {
 
 					const patient = await prisma.patient.create({
 						data: {
-							name: name || "Unknown",
-							firstName,
+							firstName: firstName || "Unknown",
 							lastName,
 							location: str(row.location) || null,
 							email,

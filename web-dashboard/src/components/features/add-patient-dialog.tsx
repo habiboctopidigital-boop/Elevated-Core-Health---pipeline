@@ -120,9 +120,9 @@ export function AddPatientDialog() {
 
   const addPatientMutation = useMutation({
     mutationFn: async (data: AddPatientFormData) => {
-      const name = `${data.firstName} ${data.lastName}`.trim()
       return await PatientsService.addPatient({
-        name,
+        firstName: data.firstName,
+        lastName: data.lastName || undefined,
         email: data.email || undefined,
         phone: data.phone || undefined,
         location: data.location || undefined,

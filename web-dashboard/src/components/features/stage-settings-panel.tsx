@@ -119,6 +119,11 @@ export function StageSettingsPanel({
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null)
   const [deletingStage, setDeletingStage] = useState<PipelineStage | null>(null)
 
+  // True when either the Add Stage form or the Edit Stage form is open — the
+  // panel toggles between the stage list and one of these forms, keeping the
+  // header fixed (no stacked modals for stage editing).
+  const showInlineForm = showCreateForm || editingStage !== null
+
   const patientCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const p of patients ?? []) {
@@ -202,14 +207,19 @@ export function StageSettingsPanel({
              stage list and the Add Stage form. */
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#6B7280]">
-              {showCreateForm
-                ? "Add a new stage to the pipeline"
-                : "Drag stages to reorder · expand a stage to manage its checklist"}
+              {editingStage
+                ? `Editing stage “${editingStage.name}”`
+                : showCreateForm
+                  ? "Add a new stage to the pipeline"
+                  : "Drag stages to reorder · expand a stage to manage its checklist"}
             </p>
-            {showCreateForm ? (
+            {showInlineForm ? (
               <Button
                 variant="ghost"
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false)
+                  setEditingStage(null)
+                }}
                 className="text-sm gap-1.5 rounded-xl px-3 h-9 shrink-0 text-[#6B7280]"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -217,7 +227,10 @@ export function StageSettingsPanel({
               </Button>
             ) : (
               <Button
-                onClick={() => setShowCreateForm(true)}
+                onClick={() => {
+                  setShowCreateForm(true)
+                  setEditingStage(null)
+                }}
                 className="bg-[#036638] hover:bg-[#025030] text-white text-sm gap-1.5 rounded-xl px-4 h-9 shrink-0"
               >
                 <Plus className="w-4 h-4" />
@@ -240,10 +253,13 @@ export function StageSettingsPanel({
                   </p>
                 </div>
               </div>
-              {showCreateForm ? (
+              {showInlineForm ? (
                 <Button
                   variant="ghost"
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => {
+                    setShowCreateForm(false)
+                    setEditingStage(null)
+                  }}
                   className="text-sm gap-1.5 rounded-xl px-4 h-10 text-[#6B7280] border border-[#E5E7EB]"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -251,7 +267,10 @@ export function StageSettingsPanel({
                 </Button>
               ) : (
                 <Button
-                  onClick={() => setShowCreateForm(true)}
+                  onClick={() => {
+                    setShowCreateForm(true)
+                    setEditingStage(null)
+                  }}
                   className="bg-[#036638] hover:bg-[#025030] text-white text-sm gap-1.5 rounded-xl px-4 h-10"
                 >
                   <Plus className="w-4 h-4" />
@@ -303,35 +322,55 @@ export function StageSettingsPanel({
           </>
         )}
 
-        {showCreateForm ? (
-          /* Inline Add Stage form — same panel, header stays fixed, only the
-             content below switches (toggle approach, no stacked modal). */
+        {showInlineForm ? (
+          /* Inline Add/Edit Stage form — same panel, header stays fixed, only
+             the content below switches (toggle approach, no stacked modal). */
           <div className={cn("bg-white rounded-2xl p-5", isDialog ? "shadow-[0_1px_3px_rgba(16,24,40,0.06)]" : "border border-[#E5E7EB]")}>
-            <StageForm
-              stages={displayStages}
-              onCancel={() => setShowCreateForm(false)}
-              onSubmit={async (values) => {
-                const { position, ...stageInput } = values
-                const created = await createStage.mutateAsync(stageInput)
-                // Backend appends new stages at the end — if the user picked a
-                // position, insert the new key there and persist the full order.
-                if (position) {
-                  const keys = displayStages.map((s) => s.key)
-                  if (position.type === "start") {
-                    keys.unshift(created.key)
-                  } else if (position.type === "after") {
-                    const idx = keys.indexOf(position.key)
-                    keys.splice(idx === -1 ? keys.length : idx + 1, 0, created.key)
-                  } else {
-                    keys.push(created.key)
+            {editingStage ? (
+              <>
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#F3F4F6]">
+                  <Settings className="w-4 h-4 text-[#036638]" />
+                  <h3 className="text-sm font-bold text-[#1A1B1E]">Edit Stage</h3>
+                </div>
+                <StageForm
+                  initial={editingStage}
+                  onCancel={() => setEditingStage(null)}
+                  onSubmit={async (values) => {
+                    await updateStage.mutateAsync({ key: editingStage.key, ...values })
+                    // Switch back to the stage list after saving.
+                    setEditingStage(null)
+                  }}
+                  isPending={updateStage.isPending}
+                  allowFinalToggle
+                />
+              </>
+            ) : (
+              <StageForm
+                stages={displayStages}
+                onCancel={() => setShowCreateForm(false)}
+                onSubmit={async (values) => {
+                  const { position, ...stageInput } = values
+                  const created = await createStage.mutateAsync(stageInput)
+                  // Backend appends new stages at the end — if the user picked a
+                  // position, insert the new key there and persist the full order.
+                  if (position) {
+                    const keys = displayStages.map((s) => s.key)
+                    if (position.type === "start") {
+                      keys.unshift(created.key)
+                    } else if (position.type === "after") {
+                      const idx = keys.indexOf(position.key)
+                      keys.splice(idx === -1 ? keys.length : idx + 1, 0, created.key)
+                    } else {
+                      keys.push(created.key)
+                    }
+                    await reorderStages.mutateAsync(keys)
                   }
-                  await reorderStages.mutateAsync(keys)
-                }
-                // Switch back to the stage list after the new stage is added.
-                setShowCreateForm(false)
-              }}
-              isPending={createStage.isPending || reorderStages.isPending}
-            />
+                  // Switch back to the stage list after the new stage is added.
+                  setShowCreateForm(false)
+                }}
+                isPending={createStage.isPending || reorderStages.isPending}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -440,7 +479,10 @@ export function StageSettingsPanel({
                   {/* Actions — desktop only */}
                   <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                     <button
-                      onClick={() => setEditingStage(stage)}
+                      onClick={() => {
+                        setShowCreateForm(false)
+                        setEditingStage(stage)
+                      }}
                       className={cn("p-2 rounded-xl text-[#6B7280] hover:text-[#036638] transition-colors", isDialog ? "hover:bg-[#EBF7EC]" : "border border-[#E5E7EB] hover:border-[#036638]")}
                       title="Edit stage"
                     >
@@ -482,7 +524,10 @@ export function StageSettingsPanel({
                         </div>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => setEditingStage(stage)}
+                          onClick={() => {
+                            setShowCreateForm(false)
+                            setEditingStage(stage)
+                          }}
                           className="cursor-pointer text-xs gap-2 text-[#374151]"
                         >
                           <Settings className="w-3.5 h-3.5 text-[#036638]" />
@@ -543,27 +588,6 @@ export function StageSettingsPanel({
         )}
 
           </>
-        )}
-
-        {/* Edit Stage Dialog */}
-        {editingStage && (
-          <Dialog open onOpenChange={() => setEditingStage(null)}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="text-base font-bold text-[#1A1B1E]">Edit Stage</DialogTitle>
-              </DialogHeader>
-              <StageForm
-                initial={editingStage}
-                onCancel={() => setEditingStage(null)}
-                onSubmit={async (values) => {
-                  await updateStage.mutateAsync({ key: editingStage.key, ...values })
-                  setEditingStage(null)
-                }}
-                isPending={updateStage.isPending}
-                allowFinalToggle
-              />
-            </DialogContent>
-          </Dialog>
         )}
 
         {/* Delete Stage Confirm — stays open with a loading state until the request finishes */}
@@ -793,6 +817,9 @@ function StageChecklistManager({
   })
 
   const [showAdd, setShowAdd] = useState(false)
+  // Id of the checklist item currently being deleted — its row shows a spinner
+  // while the request is in flight instead of silently waiting.
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
 
   // ---------------------------------------------------------------------
   // Drag-and-drop item reordering — optimistic local reorder + persistence
@@ -864,10 +891,7 @@ function StageChecklistManager({
             </span>
           )}
         </div>
-        <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-lg" onClick={() => setShowAdd((v) => !v)}>
-          {showAdd ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-          {showAdd ? "Cancel" : "Add Item"}
-        </Button>
+       
       </div>
 
       <form
@@ -916,8 +940,18 @@ function StageChecklistManager({
               item={item}
               allStages={allStages}
               onUpdate={(id, label, status, stage) => updateItem.mutate({ id, label, status, stage })}
-              onDelete={(id) => deleteItem.mutate(id)}
+              onDelete={async (id) => {
+                setDeletingItemId(id)
+                try {
+                  await deleteItem.mutateAsync(id)
+                } catch {
+                  // The hook already toasts the failure reason.
+                } finally {
+                  setDeletingItemId(null)
+                }
+              }}
               isUpdating={updateItem.isPending}
+              isDeleting={deletingItemId === item.id}
               isDragOver={dragOverItemId === item.id && draggedItemId !== item.id}
               isBeingDragged={draggedItemId === item.id}
               onDragStart={handleItemDragStart(item.id)}
@@ -942,6 +976,7 @@ function ChecklistItemRow({
   onUpdate,
   onDelete,
   isUpdating,
+  isDeleting,
   isDragOver,
   isBeingDragged,
   onDragStart,
@@ -954,6 +989,7 @@ function ChecklistItemRow({
   onUpdate: (id: string, label: string, status: "required" | "optional", stage?: string) => void
   onDelete: (id: string) => void
   isUpdating: boolean
+  isDeleting: boolean
   isDragOver: boolean
   isBeingDragged: boolean
   onDragStart: () => void
@@ -995,6 +1031,7 @@ function ChecklistItemRow({
         "flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[#EBF7EC]/50 transition-colors group border border-transparent hover:border-[#E5E7EB]",
         isDragOver && "border-emerald-400 bg-emerald-50/60",
         isBeingDragged && "opacity-40",
+        isDeleting && "opacity-60",
       )}
     >
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -1069,14 +1106,17 @@ function ChecklistItemRow({
           </span>
         )}
       </div>
-      {!item.isDefault && (
-        <button
-          onClick={() => onDelete(item.id)}
-          className="p-1 rounded hover:bg-red-50 text-[#6B7280] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      )}
+      {!item.isDefault &&
+        (isDeleting ? (
+          <Loader2 className="w-3.5 h-3.5 text-[#036638] animate-spin shrink-0" />
+        ) : (
+          <button
+            onClick={() => onDelete(item.id)}
+            className="p-1 rounded hover:bg-red-50 text-[#6B7280] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        ))}
     </div>
   )
 }

@@ -265,7 +265,10 @@ async function main() {
 
 		const patient = await prisma.patient.create({
 			data: {
-				name: demo.name,
+				// firstName/lastName are the source of truth — split the demo's
+				// single full name on the first space.
+				firstName: demo.name.trim().split(" ")[0] || "Unknown",
+				lastName: demo.name.includes(" ") ? demo.name.slice(demo.name.indexOf(" ") + 1) : null,
 				email: demo.email,
 				phone: demo.phone,
 				stage: demo.stage,

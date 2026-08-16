@@ -186,7 +186,10 @@ export const PatientsService = {
   },
 
   async addPatient(input: {
-    name: string
+    // firstName/lastName are the source of truth — the backend splits a legacy
+    // `name` if provided, but the Add Patient form always sends the parts.
+    firstName: string
+    lastName?: string | null
     email?: string | null
     phone?: string | null
     location?: string | null

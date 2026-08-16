@@ -29,7 +29,6 @@ import {
   ShieldCheck,
   Lock,
   Unlock,
-  Ban,
   RefreshCw,
   Calendar,
   Pencil,
@@ -190,6 +189,22 @@ function isValidUsPhone(value: string): boolean {
   const digits = value.replace(/\D/g, "")
   const local = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits
   return /^[2-9]\d{2}[2-9]\d{6}$/.test(local)
+}
+
+// Formats a US phone number live as the user types: (555) 123-4567. Accepts
+// any of the common styles — (555) 123-4567, 555-123-4567, 555.123.4567,
+// +1 555 123 4567, 5550123456 — by stripping non-digits first, dropping an
+// optional leading US country code (1 / +1), then laying the remaining 10
+// digits out in the standard NANP pattern (area code · prefix · line).
+// Extra digits beyond 10 are ignored, and an empty result stays empty.
+function formatUsPhone(value: string): string {
+  let digits = value.replace(/\D/g, "")
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1)
+  if (digits.length > 10) digits = digits.slice(0, 10)
+  if (digits.length === 0) return ""
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
 }
 
 const contactSchema = z.object({
@@ -473,7 +488,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     return () => mql.removeEventListener("change", sync)
   }, [])
 
-  
   useEffect(() => {
     const pm = patient?.paymentMethod ?? ""
     const ip = patient?.insuranceProvider ?? ""
@@ -482,13 +496,14 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
     setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
     setVisitStatus(patient?.visitStatus ?? "not_visited")
-    const fullName = `${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`.trim() || patient?.name || "";
-    
-    
-    const { firstName, lastName } = splitPatientName(fullName)
+  
+    // Fallback: if firstName/lastName are ever missing (e.g. a row created
+    // before the first/last split, or a webhook that only sent a full name),
+    // derive them from the API's full `name` so the fields always show a value.
+    const nameParts = splitPatientName(patient?.name ?? "")
     reset({
-      firstName:patient?.firstName,
-      lastName:patient?.lastName,
+      firstName: patient?.firstName || nameParts.firstName,
+      lastName: patient?.lastName || nameParts.lastName,
       location: patient?.location ?? "",
       phone: patient?.phone ?? "",
       email: patient?.email ?? "",
@@ -521,11 +536,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient?.id])
 
-  // Narrow sync — keeps the payment/insurance/visit-status mini-state (and
-  // the appointment field) matching the patient record whenever THOSE
-  // specific fields change, e.g. right after this modal's own save, or
-  // another VA editing the same card in another tab. Deliberately does NOT
-  // touch activeTab, the form, or any other in-progress UI state.
+
   useEffect(() => {
     const pm = patient?.paymentMethod ?? ""
     const ip = patient?.insuranceProvider ?? ""
@@ -554,11 +565,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     return () => window.removeEventListener("keydown", handleEscape)
   }, [open, onClose, assigning, showEligibilityCheck])
 
-  // Hide the floating bottom nav while the full-screen patient modal is open.
-  // The layout's `div.relative.z-10` wrapper traps the modal's z-100 inside a
-  // stacking context that sits BELOW the nav's z-50, so the nav can float
-  // over the modal backdrop — flag it with a body class instead of chasing
-  // z-indexes.
+ 
   useEffect(() => {
     if (!open) return
     document.body.classList.add("patient-modal-open")
@@ -910,6 +917,17 @@ const isExpired = () => {
                         {patient.status === "completed" ? "Completed" : "Cancelled"}
                       </span>
                     )}
+                    {patient.isPrivate ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
+                        <Lock className="w-3.5 h-3.5" />
+                        Locked
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 border border-white/25 text-white">
+                        <Unlock className="w-3.5 h-3.5" />
+                        Unlocked
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -942,19 +960,6 @@ const isExpired = () => {
                           }}
                         />
                         <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20">
-                          {isAdmin && patient.status !== "cancelled" && (
-                            <button
-                              onClick={() => {
-                                setShowMenu(false)
-                                setShowCancelInput(true)
-                                setActiveTab("overview")
-                              }}
-                              disabled={menuPending !== null}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#CC3333] hover:bg-[#CC3333]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                            >
-                              <Ban className="w-4 h-4 shrink-0" /> Mark Cancelled
-                            </button>
-                          )}
                           {isAdmin && patient.status === "cancelled" && (
                             <button
                               onClick={() => runMenuAction("reactivate")}
@@ -1634,8 +1639,32 @@ const isExpired = () => {
                             </p>
                           </div>
                           <div>
-                            <label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label>
-                            <input {...register("phone")} aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <label className={cn(contactLabelClass(!!errors.phone), "mb-0")}>Phone <span className="text-[#CC3333]">*</span></label>
+                              <span className="text-[10px] font-medium text-gray-400 shrink-0">(555) 123-4567</span>
+                            </div>
+                            <div className="relative">
+                              <span
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#036638] border-r border-gray-200 pr-2 pointer-events-none select-none"
+                                aria-hidden
+                              >
+                                +1
+                              </span>
+                              <input
+                                type="tel"
+                                inputMode="tel"
+                                value={watch("phone") ?? ""}
+                                onChange={(e) =>
+                                  setValue("phone", formatUsPhone(e.target.value), {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                  })
+                                }
+                                aria-invalid={!!errors.phone}
+                                placeholder="(555) 123-4567"
+                                className={cn(contactInputClass(!!errors.phone), "pl-12")}
+                              />
+                            </div>
                             {errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}
                           </div>
                           <div>
@@ -2156,19 +2185,6 @@ const isExpired = () => {
                           }}
                         />
                         <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20">
-                          {isAdmin && patient.status !== "cancelled" && (
-                            <button
-                              onClick={() => {
-                                setShowMenu(false)
-                                setShowCancelInput(true)
-                                setActiveTab("overview")
-                              }}
-                              disabled={menuPending !== null}
-                              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-[#CC3333] hover:bg-[#CC3333]/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                            >
-                              <Ban className="w-4 h-4 shrink-0" /> Mark Cancelled
-                            </button>
-                          )}
                           {isAdmin && patient.status === "cancelled" && (
                             <button
                               onClick={() => runMenuAction("reactivate")}
@@ -2300,6 +2316,17 @@ const isExpired = () => {
                     )}
                   >
                     {patient.status === "completed" ? "Completed" : "Cancelled"}
+                  </span>
+                )}
+                {patient.isPrivate ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
+                    <Lock className="w-3 h-3" />
+                    Locked
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white">
+                    <Unlock className="w-3 h-3" />
+                    Unlocked
                   </span>
                 )}
               </div>
@@ -2726,7 +2753,35 @@ const isExpired = () => {
                         {errors.lastName && <p className="text-[11px] text-[#CC3333] mt-1">{errors.lastName.message}</p>}
                       </div>
                       <div><label className={contactLabelClass(false)}>Location</label><LocationCombobox value={watch("location") ?? ""} onChange={(v) => setValue("location", v, { shouldValidate: true, shouldDirty: true })} placeholder="Search city & state..." className={contactInputClass(false)} /></div>
-                      <div><label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label><input {...register("phone")} type="number" aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />{errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}</div>
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <label className={cn(contactLabelClass(!!errors.phone), "mb-0")}>Phone <span className="text-[#CC3333]">*</span></label>
+                          <span className="text-[10px] font-medium text-gray-400 shrink-0">(555) 123-4567</span>
+                        </div>
+                        <div className="relative">
+                          <span
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#036638] border-r border-gray-200 pr-2 pointer-events-none select-none"
+                            aria-hidden
+                          >
+                            +1
+                          </span>
+                          <input
+                            type="tel"
+                            inputMode="tel"
+                            value={watch("phone") ?? ""}
+                            onChange={(e) =>
+                              setValue("phone", formatUsPhone(e.target.value), {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              })
+                            }
+                            aria-invalid={!!errors.phone}
+                            placeholder="(555) 123-4567"
+                            className={cn(contactInputClass(!!errors.phone), "pl-12")}
+                          />
+                        </div>
+                        {errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}
+                      </div>
                       <div><label className={contactLabelClass(false)}>Email</label><input type="email" readOnly title="Email can't be changed here" {...register("email")}  className={cn(contactInputClass(false), "bg-gray-50 text-gray-500 cursor-not-allowed")} /></div>
                       <div><label className={contactLabelClass(false)}>Copay Amount</label><input {...register("copayAmount")} type="number" className={contactInputClass(false)} /></div>
                       <div><label className={contactLabelClass(false)}>Amount Paid</label><input {...register("amountPaid")} type="number" className={contactInputClass(false)} /></div>
