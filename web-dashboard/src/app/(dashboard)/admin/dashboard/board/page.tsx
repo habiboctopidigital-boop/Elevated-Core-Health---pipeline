@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useRef, useState } from "react"
-import { usePatients, useMoveStage, useListVas } from "@/hooks/query/usePatients"
+import { usePatients, useMoveStage, useListVas, useChecklistItems } from "@/hooks/query/usePatients"
+import { toast } from "sonner"
 import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { ImportDialog } from "@/components/features/import-dialog"
@@ -23,8 +24,13 @@ export default function AdminBoardPage() {
   const { data: patients, isLoading, error, refetch } = usePatients()
   const { data: vas } = useListVas()
   const moveStage = useMoveStage()
-  const { order: stageOrder, labels: stageLabels, hints: stageHints } = useStageMeta()
+  const { order: stageOrder, labels: stageLabels, hints: stageHints, byKey: stageByKey } = useStageMeta()
+  const { data: checklistDefs } = useChecklistItems()
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  // Drag-and-drop stage moves (same behavior as the VA board) — the dragged
+  // card id + the column currently being hovered, for the drop highlight.
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [filters, setFilters] = useState<BoardFilters>(EMPTY_BOARD_FILTERS)
   const [stageFilters, setStageFilters] = useState<Record<string, Patient[]>>({})
   // Stages whose filter matched 0 — the column keeps its cards and the error
@@ -73,6 +79,75 @@ export default function AdminBoardPage() {
       { id, targetStage: target },
       { onSettled: () => pendingMoves.current.delete(id) },
     )
+  }
+
+  // ---------------------------------------------------------------------
+  // Drag-and-drop — mirrors the VA board (KanbanBoard) so admins get the
+  // exact same behavior: pick a card up, drop it on another stage column.
+  // Forward moves are gated by the same client-side checklist check; the
+  // backend re-validates on every move regardless.
+  // ---------------------------------------------------------------------
+  const handleDragStart = (e: React.DragEvent, patientId: string) => {
+    setDraggingId(patientId)
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", patientId)
+  }
+
+  const handleDragEnd = () => {
+    setDraggingId(null)
+    setDropTarget(null)
+  }
+
+  const handleDragOver = (e: React.DragEvent, stage: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDropTarget(stage)
+  }
+
+  const handleDragLeave = (e: React.DragEvent, stage: string) => {
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDropTarget((prev) => (prev === stage ? null : prev))
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent, targetStage: string) => {
+    e.preventDefault()
+    const patientId = e.dataTransfer.getData("text/plain")
+    if (!patientId) return
+
+    setDropTarget(null)
+    setDraggingId(null)
+
+    if (pendingMoves.current.has(patientId)) return
+
+    const patient = patients?.find((p) => p.id === patientId)
+    if (!patient) return
+
+    const curIdx = stageOrder.indexOf(patient.stage)
+    const tgtIdx = stageOrder.indexOf(targetStage)
+    if (curIdx === tgtIdx) return
+
+    // One stage at a time forward; backward moves are always allowed.
+    if (tgtIdx > curIdx + 1) {
+      toast.error("Cannot skip stages. Move forward one stage at a time.")
+      return
+    }
+
+    // Forward moves require every REQUIRED checklist item of the current
+    // stage to be complete (matches the server-side gate).
+    if (tgtIdx > curIdx) {
+      const stageState = patient.checklistState?.[patient.stage] ?? {}
+      const requiredDefs = (checklistDefs ?? []).filter(
+        (item) => item.stage === patient.stage && item.status === "required",
+      )
+      const allComplete = requiredDefs.every((item) => stageState[item.id] === true)
+      if (!allComplete) {
+        toast.error("Please complete all required checklist items before moving to the next stage.")
+        return
+      }
+    }
+
+    handleMoveStage(patientId, targetStage as PatientStage)
   }
 
   // Live patient count per stage — feeds the jump-bar pills.
@@ -181,13 +256,21 @@ export default function AdminBoardPage() {
             const stageFilterActive = Object.prototype.hasOwnProperty.call(stageFilters, stage)
             const filterHasNoResults = stageFilterActive && filterNotFound[stage] === true
             const matchedCount = stageFilterActive && !filterHasNoResults ? stagePatients.length : null
+            const isOver = dropTarget === stage
+            const isDragDisabled = stageByKey.get(stage)?.isFinal ?? false
             return (
               <div
                 key={stage}
                 ref={registerStageRef(stage)}
+                onDragOver={(e) => handleDragOver(e, stage)}
+                onDragLeave={(e) => handleDragLeave(e, stage)}
+                onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
                   "w-full min-w-0 sm:w-[420px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 transition-all duration-200 scroll-mt-14 lg:scroll-mt-0",
                   quickJumpStage === stage && "animate-jump-flash",
+                  isOver && !isDragDisabled
+                    ? "border-[#65BD6C] bg-[#EBF7EC] shadow-lg shadow-[#65BD6C]/10 sm:scale-[1.02]"
+                    : "border-[#E5E7EB]/50 bg-[#EBF7EC]/40",
                 )}
               >
                 <div className="px-3.5 py-3 border-b border-[#E5E7EB]/50 relative">
@@ -259,6 +342,9 @@ export default function AdminBoardPage() {
                         patient={patient}
                         onMoveStage={handleMoveStage}
                         onClick={(p) => setSelectedPatientId(p.id)}
+                        isDragging={draggingId === patient.id}
+                        onDragStart={(e) => handleDragStart(e, patient.id)}
+                        onDragEnd={handleDragEnd}
                       />
                     ))
                   ) : (

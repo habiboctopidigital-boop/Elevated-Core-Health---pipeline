@@ -11,6 +11,7 @@ import { PatientModal } from "@/components/features/patient-modal"
 import { ImportDialog } from "@/components/features/import-dialog"
 import {
   Search,
+  X,
   Loader2,
   Download,
   CloudDownload,
@@ -53,6 +54,7 @@ export default function AdminCrmPage() {
   const [search, setSearch] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [statusFilter, setStatusFilter] = useState("")
   const [stageFilter, setStageFilter] = useState("")
   const [eligFilter, setEligFilter] = useState("")
@@ -164,12 +166,26 @@ export default function AdminCrmPage() {
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search name, phone, email, location..."
             value={search}
             onChange={(e) => applySearch(e.target.value)}
-            className="w-full h-10 pl-9 pr-3 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 focus:bg-white transition-all"
+            className="w-full h-10 pl-9 pr-9 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 focus:bg-white transition-all"
           />
+          {search && (
+            <button
+              onClick={() => {
+                applySearch("")
+                searchInputRef.current?.focus()
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-[#6B7280] hover:text-[#1A1B1E] hover:bg-[#E5E7EB] transition-colors cursor-pointer"
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
         <Select
           value={statusFilter}
