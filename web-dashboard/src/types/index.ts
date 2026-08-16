@@ -232,6 +232,24 @@ export interface AdminAnalytics {
   reconciledThisWeek: number
 }
 
+export interface WebhookSettings {
+  url: string
+  secret: string
+  source: "database" | "environment"
+  rotatedAt: string | null
+  rotatedBy: { id: string; name: string } | null
+}
+
+export interface WebhookTestResult {
+  httpStatus: number
+  response: {
+    success: boolean
+    message: string
+    data: Patient | null
+    statusCode: number
+  }
+}
+
 export type CrmProvider = "private_crm" | "gohighlevel"
 export type CrmPermission = "read" | "write" | "both"
 export type CrmConnectionStatus = "connected" | "disconnected"

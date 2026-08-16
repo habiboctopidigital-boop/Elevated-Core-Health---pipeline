@@ -1,6 +1,6 @@
 "use client"
 
-import { Lock } from "lucide-react"
+import { Lock, Webhook } from "lucide-react"
 import Link from "next/link"
 import { ROUTES } from "@/constants"
 import { useAuth } from "@/hooks/auth/useAuth"
@@ -8,36 +8,47 @@ import { cn } from "@/lib/utils"
 import { isAdminOrAbove } from "@/lib/roles"
 
 interface SettingsNavProps {
-  currentPage: "profile" | "users" | "stages"
+  currentPage: "profile" | "users" | "stages" | "webhooks"
   className?: string
 }
 
-// Webhooks and CRM Connect tabs (and their admin pages) were removed. Only Profile
-// remains, and it routes to the VA or Admin profile page depending on who's signed
-// in, since this nav is shared by both.
-const settingsPages = [
-  {
-    id: "profile" as const,
-    label: "Profile",
-    icon: Lock,
-    desc: "Account & security",
-  },
-]
-
 export function SettingsNav({ currentPage, className }: SettingsNavProps) {
   const { user } = useAuth()
-  const profileHref = isAdminOrAbove(user?.role) ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
+  const isAdmin = isAdminOrAbove(user?.role)
+  const profileHref = isAdmin ? ROUTES.ADMIN.PROFILE : ROUTES.DASHBOARD.PROFILE
+
+  // CRM Connect (and the old, non-functional Webhooks page) were removed
+  // previously. Webhooks is back — admin-only, since it manages the shared
+  // intake secret — while Profile stays visible to everyone this nav serves
+  // (VAs and admins alike).
+  const settingsPages = [
+    {
+      id: "profile" as const,
+      label: "Profile",
+      icon: Lock,
+      desc: "Account & security",
+      href: profileHref,
+    },
+    ...(isAdmin
+      ? [
+          {
+            id: "webhooks" as const,
+            label: "Webhooks",
+            icon: Webhook,
+            desc: "Intake endpoint, secret key & test sends",
+            href: ROUTES.ADMIN.SETTINGS_WEBHOOKS,
+          },
+        ]
+      : []),
+  ]
 
   return (
     <div className={cn("", className)}>
       {/* Premium Tab Navigation */}
       <div className="bg-gradient-to-r from-[#F9FAFB] to-white border-b border-[#E5E7EB] sticky top-0 z-40">
         <div className="flex items-start justify-start gap-1 px-6 py-4">
-          {/* Settings Icon Header */}
-       
-
-          {/* Navigation Tabs - Centered */}
-          <div className="flex items-start  gap-0 w-full">
+          {/* Navigation Tabs */}
+          <div className="flex items-start gap-0 w-full">
             {settingsPages.map((page) => {
               const Icon = page.icon
               const isActive = currentPage === page.id
@@ -45,7 +56,7 @@ export function SettingsNav({ currentPage, className }: SettingsNavProps) {
               return (
                 <Link
                   key={page.id}
-                  href={profileHref}
+                  href={page.href}
                   className={cn(
                     "relative px-5 py-3 text-sm font-medium transition-all flex items-center gap-2 group whitespace-nowrap",
                     "border-b-2 -mb-4 pb-4",

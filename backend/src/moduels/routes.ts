@@ -11,6 +11,7 @@ import { reportingRouter } from "./reporting/reporting.router";
 import { settingsRouter } from "./settings/settings.router";
 import { stagesRouter } from "./stages/stages.router";
 import { usersRouter } from "./users/users.router";
+import { webhooksRouter } from "./webhooks/webhooks.router";
 
 export const apiRouter: Router = Router();
 
@@ -26,3 +27,4 @@ apiRouter.use("/crm", crmRouter);
 apiRouter.use("/stages", stagesRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/admin/settings", settingsRouter);
+apiRouter.use("/admin/webhooks", webhooksRouter);

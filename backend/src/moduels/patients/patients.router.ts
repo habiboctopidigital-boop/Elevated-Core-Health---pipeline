@@ -1,9 +1,9 @@
 import { Router } from "express";
 
 import { requireAuth, requireRole } from "@/middlewares/auth";
-import { env } from "@/utils/envConfig";
 import { handleServiceResponse, validateRequest } from "@/utils/httpHandlers";
 import { ServiceResponse } from "@/utils/serviceResponse";
+import { webhooksService } from "../webhooks/webhooks.service";
 import { patientsController } from "./patients.controller";
 import {
 	AssignSchema,
@@ -17,20 +17,24 @@ import {
 	IntakeSchema,
 	NotesSchema,
 	StageMoveSchema,
+	UpdateAppointmentSchema,
 	UpdatePatientSchema,
 	UpdateStatusSchema,
-	UpdateAppointmentSchema,
 } from "./patients.validation";
 
 export const patientsRouter: Router = Router();
 export const patientsPublicRouter: Router = Router();
 
 // Webhook intake — uses shared secret, not user auth. Mounted at different path.
+// The secret is DB-backed (rotatable from Admin → Settings → Webhooks) and
+// falls back to the static WEBHOOK_SECRET env var until the first rotation —
+// see webhooksService.getActiveSecret().
 patientsPublicRouter.post(
 	"/intake",
-	(req, res, next) => {
+	async (req, res, next) => {
 		const secret = req.headers["x-webhook-secret"];
-		if (!secret || secret !== env.WEBHOOK_SECRET) {
+		const activeSecret = await webhooksService.getActiveSecret();
+		if (!secret || secret !== activeSecret) {
 			handleServiceResponse(ServiceResponse.failure("Invalid webhook secret.", null, 401), res);
 			return;
 		}
@@ -64,7 +68,11 @@ patientsRouter.patch(
 patientsRouter.patch("/:id/checklist", validateRequest(ChecklistToggleSchema), patientsController.toggleChecklist);
 patientsRouter.post("/:id/notes", validateRequest(NotesSchema), patientsController.createNote);
 patientsRouter.delete("/:id/notes/:noteId", validateRequest(DeleteNoteSchema), patientsController.deleteNote);
-patientsRouter.patch("/:id/appointment", validateRequest(UpdateAppointmentSchema), patientsController.updateAppointment);
+patientsRouter.patch(
+	"/:id/appointment",
+	validateRequest(UpdateAppointmentSchema),
+	patientsController.updateAppointment,
+);
 patientsRouter.post("/:id/flag", validateRequest(FlagSchema), patientsController.flag);
 patientsRouter.post(
 	"/:id/check-eligibility",
