@@ -12,7 +12,7 @@ interface PatientListViewProps {
   patients: Patient[]
   stageOrder: string[]
   stageLabels: Record<string, string>
-  onMoveStage: (id: string, target: PatientStage) => void
+  onMoveStage: (id: string, target: PatientStage) => void | Promise<unknown>
   onSelect: (patient: Patient) => void
   /** Set of patient ids currently being moved — rows show a spinner instead of the Next button. */
   pendingIds?: Set<string>
@@ -134,7 +134,7 @@ function PatientListRow({
   stageLabels: Record<string, string>
   checklistItems?: Array<{ id: string; stage: string; status: string }>
   isPending: boolean
-  onMoveStage: (id: string, target: PatientStage) => void
+  onMoveStage: (id: string, target: PatientStage) => void | Promise<unknown>
   onSelect: (patient: Patient) => void
 }) {
   const idx = stageOrder.indexOf(patient.stage)

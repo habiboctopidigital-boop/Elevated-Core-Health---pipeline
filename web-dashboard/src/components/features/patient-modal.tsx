@@ -339,6 +339,9 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   )
 
   const moveStage = useMoveStage()
+  // Stage currently receiving a move — the stage-stepper + Move Next buttons
+  // show a spinner and lock while the request is in flight.
+  const [movingStage, setMovingStage] = useState<PatientStage | null>(null)
   const toggleChecklist = useToggleChecklist()
   const addNote = useAddNote()
   const deleteNote = useDeleteNote()
@@ -589,11 +592,16 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
   }
 
   const handleMoveStage = async (target: PatientStage) => {
-    if (!patient) return
+    if (!patient || movingStage) return
     const currentIdx = stageOrder.indexOf(patient.stage)
     const targetIdx = stageOrder.indexOf(target)
     if (targetIdx > currentIdx && !allComplete) return
-    await moveStage.mutateAsync({ id: patient.id, targetStage: target })
+    setMovingStage(target)
+    try {
+      await moveStage.mutateAsync({ id: patient.id, targetStage: target })
+    } finally {
+      setMovingStage(null)
+    }
   }
 
   const handleClaim = async () => {
@@ -1359,11 +1367,11 @@ const isExpired = () => {
                                   )}
                                   <button
                                     onClick={() => isClickable && handleMoveStage(stage)}
-                                    disabled={!isClickable}
+                                    disabled={!isClickable || movingStage !== null}
                                     className={cn(
                                       "relative w-full flex flex-col items-center gap-1.5 py-1 px-1 rounded-xl transition-all",
                                       isCurrent && "cursor-default",
-                                      !isClickable && !isCurrent && "opacity-50 cursor-not-allowed",
+                                      (!isClickable || movingStage !== null) && !isCurrent && "opacity-50 cursor-not-allowed",
                                     )}
                                   >
                                     <span
@@ -1374,7 +1382,13 @@ const isExpired = () => {
                                         !isCurrent && !isComplete && "bg-white border-gray-200 text-gray-400",
                                       )}
                                     >
-                                      {isComplete ? <Check className="w-4 h-4" /> : idx + 1}
+                                      {movingStage === stage ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : isComplete ? (
+                                        <Check className="w-4 h-4" />
+                                      ) : (
+                                        idx + 1
+                                      )}
                                     </span>
                                     <span className={cn("text-[10px] mt-2 font-semibold text-center leading-tight", isCurrent ? color.label : "text-gray-500")}>
                                       {stageLabels[stage]}
@@ -1954,12 +1968,10 @@ const isExpired = () => {
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </button>
-              <div className="flex items-center gap-2.5">
-               
-                {currentStageIdx < stageOrder.length - 1 && (
+              <div className="flex items-center gap-2.5">                {currentStageIdx < stageOrder.length - 1 && (
                   <button
                     onClick={() => handleMoveStage(stageOrder[currentStageIdx + 1])}
-                    disabled={!allComplete}
+                    disabled={!allComplete || movingStage !== null}
                     className={cn(
                       "flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all",
                       allComplete
@@ -1968,8 +1980,17 @@ const isExpired = () => {
                     )}
                     title={allComplete ? `Move to ${stageLabels[stageOrder[currentStageIdx + 1]]}` : "Tick every required item before moving forward."}
                   >
-                    Move Next
-                    <ArrowRight className="w-4 h-4" />
+                    {movingStage ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Moving...
+                      </>
+                    ) : (
+                      <>
+                        Move Next
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>
@@ -2881,8 +2902,17 @@ const isExpired = () => {
               </button>
               <div className="flex items-center gap-2.5">
                 {currentStageIdx < stageOrder.length - 1 && (
-                  <button onClick={() => handleMoveStage(stageOrder[currentStageIdx + 1])} disabled={!allComplete} className={cn("flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all", allComplete ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-sm shadow-emerald-500/30" : "bg-gray-100 text-gray-400 cursor-not-allowed")} title={allComplete ? `Move to ${stageLabels[stageOrder[currentStageIdx + 1]]}` : "Tick every required item before moving forward."}>
-                    Move Next <ArrowRight className="w-4 h-4" />
+                  <button onClick={() => handleMoveStage(stageOrder[currentStageIdx + 1])} disabled={!allComplete || movingStage !== null} className={cn("flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold transition-all", allComplete ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-700 hover:to-teal-700 shadow-sm shadow-emerald-500/30" : "bg-gray-100 text-gray-400 cursor-not-allowed")} title={allComplete ? `Move to ${stageLabels[stageOrder[currentStageIdx + 1]]}` : "Tick every required item before moving forward."}>
+                    {movingStage ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Moving...
+                      </>
+                    ) : (
+                      <>
+                        Move Next <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>

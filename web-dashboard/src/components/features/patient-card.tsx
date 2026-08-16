@@ -35,7 +35,7 @@ import {
 
 interface PatientCardProps {
   patient: Patient
-  onMoveStage: (id: string, target: PatientStage) => void
+  onMoveStage: (id: string, target: PatientStage) => void | Promise<unknown>
   onClick: (patient: Patient) => void
   isDragging?: boolean
   onDragStart?: (e: React.DragEvent) => void
@@ -158,6 +158,8 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
   const assignPatient = useAssignPatient()
   const [assigning, setAssigning] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  // Which direction's move is in flight — shows a spinner on that button.
+  const [moving, setMoving] = useState<"back" | "next" | null>(null)
   // Phase 3 shared editing: board is open - any VA or admin can move any patient.
   const isAdmin = isAdminOrAbove(currentUser?.role)
   const canMoveStage = true
@@ -184,6 +186,23 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
       { id: patient.id, assignedTo: vaId || null },
       { onSettled: () => setAssigning(false) },
     )
+  }
+
+  // Fire a stage move and keep the button spinning until it settles. The
+  // boards' handleMoveStage returns the mutation promise; if a caller ever
+  // returns void (fire-and-forget), clear the spinner immediately instead of
+  // spinning forever.
+  const handleMove = (dir: "back" | "next") => {
+    if (moving) return
+    const target = dir === "back" ? stageOrder[currentIdx - 1] : stageOrder[currentIdx + 1]
+    if (!target) return
+    setMoving(dir)
+    const result = onMoveStage(patient.id, target)
+    if (result && typeof (result as Promise<unknown>).then === "function") {
+      ;(result as Promise<unknown>).catch(() => {}).finally(() => setMoving(null))
+    } else {
+      setMoving(null)
+    }
   }
 
   // One badge, priority order — a card is flagged, or stale, or unassigned,
@@ -384,35 +403,50 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
           {canMoveStage && canRetreat && (
             <button
               draggable={false}
+              disabled={moving !== null}
               onClick={(e) => {
                 e.stopPropagation()
-                onMoveStage(patient.id, stageOrder[currentIdx - 1])
+                handleMove("back")
               }}
               title="Move back one stage"
-              className="flex items-center justify-center gap-1 shrink-0 px-2.5 py-2 rounded-xl border border-[#E5E7EB] bg-white text-xs font-bold text-[#6B7280] hover:bg-gray-50 hover:text-[#12141A] active:bg-gray-100 transition-colors"
+              className="flex items-center justify-center gap-1 shrink-0 px-2.5 py-2 rounded-xl border border-[#E5E7EB] bg-white text-xs font-bold text-[#6B7280] hover:bg-gray-50 hover:text-[#12141A] active:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              {moving === "back" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ArrowLeft className="w-3.5 h-3.5" />
+              )}
               Back
             </button>
           )}
           {canMoveStage && canAdvance && (
             <button
               draggable={false}
-              disabled={!allComplete}
+              disabled={!allComplete || moving !== null}
               onClick={(e) => {
                 e.stopPropagation()
-                onMoveStage(patient.id, stageOrder[currentIdx + 1])
+                handleMove("next")
               }}
               className={cn(
                 "shrink-0 flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold transition-colors",
                 allComplete
                   ? "bg-[#036638] text-white hover:bg-[#025030]"
                   : "bg-[#F1F2F0] text-[#9CA3AF] cursor-not-allowed",
+                moving === "next" && "opacity-70 cursor-wait",
               )}
               title={allComplete ? "Move to next stage" : "Tick every required item before moving this card forward."}
             >
-              Move Next
-              <ArrowRight className="w-4 h-4" />
+              {moving === "next" ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Moving...
+                </>
+              ) : (
+                <>
+                  Move Next
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           )}
         </div>

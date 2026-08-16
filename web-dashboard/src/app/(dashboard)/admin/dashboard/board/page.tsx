@@ -41,6 +41,9 @@ export default function AdminBoardPage() {
   const [view, changeView] = useBoardView()
   // In-flight stage moves — list view shows a spinner on the row being moved.
   const pendingMoves = useRef<Set<string>>(new Set())
+  // Stages currently receiving a move — the stage header shows a spinner
+  // while the request is in flight (drag-and-drop or move buttons).
+  const [movingStages, setMovingStages] = useState<Set<string>>(new Set())
 
   // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
@@ -75,10 +78,17 @@ export default function AdminBoardPage() {
   const handleMoveStage = (id: string, target: PatientStage) => {
     if (pendingMoves.current.has(id)) return
     pendingMoves.current.add(id)
-    moveStage.mutate(
-      { id, targetStage: target },
-      { onSettled: () => pendingMoves.current.delete(id) },
-    )
+    setMovingStages((prev) => new Set(prev).add(target))
+    // Returns the promise so callers (card Move/Back buttons) can show a
+    // spinner until the move settles. Errors are toasted by the hook.
+    return moveStage.mutateAsync({ id, targetStage: target }).finally(() => {
+      pendingMoves.current.delete(id)
+      setMovingStages((prev) => {
+        const next = new Set(prev)
+        next.delete(target)
+        return next
+      })
+    })
   }
 
   // ---------------------------------------------------------------------
@@ -307,9 +317,13 @@ export default function AdminBoardPage() {
                       >
                         <Filter className="w-4 h-4" />
                       </button>
-                      <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center border border-[#E5E7EB]">
-                        {stagePatients.length}
-                      </span>
+                      {movingStages.has(stage) ? (
+                        <Loader2 className="w-4 h-4 text-[#036638] animate-spin" />
+                      ) : (
+                        <span className="text-xs font-bold text-[#6B7280] bg-white rounded-full w-5 h-5 flex items-center justify-center border border-[#E5E7EB]">
+                          {stagePatients.length}
+                        </span>
+                      )}
                     </div>
                   </div>
 
