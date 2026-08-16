@@ -8,6 +8,8 @@ import {
   endOfMonth,
   endOfWeek,
   format,
+  isAfter,
+  isBefore,
   isSameDay,
   isSameMonth,
   isToday,
@@ -465,6 +467,251 @@ export function DatePicker({
             <X className="w-3 h-3" />
             Clear date
           </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+export interface DateFilterValue {
+  mode: "single" | "range"
+  /** "YYYY-MM-DD", single mode only. */
+  date?: string
+  /** "YYYY-MM-DD", range mode only — order-independent, the picker normalizes it. */
+  from?: string
+  to?: string
+}
+
+export const EMPTY_DATE_FILTER: DateFilterValue = { mode: "single" }
+
+interface DateFilterPickerProps {
+  value: DateFilterValue
+  onChange: (value: DateFilterValue) => void
+  placeholder?: string
+  disabled?: boolean
+}
+
+/**
+ * Date-only picker for filter UIs: a "Single Day" / "Date Range" toggle up top,
+ * one calendar grid underneath that behaves differently per mode. Range mode
+ * needs two clicks (start, then end — order doesn't matter, second click
+ * settles it) and stays open between them so the user can see both ends land;
+ * single mode is one click and done, same feel as the plain DatePicker.
+ */
+export function DateFilterPicker({
+  value,
+  onChange,
+  placeholder = "Filter by date",
+  disabled,
+}: DateFilterPickerProps) {
+  const [open, setOpen] = useState(false)
+  const mode = value.mode ?? "single"
+  const selected = value.date ? parseISO(value.date) : null
+  const rangeFrom = value.from ? parseISO(value.from) : null
+  const rangeTo = value.to ? parseISO(value.to) : null
+
+  const anchor = selected ?? rangeFrom ?? rangeTo
+  const [viewDate, setViewDate] = useState<Date>(() => startOfMonth(anchor ?? new Date()))
+
+  const gridStart = startOfWeek(startOfMonth(viewDate), { weekStartsOn: 0 })
+  const gridEnd = endOfWeek(endOfMonth(viewDate), { weekStartsOn: 0 })
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
+
+  const switchMode = (next: "single" | "range") => {
+    if (next === mode) return
+    onChange({ mode: next })
+  }
+
+  const handleDaySelect = (day: Date) => {
+    if (!isSameMonth(day, viewDate)) setViewDate(startOfMonth(day))
+
+    if (mode === "single") {
+      onChange({ mode: "single", date: format(day, "yyyy-MM-dd") })
+      setOpen(false)
+      return
+    }
+
+    // Range: first click (or a fresh click after a completed range) starts a
+    // new range; the second click settles the other end, ordered start→end.
+    if (!rangeFrom || rangeTo) {
+      onChange({ mode: "range", from: format(day, "yyyy-MM-dd") })
+      return
+    }
+    const [start, end] = isBefore(day, rangeFrom) ? [day, rangeFrom] : [rangeFrom, day]
+    onChange({ mode: "range", from: format(start, "yyyy-MM-dd"), to: format(end, "yyyy-MM-dd") })
+    setOpen(false)
+  }
+
+  const handleClear = () => {
+    onChange({ mode })
+    setOpen(false)
+  }
+
+  const label = (() => {
+    if (mode === "single") {
+      return selected ? format(selected, "EEE, MMM d, yyyy") : placeholder
+    }
+    if (rangeFrom && rangeTo) {
+      const sameYear = rangeFrom.getFullYear() === rangeTo.getFullYear()
+      const fromFmt = sameYear ? "MMM d" : "MMM d, yyyy"
+      return `${format(rangeFrom, fromFmt)} – ${format(rangeTo, "MMM d, yyyy")}`
+    }
+    if (rangeFrom) return `${format(rangeFrom, "MMM d, yyyy")} → pick end date`
+    return placeholder
+  })()
+
+  const hasValue = mode === "single" ? !!selected : !!(rangeFrom || rangeTo)
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next && anchor) setViewDate(startOfMonth(anchor))
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "w-full h-10 px-3.5 rounded-lg border bg-white text-sm flex items-center gap-2.5 transition-all cursor-pointer",
+            disabled && "opacity-50 cursor-not-allowed",
+            hasValue
+              ? "border-[#036638]/40 focus:border-[#036638]/60"
+              : "border-[#E5E7EB] hover:border-[#D1D5DB]",
+            "focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50",
+          )}
+          title={label}
+        >
+          <Calendar className={cn("w-4 h-4 shrink-0", hasValue ? "text-[#036638]" : "text-[#9CA3AF]")} />
+          <span className={cn("truncate", hasValue ? "font-semibold text-[#1A1B1E]" : "text-[#9CA3AF]")}>
+            {label}
+          </span>
+          <ChevronDown className="ml-auto w-4 h-4 text-[#9CA3AF] shrink-0" />
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-[280px] p-3 rounded-2xl shadow-lg" align="start">
+        {/* Single / Range toggle */}
+        <div className="grid grid-cols-2 gap-1 mb-3 p-0.5 bg-[#F3F4F6] rounded-lg">
+          {(["single", "range"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => switchMode(m)}
+              className={cn(
+                "h-7 rounded-md text-xs font-semibold transition-colors cursor-pointer",
+                mode === m ? "bg-white text-[#036638] shadow-sm" : "text-[#6B7280] hover:text-[#1A1B1E]",
+              )}
+            >
+              {m === "single" ? "Single Day" : "Date Range"}
+            </button>
+          ))}
+        </div>
+
+        {mode === "range" && (
+          <p className="text-[10px] text-[#6B7280] mb-2 -mt-1">
+            {!rangeFrom ? "Pick a start day" : !rangeTo ? "Pick an end day" : "Range set — pick again to restart"}
+          </p>
+        )}
+
+        {/* Month nav — arrows step one month, dropdowns jump to any month/year */}
+        <div className="flex items-center gap-1 mb-2">
+          <button
+            type="button"
+            onClick={() => setViewDate((v) => subMonths(v, 1))}
+            aria-label="Previous month"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <MonthYearNav viewDate={viewDate} onNavigate={(d) => setViewDate(d)} />
+          <button
+            type="button"
+            onClick={() => setViewDate((v) => addMonths(v, 1))}
+            aria-label="Next month"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#036638] transition-colors cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {WEEKDAYS.map((d) => (
+            <span key={d} className="text-center text-[10px] font-bold text-[#9CA3AF]">
+              {d}
+            </span>
+          ))}
+        </div>
+
+        {/* Day grid */}
+        <div className="grid grid-cols-7 gap-y-0.5">
+          {days.map((day) => {
+            const inMonth = isSameMonth(day, viewDate)
+            const isSingleSelected = mode === "single" && selected && isSameDay(day, selected)
+            const isRangeStart = mode === "range" && rangeFrom && isSameDay(day, rangeFrom)
+            const isRangeEnd = mode === "range" && rangeTo && isSameDay(day, rangeTo)
+            const isInRange =
+              mode === "range" &&
+              rangeFrom &&
+              rangeTo &&
+              isAfter(day, rangeFrom) &&
+              isBefore(day, rangeTo)
+            const isEndpoint = isSingleSelected || isRangeStart || isRangeEnd
+
+            return (
+              <button
+                key={day.toISOString()}
+                type="button"
+                aria-label={format(day, "EEEE, MMMM d, yyyy")}
+                aria-pressed={Boolean(isEndpoint)}
+                onClick={() => handleDaySelect(day)}
+                className={cn(
+                  "h-8 w-full text-xs font-medium transition-colors cursor-pointer relative",
+                  // Range middle days get a flat tinted band with square-ish
+                  // joins so the selected stretch reads as one continuous bar;
+                  // endpoints stay fully round on top of it.
+                  isInRange && "bg-[#EBF7EC]",
+                  !inMonth && "text-[#D1D5DB]",
+                  inMonth && !isEndpoint && !isInRange && "text-[#1A1B1E] hover:bg-[#EBF7EC] hover:text-[#036638] rounded-full",
+                  inMonth && isInRange && "text-[#036638]",
+                  isToday(day) && inMonth && !isEndpoint && "ring-1 ring-[#036638]/40 rounded-full",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute inset-y-0 my-auto h-8 w-8 mx-auto left-0 right-0 flex items-center justify-center",
+                    isEndpoint && "rounded-full bg-[#036638] text-white shadow-sm shadow-emerald-500/30",
+                  )}
+                >
+                  {format(day, "d")}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Clear */}
+        <div className="mt-2.5 pt-2 border-t border-[#EDEFF2] flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="flex items-center gap-1 text-[10px] font-semibold text-red-500 hover:text-red-600 transition-colors cursor-pointer"
+          >
+            <X className="w-3 h-3" />
+            Clear
+          </button>
+          {mode === "range" && rangeFrom && rangeTo && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="text-[10px] font-semibold text-[#036638] hover:text-[#025030] transition-colors cursor-pointer"
+            >
+              Done
+            </button>
+          )}
         </div>
       </PopoverContent>
     </Popover>

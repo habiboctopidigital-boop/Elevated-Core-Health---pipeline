@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { DatePicker } from "@/components/ui/date-time-picker"
+import { DateFilterPicker, EMPTY_DATE_FILTER, type DateFilterValue } from "@/components/ui/date-time-picker"
 import type { Patient } from "@/types"
 
 interface StageFilterPopupProps {
@@ -25,16 +25,30 @@ export function StageFilterPopup({
 }: StageFilterPopupProps) {
   const [sortOrder, setSortOrder] = useState<SortOrder>(null)
   const [searchName, setSearchName] = useState("")
-  const [specificDate, setSpecificDate] = useState("")
+  const [dateFilter, setDateFilter] = useState<DateFilterValue>(EMPTY_DATE_FILTER)
   const [isLoading, setIsLoading] = useState(false)
   const popupRef = useRef<HTMLDivElement>(null)
 
   // Close popup when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
-        onOpenChange(false)
+      const target = event.target as Node
+      if (popupRef.current && popupRef.current.contains(target)) return
+
+      // The date picker (and its month/year dropdowns) render into a Radix
+      // portal attached to <body>, not inside popupRef — so a click on a
+      // calendar day is a DOM descendant of that portal, not of this popup,
+      // and looks like an "outside" click even though it visually sits right
+      // on top of the panel. That was closing the whole filter popup before
+      // the day-select handler (or Apply) ever got to run. Every Radix
+      // popper-based primitive (Popover, Select, DropdownMenu...) wraps its
+      // portaled content in an element carrying this attribute, so treating
+      // clicks inside it as "inside" covers the calendar and its selects.
+      if (target instanceof Element && target.closest("[data-radix-popper-content-wrapper]")) {
+        return
       }
+
+      onOpenChange(false)
     }
 
     if (isOpen) {
@@ -63,14 +77,21 @@ export function StageFilterPopup({
       )
     }
 
-    // Filter by specific date if provided
-    if (specificDate) {
-      const targetDate = new Date(specificDate)
+    // Filter by date — a single day (exact match) or an inclusive range.
+    if (dateFilter.mode === "single" && dateFilter.date) {
+      const targetDate = new Date(dateFilter.date)
       result = result.filter(p => {
         const patientDate = new Date(p.appointmentDatetime || p.createdAt)
-        return (
-          patientDate.toDateString() === targetDate.toDateString()
-        )
+        return patientDate.toDateString() === targetDate.toDateString()
+      })
+    } else if (dateFilter.mode === "range" && dateFilter.from && dateFilter.to) {
+      const from = new Date(dateFilter.from)
+      from.setHours(0, 0, 0, 0)
+      const to = new Date(dateFilter.to)
+      to.setHours(23, 59, 59, 999)
+      result = result.filter(p => {
+        const patientDate = new Date(p.appointmentDatetime || p.createdAt)
+        return patientDate >= from && patientDate <= to
       })
     }
 
@@ -102,13 +123,13 @@ export function StageFilterPopup({
 
     setSortOrder(null)
     setSearchName("")
-    setSpecificDate("")
+    setDateFilter(EMPTY_DATE_FILTER)
     setIsLoading(false)
     onFilterChange(patients)
     onOpenChange(false)
   }
 
-  const hasActiveFilters = sortOrder || searchName || specificDate
+  const hasActiveFilters = sortOrder || searchName || dateFilter.date || dateFilter.from
 
   return (
     <>
@@ -180,9 +201,9 @@ export function StageFilterPopup({
               <label className="text-xs font-semibold text-[#374151] uppercase tracking-wider block mb-2">
                 Filter by Date
               </label>
-              <DatePicker
-                value={specificDate}
-                onChange={(v) => setSpecificDate(v)}
+              <DateFilterPicker
+                value={dateFilter}
+                onChange={setDateFilter}
                 placeholder="Filter by date"
                 disabled={isLoading}
               />
