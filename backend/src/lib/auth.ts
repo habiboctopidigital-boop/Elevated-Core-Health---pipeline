@@ -12,7 +12,7 @@ export interface RefreshTokenPayload {
 	tokenId: string;
 }
 
-const ACCESS_EXPIRY = "50m";
+const ACCESS_EXPIRY = "1d";
 const REFRESH_EXPIRY = "7d";
 
 export function signAccessToken(userId: string, role: string): string {
