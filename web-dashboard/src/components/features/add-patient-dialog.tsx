@@ -165,7 +165,13 @@ export function AddPatientDialog() {
       resetForm()
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || "Failed to add patient")
+      const message = error?.response?.data?.message || "Failed to add patient"
+      toast.error(message)
+      // Server-side duplicate-email rejection — surface it inline on the
+      // email field too, so it's obvious which value needs changing.
+      if (/email/i.test(message)) {
+        setErrors((prev) => ({ ...prev, email: message }))
+      }
     },
   })
 

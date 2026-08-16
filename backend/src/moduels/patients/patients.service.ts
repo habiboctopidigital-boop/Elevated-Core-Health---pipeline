@@ -56,6 +56,21 @@ function toPatientListDto<T extends { firstName?: string | null; lastName?: stri
 }
 
 /**
+ * True when another patient already has this email (case-insensitive).
+ * Emails are treated as unique identifiers for patients — the Add Patient form
+ * and the webhook intake must not create duplicates.
+ */
+async function findDuplicateByEmail(email: string | null | undefined): Promise<boolean> {
+	const normalized = email?.trim().toLowerCase();
+	if (!normalized) return false;
+	const existing = await prisma.patient.findFirst({
+		where: { email: { equals: normalized, mode: "insensitive" } },
+		select: { id: true },
+	});
+	return !!existing;
+}
+
+/**
  * Server-side simulated verification of benefits. In a later phase this will
  * call a real payer/clearinghouse API; for now it synthesizes realistic values
  * from the patient's stored payment data so the eligibility flow can be tested.
@@ -1058,6 +1073,15 @@ export const patientsService = {
 		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
 		const firstStage = await getFirstStageKey();
 
+		// Reject re-pushes of a patient that already exists (same email).
+		if (await findDuplicateByEmail(input.email)) {
+			return ServiceResponse.failure(
+				"A patient with this email already exists. Intake skipped to avoid a duplicate record.",
+				null,
+				StatusCodes.CONFLICT,
+			);
+		}
+
 		// Auto-assign VA: explicit selection wins, then vaName from webhook, then appointment time
 		const { assignedTo, assignmentMethod } = await resolveAutoAssign(input, appointmentDatetime);
 
@@ -1133,6 +1157,16 @@ export const patientsService = {
 	async create(input: CreatePatientInput, user: AuthenticatedUser) {
 		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
 		const firstStage = await getFirstStageKey();
+
+		// No duplicate emails — the Add Patient form must not create a second
+		// record for an existing patient.
+		if (await findDuplicateByEmail(input.email)) {
+			return ServiceResponse.failure(
+				"A patient with this email already exists. Use a different email or update the existing patient.",
+				null,
+				StatusCodes.CONFLICT,
+			);
+		}
 
 		// Auto-assign VA: explicit selection wins, then appointment time
 		const { assignedTo, assignmentMethod } = await resolveAutoAssign(input, appointmentDatetime);

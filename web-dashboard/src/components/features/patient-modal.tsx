@@ -1759,22 +1759,24 @@ const isExpired = () => {
                           </h4>
 
                           {/* Composer */}
-                          <div className="flex items-start gap-2 mb-4">
+                          <div className="mb-4">
                             <Textarea
                               placeholder="Add an operational note..."
                               value={newNoteText}
                               onChange={(e) => setNewNoteText(e.target.value)}
-                              className="text-sm min-h-[80px] rounded-xl border-gray-200 focus:ring-emerald-400/30 flex-1"
+                              className="text-sm min-h-[80px] rounded-xl border-gray-200 focus:ring-emerald-400/30"
                             />
-                            <Button
-                              size="sm"
-                              onClick={handleAddNote}
-                              disabled={addNote.isPending || !newNoteText.trim()}
-                              className="mt-0.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow shrink-0"
-                            >
-                              {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                              Add Note
-                            </Button>
+                            <div className="mt-2 flex justify-end">
+                              <Button
+                                size="sm"
+                                onClick={handleAddNote}
+                                disabled={addNote.isPending || !newNoteText.trim()}
+                                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow"
+                              >
+                                {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                                Add Note
+                              </Button>
+                            </div>
                           </div>
 
                           {/* Note list (newest first) */}
@@ -2810,10 +2812,19 @@ const isExpired = () => {
                   <>
                     <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm">
                       <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2 mb-3"><MessageSquare className="w-4 h-4 text-indigo-500" /> Notes</h4>
-                      <div className=" items-start gap-2 mb-3">
-                        <Textarea placeholder="Add an operational note..." value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} className="text-sm min-h-[70px] rounded-xl border-gray-200 focus:ring-emerald-400/30 flex-1" />
-                        
-                       
+                      <div className="mb-3">
+                        <Textarea placeholder="Add an operational note..." value={newNoteText} onChange={(e) => setNewNoteText(e.target.value)} className="text-sm min-h-[70px] rounded-xl border-gray-200 focus:ring-emerald-400/30" />
+                        <div className="mt-2 flex justify-end">
+                          <Button
+                            size="sm"
+                            onClick={handleAddNote}
+                            disabled={addNote.isPending || !newNoteText.trim()}
+                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold shadow"
+                          >
+                            {addNote.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                            Add Note
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-2.5">
                         {(patient.patientNotes?.length ?? 0) > 0 ? (
