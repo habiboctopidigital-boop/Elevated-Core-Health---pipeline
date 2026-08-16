@@ -62,6 +62,7 @@ export function useMoveStage() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.SUMMARY })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Stage updated")
     },
     onError: (err: any) => {
@@ -85,6 +86,7 @@ export function useAssignPatient() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Assignment updated")
     },
     onError: (err: any) => {
@@ -164,6 +166,7 @@ export function useToggleChecklist() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
     },
   })
 }
@@ -176,6 +179,7 @@ export function useAddNote() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Note added")
     },
     onError: (err: any) => {
@@ -192,6 +196,7 @@ export function useDeleteNote() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Note deleted")
     },
     onError: (err: any) => {
@@ -216,6 +221,7 @@ export function useFlagPatient() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.SUMMARY })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Patient flagged for Donna")
     },
     onError: (err: any) => {
@@ -233,6 +239,7 @@ export function useClearFlag() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD.SUMMARY })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Flag cleared")
     },
     onError: (err: any) => {
@@ -257,6 +264,7 @@ export function useClaimPatient() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Patient claimed")
     },
     onError: (err: any) => {
@@ -279,6 +287,7 @@ export function useCheckEligibility() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Eligibility check completed")
     },
     onError: (err: any) => {
@@ -294,6 +303,7 @@ export function useIntake() {
       PatientsService.intake(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Patient added via test intake")
     },
     onError: (err: any) => {
@@ -325,6 +335,7 @@ export function useUpdatePatient() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Patient updated")
     },
     onError: (err: any) => {
@@ -341,6 +352,7 @@ export function useLockPatient() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Patient locked")
     },
     onError: (err: any) => {
@@ -357,6 +369,7 @@ export function useUnlockPatient() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Patient unlocked")
     },
     onError: (err: any) => {
@@ -374,6 +387,7 @@ export function useUpdatePatientStatus() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.CRM.CONTACTS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Status updated")
     },
     onError: (err: any) => {
@@ -390,6 +404,7 @@ export function useUpdateAppointment() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.DETAIL(vars.id) })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.ALL })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Appointment updated and emails sent to patient and admin")
     },
     onError: (err: any) => {

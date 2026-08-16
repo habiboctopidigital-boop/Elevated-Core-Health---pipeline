@@ -92,6 +92,9 @@ export const QUERY_KEYS = {
     CHECKLIST_ITEMS: ["checklist-items"] as const,
   },
   ACTIVITY_LOG: {
+    // Prefix key — invalidating this refreshes every activity-log query
+    // (the modal's patient-scoped list AND the global log page filters).
+    ALL: ["activity-log"] as const,
     LIST: (params?: string) => ["activity-log", params] as const,
   },
   USERS: {

@@ -917,15 +917,10 @@ const isExpired = () => {
                         {patient.status === "completed" ? "Completed" : "Cancelled"}
                       </span>
                     )}
-                    {patient.isPrivate ? (
+                    {patient.isPrivate && (
                       <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
                         <Lock className="w-3.5 h-3.5" />
                         Locked
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/15 border border-white/25 text-white">
-                        <Unlock className="w-3.5 h-3.5" />
-                        Unlocked
                       </span>
                     )}
                   </div>
@@ -2318,15 +2313,10 @@ const isExpired = () => {
                     {patient.status === "completed" ? "Completed" : "Cancelled"}
                   </span>
                 )}
-                {patient.isPrivate ? (
+                {patient.isPrivate && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-300/40 text-amber-50">
                     <Lock className="w-3 h-3" />
                     Locked
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white">
-                    <Unlock className="w-3 h-3" />
-                    Unlocked
                   </span>
                 )}
               </div>

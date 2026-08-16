@@ -33,6 +33,7 @@ export function useCreateUser() {
       // two different caches — without this, a newly created VA shows up on
       // the Users page but stays invisible everywhere else until a hard reload.
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.VAS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("User created")
     },
     onError: (err: any) => {
@@ -57,6 +58,7 @@ export function useUpdateUser() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.USERS })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.VAS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("User updated")
     },
     onError: (err: any) => {
@@ -72,6 +74,7 @@ export function useDeleteUser() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.USERS })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.VAS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("User deleted")
     },
     onError: (err: any) => {
@@ -94,6 +97,7 @@ export function useCreateChecklistItem() {
       AdminService.createChecklistItem(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Checklist item added")
     },
     onError: (err: any) => {
@@ -114,6 +118,7 @@ export function useUpdateChecklistItem() {
       }).then((item) => ({ item, silent })),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       if (!res.silent) toast.success("Checklist item updated")
     },
     onError: (err: any) => {
@@ -128,6 +133,7 @@ export function useDeleteChecklistItem() {
     mutationFn: (id: string) => AdminService.deleteChecklistItem(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.PATIENTS.CHECKLIST_ITEMS })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Checklist item removed")
     },
     onError: (err: any) => {
@@ -162,6 +168,7 @@ export function useCreateEligibilityRule() {
     }) => AdminService.createEligibilityRule(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Eligibility rule added")
     },
     onError: (err: any) => {
@@ -182,6 +189,7 @@ export function useUpdateEligibilityRule() {
     }>) => AdminService.updateEligibilityRule(id, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Eligibility rule updated")
     },
     onError: (err: any) => {
@@ -196,6 +204,7 @@ export function useDeleteEligibilityRule() {
     mutationFn: (id: string) => AdminService.deleteEligibilityRule(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.ELIGIBILITY_RULES })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Eligibility rule removed")
     },
     onError: (err: any) => {
@@ -218,6 +227,7 @@ export function useConnectCrm() {
       AdminService.connectCrm(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("CRM connected")
     },
     onError: (err: any) => {
@@ -232,6 +242,7 @@ export function useDisconnectCrm() {
     mutationFn: () => AdminService.disconnectCrm(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("CRM disconnected")
     },
     onError: (err: any) => {
@@ -246,6 +257,7 @@ export function useUpdateCrmPermission() {
     mutationFn: (permission: CrmPermission) => AdminService.updateCrmPermission(permission),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ADMIN.CRM_INTEGRATION })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ACTIVITY_LOG.ALL })
       toast.success("Permission updated")
     },
     onError: (err: any) => {

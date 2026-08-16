@@ -16,6 +16,7 @@ import {
   Globe,
   User,
   AlertTriangle,
+  Lock,
 } from "lucide-react"
 import { cn, getInitials } from "@/lib/utils"
 import { STALE_HOURS } from "@/constants"
@@ -257,6 +258,13 @@ export function PatientCard({ patient, onMoveStage, onClick, isDragging, onDragS
               <BadgeIcon className="w-3 h-3" fill={patient.isFlagged ? "currentColor" : "none"} />
               {headerBadge.label}
             </span>
+            {/* Lock chip — only when the record is locked; nothing shows when unlocked */}
+            {patient.isPrivate && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700">
+                <Lock className="w-3 h-3" />
+                Locked
+              </span>
+            )}
             <span className="w-px h-3.5 bg-[#E5E7EB]" />
             <span className="inline-flex items-center gap-1.5 text-[#6B7280]">
               <Calendar className="w-3.5 h-3.5 text-[#9CA3AF]" />
