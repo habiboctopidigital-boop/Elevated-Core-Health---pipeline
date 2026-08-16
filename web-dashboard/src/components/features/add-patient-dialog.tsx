@@ -25,6 +25,7 @@ import { useListVas } from "@/hooks/query/usePatients"
 import { useNotificationsContext } from "@/providers/NotificationsProvider"
 import { SelectOrOther } from "@/components/shared/select-or-other"
 import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS } from "@/lib/patient-options"
+import { isValidUsPhone, formatUsPhone } from "@/lib/us-phone"
 import { QUERY_KEYS } from "@/constants"
 import type { Patient } from "@/types"
 import { toast } from "sonner"
@@ -55,8 +56,8 @@ const addPatientSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || /^[+()\-.\s\d]{7,20}$/.test(v), {
-      message: "Enter a valid phone number",
+    .refine((v) => !v || isValidUsPhone(v), {
+      message: "Enter a valid US phone number, e.g. (555) 123-4567",
     }),
   location: z.string().trim().max(120, "Location is too long").optional(),
   dateOfBirth: z
@@ -297,17 +298,37 @@ export function AddPatientDialog() {
                 />
               </Field>
 
-              <Field label="Phone" optional error={errors.phone}>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="(555) 123-4567"
-                  className={inputClass(!!errors.phone)}
-                  aria-invalid={!!errors.phone}
-                />
-              </Field>
+              <div className="space-y-1.5 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="block text-sm font-semibold text-[#1A1B1E]">
+                    Phone
+                    <span className="text-[#9CA3AF] font-normal ml-1">(optional)</span>
+                  </label>
+                  <span className="text-xs text-[#9CA3AF] font-medium shrink-0">(555) 123-4567</span>
+                </div>
+                <div className="relative">
+                  <span
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#036638] border-r border-gray-200 pr-2 pointer-events-none select-none"
+                    aria-hidden
+                  >
+                    +1
+                  </span>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, phone: formatUsPhone(e.target.value) }))
+                      clearFieldError("phone")
+                    }}
+                    placeholder="(555) 123-4567"
+                    className={`${inputClass(!!errors.phone)} pl-12`}
+                    aria-invalid={!!errors.phone}
+                  />
+                </div>
+                {errors.phone && <p className="text-xs text-red-500 mt-0.5">{errors.phone}</p>}
+              </div>
 
               <Field label="Location" optional error={errors.location}>
                 <input
