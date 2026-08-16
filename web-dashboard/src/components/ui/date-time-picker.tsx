@@ -729,11 +729,19 @@ export function getMinAppointmentDate(): Date {
 }
 
 /**
+ * Latest allowed date of birth for a given minimum age in years. Pass as
+ * `maxDate` to DatePicker so patients must be at least `minAge` years old.
+ */
+export function getMaxDobAgeDate(minAge: number): Date {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - minAge)
+  return d
+}
+
+/**
  * Latest allowed date of birth — exactly 18 years ago. Pass as `maxDate` to
  * DatePicker so patients must be at least 18 years old.
  */
 export function getMaxDobDate(): Date {
-  const d = new Date()
-  d.setFullYear(d.getFullYear() - 18)
-  return d
+  return getMaxDobAgeDate(18)
 }

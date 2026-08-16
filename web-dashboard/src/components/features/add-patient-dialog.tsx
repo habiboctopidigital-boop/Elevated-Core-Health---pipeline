@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Loader2 } from "lucide-react"
-import { DateTimePicker, DatePicker, getMinAppointmentDate, getMaxDobDate } from "@/components/ui/date-time-picker"
+import { Plus, Loader2, Info } from "lucide-react"
+import { DateTimePicker, DatePicker, getMinAppointmentDate, getMaxDobAgeDate } from "@/components/ui/date-time-picker"
+import { LocationCombobox } from "@/components/shared/location-combobox"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { PatientsService } from "@/services/patients.service"
 import { useListVas } from "@/hooks/query/usePatients"
@@ -49,9 +50,8 @@ const addPatientSchema = z.object({
   email: z
     .string()
     .trim()
-    .email("Enter a valid email address")
-    .optional()
-    .or(z.literal("")),
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
   phone: z
     .string()
     .trim()
@@ -59,12 +59,14 @@ const addPatientSchema = z.object({
     .refine((v) => !v || isValidUsPhone(v), {
       message: "Enter a valid US phone number, e.g. (555) 123-4567",
     }),
-  location: z.string().trim().max(120, "Location is too long").optional(),
+  location: z.string().trim().min(1, "Location is required").max(120, "Location is too long"),
   dateOfBirth: z
     .string()
-    .optional()
-    .refine((v) => !v || new Date(v).getTime() <= getMaxDobDate().getTime(), {
-      message: "Patient must be at least 18 years old",
+    .trim()
+    .min(1, "Date of birth is required")
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Enter a valid date of birth")
+    .refine((v) => new Date(v).getTime() <= getMaxDobAgeDate(15).getTime(), {
+      message: "Patient must be at least 15 years old",
     }),
   appointmentDatetime: z
     .string()
@@ -286,7 +288,7 @@ export function AddPatientDialog() {
                 />
               </Field>
 
-              <Field label="Email" optional error={errors.email}>
+              <Field label="Email" required error={errors.email}>
                 <input
                   type="email"
                   name="email"
@@ -330,28 +332,32 @@ export function AddPatientDialog() {
                 {errors.phone && <p className="text-xs text-red-500 mt-0.5">{errors.phone}</p>}
               </div>
 
-              <Field label="Location" optional error={errors.location}>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="City, State"
+              <Field label="Location" required error={errors.location}>
+                <LocationCombobox
+                  value={formData.location ?? ""}
+                  onChange={(v) => {
+                    setFormData((f) => ({ ...f, location: v }))
+                    clearFieldError("location")
+                  }}
+                  placeholder="Search city & state..."
                   className={inputClass(!!errors.location)}
-                  aria-invalid={!!errors.location}
                 />
               </Field>
 
-              <Field label="Date of Birth" optional error={errors.dateOfBirth}>
+              <Field label="Date of Birth" required error={errors.dateOfBirth}>
                 <DatePicker
                   value={formData.dateOfBirth ?? ""}
                   onChange={(iso) => {
                     setFormData((f) => ({ ...f, dateOfBirth: iso }))
                     clearFieldError("dateOfBirth")
                   }}
-                  maxDate={getMaxDobDate()}
+                  maxDate={getMaxDobAgeDate(15)}
                   placeholder="Select date of birth"
                 />
+                <p className="flex items-center gap-1 text-xs text-[#9CA3AF] mt-1.5">
+                  <Info className="w-3 h-3 shrink-0" />
+                  DOB must be realistic — patient must be at least 15 years old
+                </p>
               </Field>
 
               <Field label="Appointment Date & Time" optional>
