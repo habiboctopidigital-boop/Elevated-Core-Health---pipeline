@@ -26,6 +26,13 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "sonner"
 import type { Patient } from "@/types"
 
@@ -164,36 +171,48 @@ export default function AdminCrmPage() {
             className="w-full h-10 pl-9 pr-3 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 focus:bg-white transition-all"
           />
         </div>
-        <select
+        <Select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="h-10 px-3 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 appearance-none cursor-pointer"
+          onValueChange={(v) => { setStatusFilter(v); setPage(1) }}
         >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select
+          <SelectTrigger className="w-auto h-10 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
           value={stageFilter}
-          onChange={(e) => { setStageFilter(e.target.value); setPage(1) }}
-          className="h-10 px-3 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 appearance-none cursor-pointer"
+          onValueChange={(v) => { setStageFilter(v); setPage(1) }}
         >
-          <option value="">All stages</option>
-          {Object.entries(stageLabels).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
-        <select
+          <SelectTrigger className="w-auto h-10 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+            <SelectValue placeholder="All stages" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All stages</SelectItem>
+            {Object.entries(stageLabels).map(([key, label]) => (
+              <SelectItem key={key} value={key}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
           value={eligFilter}
-          onChange={(e) => { setEligFilter(e.target.value); setPage(1) }}
-          className="h-10 px-3 rounded-xl border border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 appearance-none cursor-pointer"
+          onValueChange={(v) => { setEligFilter(v); setPage(1) }}
         >
-          <option value="">All eligibility</option>
-          <option value="eligible">Eligible</option>
-          <option value="not_eligible">Not Eligible</option>
-          <option value="not_checked">Not Checked</option>
-        </select>
+          <SelectTrigger className="w-auto h-10 rounded-xl border-[#E5E7EB] bg-[#F8FAF9] text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+            <SelectValue placeholder="All eligibility" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All eligibility</SelectItem>
+            <SelectItem value="eligible">Eligible</SelectItem>
+            <SelectItem value="not_eligible">Not Eligible</SelectItem>
+            <SelectItem value="not_checked">Not Checked</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* - Contacts table - */}

@@ -23,6 +23,13 @@ import { useStageMeta } from "@/hooks/query/useStages"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { PatientModal } from "@/components/features/patient-modal"
 import { DatePicker } from "@/components/ui/date-time-picker"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { ActivityCategory, ActivityLog, UserRole } from "@/types"
 import { cn } from "@/lib/utils"
 import { isAdminOrAbove } from "@/lib/roles"
@@ -292,48 +299,60 @@ export function HandoffLog() {
               className="w-full h-9 pl-9 pr-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] transition-all"
             />
           </div>
-          <select
+          <Select
             value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value)
+            onValueChange={(v) => {
+              setCategoryFilter(v)
               setPage(1)
             }}
-            className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
           >
-            <option value="">All categories</option>
-            {CATEGORY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <select
+            <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All categories</SelectItem>
+              {CATEGORY_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
             value={actionFilter}
-            onChange={(e) => {
-              setActionFilter(e.target.value)
+            onValueChange={(v) => {
+              setActionFilter(v)
               setPage(1)
             }}
-            className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
           >
-            <option value="">All actions</option>
-            {ACTION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <select
+            <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+              <SelectValue placeholder="All actions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All actions</SelectItem>
+              {ACTION_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
             value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value)
+            onValueChange={(v) => {
+              setTypeFilter(v)
               setPage(1)
             }}
-            className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
           >
-            <option value="">All types</option>
-            <option value="manual">Manual</option>
-            <option value="auto">Auto</option>
-          </select>
+            <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All types</SelectItem>
+              <SelectItem value="manual">Manual</SelectItem>
+              <SelectItem value="auto">Auto</SelectItem>
+            </SelectContent>
+          </Select>
           <button
             onClick={() => setShowFilters((s) => !s)}
             className={cn(
@@ -389,56 +408,68 @@ export function HandoffLog() {
             {isAdmin && (
               <div className="flex items-center gap-1.5">
                 <label className="text-xs text-[#6B7280] font-medium">User</label>
-                <select
+                <Select
                   value={actorFilter}
-                  onChange={(e) => {
-                    setActorFilter(e.target.value)
+                  onValueChange={(v) => {
+                    setActorFilter(v)
                     setPage(1)
                   }}
-                  className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer min-w-[160px]"
                 >
-                  <option value="">All users</option>
-                  {userOptions.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role === "super_admin" ? "Super Admin" : isAdminOrAbove(u.role) ? "Admin" : "VA"})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer min-w-[160px]">
+                    <SelectValue placeholder="All users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All users</SelectItem>
+                    {userOptions.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.role === "super_admin" ? "Super Admin" : isAdminOrAbove(u.role) ? "Admin" : "VA"})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-[#6B7280] font-medium">Role</label>
-              <select
+              <Select
                 value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value)
+                onValueChange={(v) => {
+                  setRoleFilter(v)
                   setPage(1)
                 }}
-                className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
               >
-                <option value="">All roles</option>
-                <option value="super_admin">Super Admin</option>
-                <option value="admin">Admin</option>
-                <option value="va">VA</option>
-              </select>
+                <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+                  <SelectValue placeholder="All roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All roles</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="va">VA</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-1.5">
               <label className="text-xs text-[#6B7280] font-medium">Entity</label>
-              <select
+              <Select
                 value={entityFilter}
-                onChange={(e) => {
-                  setEntityFilter(e.target.value)
+                onValueChange={(v) => {
+                  setEntityFilter(v)
                   setPage(1)
                 }}
-                className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer"
               >
-                <option value="">All entities</option>
-                {ENTITY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+                  <SelectValue placeholder="All entities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All entities</SelectItem>
+                  {ENTITY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {!isAdmin && (
               <span className="text-xs text-[#9CA3AF] italic">

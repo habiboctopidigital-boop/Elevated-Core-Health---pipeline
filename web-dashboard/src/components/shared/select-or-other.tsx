@@ -1,4 +1,12 @@
-import { ChevronDown } from "lucide-react"
+"use client"
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export const OTHER_OPTION = "Other"
 
@@ -26,31 +34,30 @@ export function SelectOrOther({
 
   return (
     <div className="space-y-1.5">
-      <div className="relative">
-        <select
-          value={selectValue}
-          onChange={(e) => {
-            if (e.target.value === OTHER_OPTION) {
-              onOtherModeChange(true)
-              onChange("")
-            } else {
-              onOtherModeChange(false)
-              onChange(e.target.value)
-            }
-          }}
-          className="w-full h-10 sm:h-9 px-2.5 pr-9 rounded-lg border border-[#E5E7EB] text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white appearance-none cursor-pointer"
-        >
-          <option value="">{placeholder}</option>
+      <Select
+        value={selectValue}
+        onValueChange={(v) => {
+          if (v === OTHER_OPTION) {
+            onOtherModeChange(true)
+            onChange("")
+          } else {
+            onOtherModeChange(false)
+            onChange(v)
+          }
+        }}
+      >
+        <SelectTrigger className="w-full h-10 sm:h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
           {options.map((o) => (
-            <option key={o} value={o}>
+            <SelectItem key={o} value={o}>
               {o}
-            </option>
+            </SelectItem>
           ))}
-          <option value={OTHER_OPTION}>Other (specify)</option>
-        </select>
-        {/* Visible chevron so the field reads as a dropdown at a glance */}
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] pointer-events-none" />
-      </div>
+          <SelectItem value={OTHER_OPTION}>Other (specify)</SelectItem>
+        </SelectContent>
+      </Select>
       {otherMode && (
         <input
           value={value}

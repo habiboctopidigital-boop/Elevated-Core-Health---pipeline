@@ -61,7 +61,7 @@ const ADMIN_NAV = [
     { href: ROUTES.ADMIN.ELIGIBILITY, icon: ShieldCheck, label: "Eligibility" },
   ]},
   { section: "Configuration", items: [
-    { href: ROUTES.ADMIN.APP_SETTINGS, icon: Settings, label: "App Settings" },
+    // { href: ROUTES.ADMIN.APP_SETTINGS, icon: Settings, label: "App Settings" },
     { href: ROUTES.ADMIN.SOP, icon: NotebookText, label: "Sop Guide" },
   ]},
 ]

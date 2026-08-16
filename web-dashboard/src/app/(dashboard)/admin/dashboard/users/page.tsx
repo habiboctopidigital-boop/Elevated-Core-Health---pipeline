@@ -9,6 +9,13 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import z from "zod"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { SettingsNav } from "@/components/features/settings-nav"
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
@@ -72,6 +79,8 @@ export default function AdminUsersPage() {
     handleSubmit,
     reset,
     setError,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -495,24 +504,28 @@ export default function AdminUsersPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[#374151]">Role</label>
-                <select
-                  {...register("role")}
-                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
-                >
-                  <option value="va">VA</option>
-                  <option value="admin">Admin</option>
-                </select>
+                <Select value={watch("role")} onValueChange={(v) => setValue("role", v as "va" | "admin")}>
+                  <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/30 cursor-pointer">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="va">VA</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[#374151]">Shift</label>
-                <select
-                  {...register("shift")}
-                  className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-2 focus:ring-[#036638]/30 bg-white"
-                >
-                  <option value="">No shift</option>
-                  <option value="morning">Morning</option>
-                  <option value="evening">Evening</option>
-                </select>
+                <Select value={watch("shift")} onValueChange={(v) => setValue("shift", v as "" | "morning" | "evening")}>
+                  <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/30 cursor-pointer">
+                    <SelectValue placeholder="No shift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No shift</SelectItem>
+                    <SelectItem value="morning">Morning</SelectItem>
+                    <SelectItem value="evening">Evening</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">

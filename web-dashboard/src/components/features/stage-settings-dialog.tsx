@@ -26,11 +26,14 @@ export function StageSettingsDialog() {
           <span className="sm:hidden">Settings</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl gap-0 p-0 overflow-hidden max-h-[calc(100dvh-2rem)] overflow-y-auto border-0 shadow-2xl rounded-3xl" hideAccent>
+      {/* Fixed height so the modal never grows/shrinks when toggling between
+          the stage list and the Add Stage form — the green header stays
+          pinned and only the body below scrolls. */}
+      <DialogContent className="sm:max-w-3xl gap-0 p-0 border-0 shadow-2xl rounded-3xl overflow-hidden flex flex-col h-[calc(90dvh-2rem)]" hideAccent>
         <DialogHeader className="sr-only">
           <DialogTitle>Stage Settings</DialogTitle>
         </DialogHeader>
-        <div className="relative overflow-hidden bg-gradient-to-r border-none from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">
+        <div className="relative shrink-0 overflow-hidden bg-gradient-to-r border-none from-[#036638] via-[#0a7a44] to-emerald-600 px-5 pt-5 pb-5 pr-12">
           <div className="absolute -right-10 -top-12 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
           <div className="absolute -right-2 -top-3 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
           <div className="flex items-start gap-3 relative">
@@ -43,7 +46,7 @@ export function StageSettingsDialog() {
             </div>
           </div>
         </div>
-        <div className="p-5 sm:p-6 bg-[#FAFBFA]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 bg-[#FAFBFA]">
           <StageSettingsPanel variant="dialog" />
         </div>
       </DialogContent>

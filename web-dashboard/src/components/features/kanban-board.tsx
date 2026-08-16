@@ -6,11 +6,18 @@ import { PatientCard } from "@/components/features/patient-card"
 import { PatientModal } from "@/components/features/patient-modal"
 import { PatientListView } from "@/components/features/patient-list-view"
 import { StageFilterPopup } from "@/components/features/stage-filter-popup"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useStageMeta } from "@/hooks/query/useStages"
 import { useStageJump } from "@/hooks/useStageJump"
 import { filterPatients, type BoardFilters } from "@/lib/board-filters"
 import type { Patient, PatientStage } from "@/types"
-import { CheckCircle2, ChevronDown, Filter, GripVertical, Loader2, SearchX } from "lucide-react"
+import { CheckCircle2, Filter, GripVertical, Loader2, SearchX } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useMemo } from "react"
@@ -37,7 +44,7 @@ export function KanbanBoard({
   const [filterNotFound, setFilterNotFound] = useState<Record<string, boolean>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
   const pendingMoves = useRef<Set<string>>(new Set())
-  const { activeStage: quickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
+  const { activeStage: quickJumpStage, lastJumpedStage: lastQuickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
 
   // Global filters from the board filter bar — applied across every stage column
   const filteredPatients = useMemo(() => {
@@ -209,25 +216,24 @@ export function KanbanBoard({
             fixed width, it doesn't need to fill the row */}
         <div className="sm:hidden flex items-center gap-2 w-full min-w-0">
           <span className="text-sm font-medium text-[#6B7280] shrink-0">Jump to stage:</span>
-          <div className="relative w-56 max-w-full shrink-0">
-            <select
-              value={quickJumpStage ?? ""}
-              onChange={(e) => {
-                if (e.target.value) handleQuickJump(e.target.value)
+          <div className="w-56 max-w-full shrink-0">
+            <Select
+              value={lastQuickJumpStage ?? ""}
+              onValueChange={(v) => {
+                if (v) handleQuickJump(v)
               }}
-              aria-label="Jump to stage"
-              className="w-full h-9 appearance-none rounded-xl border border-[#E5E7EB] bg-white pl-3 pr-8 text-xs font-semibold text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50"
             >
-              <option value="" disabled>
-                Select stage…
-              </option>
-              {stageOrder.map((stage) => (
-                <option key={stage} value={stage}>
-                  {stageLabels[stage]}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+              <SelectTrigger aria-label="Jump to stage" className="w-full h-9 rounded-xl border-[#E5E7EB] bg-white text-xs font-semibold text-[#1A1B1E] shadow-none focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 cursor-pointer">
+                <SelectValue placeholder="Select stage…" />
+              </SelectTrigger>
+              <SelectContent>
+                {stageOrder.map((stage) => (
+                  <SelectItem key={stage} value={stage}>
+                    {stageLabels[stage]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -255,7 +261,7 @@ export function KanbanBoard({
                 onDragLeave={(e) => handleDragLeave(e, stage)}
                 onDrop={(e) => handleDrop(e, stage)}
                 className={cn(
-                  "w-full min-w-0 sm:w-[450px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50",
+                  "w-full min-w-0 sm:w-[450px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 scroll-mt-14 lg:scroll-mt-0",
                   // Brief self-fading flash (animate-jump-flash clears on its own)
 quickJumpStage === stage && "animate-jump-flash",
                   isOver && !isDisabled
@@ -373,15 +379,23 @@ quickJumpStage === stage && "animate-jump-flash",
         </div>
       </div>
       ) : (
-        <PatientListView
-          patients={filteredPatients}
-          stageOrder={stageOrder}
-          stageLabels={stageLabels}
-          onMoveStage={handleMoveStage}
-          onSelect={(p) => setSelectedPatientId(p.id)}
-          pendingIds={pendingMoves.current}
-          registerStageRef={registerStageRef}
-        />
+        // List view needs its own scroll container on desktop: the page root
+        // is a fixed-height overflow-hidden flex column, so without a
+        // flex-1/min-h-0/overflow-y-auto wrapper the list content gets
+        // clipped and the page can't scroll. On phone/tablet the page flows
+        // naturally, so the scroll behavior is desktop-only.
+        <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto scrollbar-brand">
+          <PatientListView
+            patients={filteredPatients}
+            stageOrder={stageOrder}
+            stageLabels={stageLabels}
+            onMoveStage={handleMoveStage}
+            onSelect={(p) => setSelectedPatientId(p.id)}
+            pendingIds={pendingMoves.current}
+            registerStageRef={registerStageRef}
+            activeStage={quickJumpStage}
+          />
+        </div>
       )}
 
       <PatientModal

@@ -18,6 +18,8 @@ interface PatientListViewProps {
   pendingIds?: Set<string>
   /** Stage jump refs — attached to each stage's section header so the jump bar can scroll the list. */
   registerStageRef?: (stage: string) => (el: HTMLDivElement | null) => void
+  /** Stage being jumped to — the matching section flashes brand-green briefly. */
+  activeStage?: string | null
 }
 
 /**
@@ -35,6 +37,7 @@ export function PatientListView({
   onSelect,
   pendingIds,
   registerStageRef,
+  activeStage,
 }: PatientListViewProps) {
   // Required checklist defs per stage — used to gate the "Next" button: it
   // stays enabled only when every required item for the patient's current
@@ -77,9 +80,14 @@ export function PatientListView({
         const color = getStageColor(stage)
         const sectionRef = registerStageRef ? registerStageRef(stage) : undefined
         return (
-          <section key={stage} className="space-y-2">
-            {/* Stage section header — the jump bar scrolls to this */}
-            <div ref={sectionRef} className="flex items-center gap-2 px-1">
+          // Brief self-fading flash on the jumped-to section (same
+          // animate-jump-flash the grid columns use — clears on its own).
+          <section key={stage} className={cn("space-y-2", activeStage === stage && "animate-jump-flash")}>
+            {/* Stage section header — the jump bar scrolls to this.
+                scroll-mt-14 clears the fixed mobile topbar so the section
+                lands at the top of the visible area on phones; desktop has no
+                fixed overlap so it scrolls to the very top of the list. */}
+            <div ref={sectionRef} className="flex items-center gap-2 px-1 scroll-mt-14 lg:scroll-mt-0">
               <span className={cn("w-2 h-2 rounded-full shrink-0", color.circle)} />
               <h4 className="text-xs font-bold text-[#036638] truncate">{stageLabels[stage] || stage}</h4>
               <span className="ml-auto text-[10px] font-bold text-[#6B7280] bg-white rounded-full px-1.5 py-0.5 border border-[#E5E7EB] shrink-0">

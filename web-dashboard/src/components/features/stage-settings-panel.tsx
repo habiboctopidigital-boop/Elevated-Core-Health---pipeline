@@ -35,10 +35,18 @@ import {
   Calendar,
   EllipsisVertical,
   Power,
+  ArrowLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -105,7 +113,9 @@ export function StageSettingsPanel({
   const deleteStage = useDeleteStage()
 
   const [expandedStage, setExpandedStage] = useState<string | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
+  // Toggle between the stage list and the inline Add Stage form — the panel
+  // header stays fixed and only the content below switches (no stacked modal).
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null)
   const [deletingStage, setDeletingStage] = useState<PipelineStage | null>(null)
 
@@ -187,18 +197,33 @@ export function StageSettingsPanel({
     <>
       <div className={cn("space-y-5 max-w-[1600px] mx-auto", isDialog ? "pb-1" : "pb-12")}>
         {isDialog ? (
-          /* Compact toolbar for the modal — the dialog already has its own header */
+          /* Compact toolbar for the modal — the dialog already has its own
+             header. Stays fixed while the content below toggles between the
+             stage list and the Add Stage form. */
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#6B7280]">
-              Drag stages to reorder · expand a stage to manage its checklist
+              {showCreateForm
+                ? "Add a new stage to the pipeline"
+                : "Drag stages to reorder · expand a stage to manage its checklist"}
             </p>
-            <Button
-              onClick={() => setCreateOpen(true)}
-              className="bg-[#036638] hover:bg-[#025030] text-white text-sm gap-1.5 rounded-xl px-4 h-9 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              Add Stage
-            </Button>
+            {showCreateForm ? (
+              <Button
+                variant="ghost"
+                onClick={() => setShowCreateForm(false)}
+                className="text-sm gap-1.5 rounded-xl px-3 h-9 shrink-0 text-[#6B7280]"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Stages
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                className="bg-[#036638] hover:bg-[#025030] text-white text-sm gap-1.5 rounded-xl px-4 h-9 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                Add Stage
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -215,13 +240,24 @@ export function StageSettingsPanel({
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={() => setCreateOpen(true)}
-                className="bg-[#036638] hover:bg-[#025030] text-white text-sm gap-1.5 rounded-xl px-4 h-10"
-              >
-                <Plus className="w-4 h-4" />
-                Add Stage
-              </Button>
+              {showCreateForm ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowCreateForm(false)}
+                  className="text-sm gap-1.5 rounded-xl px-4 h-10 text-[#6B7280] border border-[#E5E7EB]"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Stages
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setShowCreateForm(true)}
+                  className="bg-[#036638] hover:bg-[#025030] text-white text-sm gap-1.5 rounded-xl px-4 h-10"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Stage
+                </Button>
+              )}
             </div>
 
             {/* Summary chips */}
@@ -267,6 +303,38 @@ export function StageSettingsPanel({
           </>
         )}
 
+        {showCreateForm ? (
+          /* Inline Add Stage form — same panel, header stays fixed, only the
+             content below switches (toggle approach, no stacked modal). */
+          <div className={cn("bg-white rounded-2xl p-5", isDialog ? "shadow-[0_1px_3px_rgba(16,24,40,0.06)]" : "border border-[#E5E7EB]")}>
+            <StageForm
+              stages={displayStages}
+              onCancel={() => setShowCreateForm(false)}
+              onSubmit={async (values) => {
+                const { position, ...stageInput } = values
+                const created = await createStage.mutateAsync(stageInput)
+                // Backend appends new stages at the end — if the user picked a
+                // position, insert the new key there and persist the full order.
+                if (position) {
+                  const keys = displayStages.map((s) => s.key)
+                  if (position.type === "start") {
+                    keys.unshift(created.key)
+                  } else if (position.type === "after") {
+                    const idx = keys.indexOf(position.key)
+                    keys.splice(idx === -1 ? keys.length : idx + 1, 0, created.key)
+                  } else {
+                    keys.push(created.key)
+                  }
+                  await reorderStages.mutateAsync(keys)
+                }
+                // Switch back to the stage list after the new stage is added.
+                setShowCreateForm(false)
+              }}
+              isPending={createStage.isPending || reorderStages.isPending}
+            />
+          </div>
+        ) : (
+          <>
         {/* Reordering indicator */}
         {reorderStages.isPending && (
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 w-fit">
@@ -474,38 +542,8 @@ export function StageSettingsPanel({
           </div>
         )}
 
-        {/* Add Stage Dialog */}
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-base font-bold text-[#1A1B1E]">Add Stage</DialogTitle>
-            </DialogHeader>
-            <StageForm
-              stages={displayStages}
-              onCancel={() => setCreateOpen(false)}
-              onSubmit={async (values) => {
-                const { position, ...stageInput } = values
-                const created = await createStage.mutateAsync(stageInput)
-                // Backend appends new stages at the end — if the user picked a
-                // position, insert the new key there and persist the full order.
-                if (position) {
-                  const keys = displayStages.map((s) => s.key)
-                  if (position.type === "start") {
-                    keys.unshift(created.key)
-                  } else if (position.type === "after") {
-                    const idx = keys.indexOf(position.key)
-                    keys.splice(idx === -1 ? keys.length : idx + 1, 0, created.key)
-                  } else {
-                    keys.push(created.key)
-                  }
-                  await reorderStages.mutateAsync(keys)
-                }
-                setCreateOpen(false)
-              }}
-              isPending={createStage.isPending || reorderStages.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+          </>
+        )}
 
         {/* Edit Stage Dialog */}
         {editingStage && (
@@ -679,19 +717,23 @@ function StageForm({
       {!initial && stages.length > 0 && (
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-[#374151]">Position in Pipeline</label>
-          <select
+          <Select
             value={position}
-            onChange={(e) => setPosition(e.target.value as typeof position)}
-            className="w-full h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#036638]/30 cursor-pointer"
+            onValueChange={(v) => setPosition(v as typeof position)}
           >
-            <option value="end">At the end (default)</option>
-            <option value="start">At the beginning</option>
-            {stages.map((s) => (
-              <option key={s.key} value={`after:${s.key}`}>
-                After “{s.name}”
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+              <SelectValue placeholder="Choose position..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="end">At the end (default)</SelectItem>
+              <SelectItem value="start">At the beginning</SelectItem>
+              {stages.map((s) => (
+                <SelectItem key={s.key} value={`after:${s.key}`}>
+                  After “{s.name}”
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="text-[11px] text-[#6B7280]">
             Choose where this stage should appear in the pipeline.
           </p>
@@ -743,8 +785,11 @@ function StageChecklistManager({
   const updateItem = useUpdateChecklistItem()
   const deleteItem = useDeleteChecklistItem()
 
-  const { register, handleSubmit, reset } = useForm({
-    defaultValues: { label: "", status: "required" as const },
+  const { register, handleSubmit, reset, watch, setValue } = useForm<{
+    label: string
+    status: "required" | "optional"
+  }>({
+    defaultValues: { label: "", status: "required" },
   })
 
   const [showAdd, setShowAdd] = useState(false)
@@ -837,13 +882,18 @@ function StageChecklistManager({
           placeholder="New checklist item..."
           className="flex-1 min-w-[200px] h-9 px-3 rounded-lg border border-[#E5E7EB] text-sm focus:outline-none focus:ring-1 focus:ring-[#036638]/40"
         />
-        <select
-          {...register("status")}
-          className="h-9 px-2.5 rounded-lg border border-[#E5E7EB] text-sm font-medium bg-white focus:outline-none focus:ring-1 focus:ring-[#036638]/40"
+        <Select
+          value={watch("status")}
+          onValueChange={(v) => setValue("status", v as "required" | "optional")}
         >
-          <option value="required">Required</option>
-          <option value="optional">Optional</option>
-        </select>
+          <SelectTrigger className="h-9 w-[130px] rounded-lg border-[#E5E7EB] bg-white text-sm font-medium text-[#1A1B1E] shadow-none focus:ring-1 focus:ring-[#036638]/40 cursor-pointer">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="required">Required</SelectItem>
+            <SelectItem value="optional">Optional</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           type="submit"
           size="sm"
@@ -970,18 +1020,18 @@ function ChecklistItemRow({
               autoFocus
               className="flex-1 min-w-[120px] h-7 px-2 rounded border border-[#036638] text-sm text-[#1A1B1E] focus:outline-none focus:ring-1 focus:ring-[#036638]/30"
             />
-            <select
-              value={editStage}
-              onChange={(e) => setEditStage(e.target.value)}
-              className="h-7 px-2 rounded border border-[#E5E7EB] text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#036638]/40"
-              title="Move item to another stage"
-            >
-              {allStages.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <Select value={editStage} onValueChange={setEditStage}>
+              <SelectTrigger className="h-7 w-[140px] rounded border border-[#E5E7EB] bg-white text-xs text-[#1A1B1E] shadow-none focus:outline-none focus:ring-1 focus:ring-[#036638]/40 cursor-pointer" title="Move item to another stage">
+                <SelectValue placeholder="Stage" />
+              </SelectTrigger>
+              <SelectContent>
+                {allStages.map((s) => (
+                  <SelectItem key={s.key} value={s.key}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <button
               onClick={handleSave}
               disabled={isUpdating || !editValue.trim()}

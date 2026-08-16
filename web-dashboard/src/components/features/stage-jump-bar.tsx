@@ -1,8 +1,15 @@
 "use client"
 
-import { ChevronDown, CornerDownRight } from "lucide-react"
+import { CornerDownRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getStageColor } from "@/lib/stage-colors"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface StageJumpBarProps {
   stageOrder: string[]
@@ -11,6 +18,8 @@ interface StageJumpBarProps {
   counts: Record<string, number>
   /** The stage that was just jumped to (brief highlight flash). */
   activeStage: string | null
+  /** The last stage jumped to — sticky value shown in the phone dropdown. */
+  selectedStage?: string | null
   onJump: (stage: string) => void
 }
 
@@ -23,7 +32,7 @@ interface StageJumpBarProps {
  * so the bar never squeezes or clips on narrow screens. The just-jumped stage
  * lights up brand-green while the column flashes via `animate-jump-flash`.
  */
-export function StageJumpBar({ stageOrder, stageLabels, counts, activeStage, onJump }: StageJumpBarProps) {
+export function StageJumpBar({ stageOrder, stageLabels, counts, activeStage, selectedStage, onJump }: StageJumpBarProps) {
   return (
     <div className="flex items-center gap-2.5 mb-4 w-full min-w-0">
       {/* Leading label chip — sm+ only */}
@@ -70,25 +79,24 @@ export function StageJumpBar({ stageOrder, stageLabels, counts, activeStage, onJ
           fixed width, it doesn't need to fill the row */}
       <div className="sm:hidden flex items-center gap-2 w-full min-w-0">
         <span className="text-xs font-semibold text-[#036638] shrink-0">Jump to</span>
-        <div className="relative w-56 max-w-full shrink-0">
-          <select
-            value={activeStage ?? ""}
-            onChange={(e) => {
-              if (e.target.value) onJump(e.target.value)
+        <div className="w-56 max-w-full shrink-0">
+          <Select
+            value={selectedStage ?? ""}
+            onValueChange={(v) => {
+              if (v) onJump(v)
             }}
-            aria-label="Jump to stage"
-            className="w-full h-9 appearance-none rounded-xl border border-[#E5E7EB] bg-white pl-3 pr-8 text-xs font-semibold text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50"
           >
-            <option value="" disabled>
-              Select stage…
-            </option>
-            {stageOrder.map((stage) => (
-              <option key={stage} value={stage}>
-                {stageLabels[stage]} ({counts[stage] ?? 0})
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
+            <SelectTrigger aria-label="Jump to stage" className="w-full h-9 rounded-xl border-[#E5E7EB] bg-white text-xs font-semibold text-[#1A1B1E] shadow-none focus:outline-none focus:ring-2 focus:ring-[#036638]/25 focus:border-[#036638]/50 cursor-pointer">
+              <SelectValue placeholder="Select stage…" />
+            </SelectTrigger>
+            <SelectContent>
+              {stageOrder.map((stage) => (
+                <SelectItem key={stage} value={stage}>
+                  {stageLabels[stage]} ({counts[stage] ?? 0})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

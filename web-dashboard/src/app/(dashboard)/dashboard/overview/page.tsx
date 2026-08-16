@@ -10,6 +10,13 @@ import { PerformanceAnalytics } from "@/components/features/dashboard/performanc
 import { AcquisitionMetrics } from "@/components/features/dashboard/acquisition-metrics"
 import { WorkloadTable } from "@/components/features/dashboard/workload-table"
 import { ChartContainer } from "@/components/ui/chart-container"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Download, Share2, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -45,16 +52,17 @@ export default function OverviewPage() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 text-sm border border-[#E5E7EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] bg-white"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="1y">Last year</option>
-          </select>
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-auto px-3 py-2 text-sm border-[#E5E7EB] rounded-lg shadow-none focus:outline-none focus:ring-2 focus:ring-[#036638]/30 focus:border-[#036638] bg-white cursor-pointer">
+              <SelectValue placeholder="Select range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="1y">Last year</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Button
             variant="outline"

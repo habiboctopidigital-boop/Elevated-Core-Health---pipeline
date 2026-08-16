@@ -65,8 +65,8 @@ const VISIBLE_ITEMS = 2
 // badge: a flagged or stale card must be unmistakable at a glance, so it
 // overrides the calmer default/unassigned tones.
 function stateAvatarClass(patient: Patient, stale: boolean): string {
-  if (patient.isFlagged) return "bg-red-500"
-  if (stale) return "bg-amber-500"
+  if (patient.isFlagged) return "bg-red-400"
+  if (stale) return "bg-green-300"
   if (!patient.assignedUser) return "bg-lime-600"
   return "bg-[#036638]"
 }

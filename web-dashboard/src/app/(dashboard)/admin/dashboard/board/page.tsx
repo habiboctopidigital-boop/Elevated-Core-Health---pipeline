@@ -31,7 +31,7 @@ export default function AdminBoardPage() {
   // is shown only in the stage header.
   const [filterNotFound, setFilterNotFound] = useState<Record<string, boolean>>({})
   const [openStageFilterPopup, setOpenStageFilterPopup] = useState<string | null>(null)
-  const { activeStage: quickJumpStage, jump: handleQuickJump, registerStageRef } = useStageJump()
+  const { activeStage: quickJumpStage, lastJumpedStage, jump: handleQuickJump, registerStageRef } = useStageJump()
   const [view, changeView] = useBoardView()
   // In-flight stage moves — list view shows a spinner on the row being moved.
   const pendingMoves = useRef<Set<string>>(new Set())
@@ -164,6 +164,7 @@ export default function AdminBoardPage() {
         stageLabels={stageLabels}
         counts={stageCounts}
         activeStage={quickJumpStage}
+        selectedStage={lastJumpedStage}
         onJump={handleQuickJump}
       />
 
@@ -185,7 +186,7 @@ export default function AdminBoardPage() {
                 key={stage}
                 ref={registerStageRef(stage)}
                 className={cn(
-                  "w-full min-w-0 sm:w-[420px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 transition-all duration-200",
+                  "w-full min-w-0 sm:w-[420px] sm:shrink-0 sm:snap-center flex flex-col bg-[#EBF7EC]/40 rounded-xl border border-[#E5E7EB]/50 transition-all duration-200 scroll-mt-14 lg:scroll-mt-0",
                   quickJumpStage === stage && "animate-jump-flash",
                 )}
               >
@@ -272,15 +273,23 @@ export default function AdminBoardPage() {
         </div>
       </div>
       ) : (
-        <PatientListView
-          patients={filteredPatients}
-          stageOrder={stageOrder}
-          stageLabels={stageLabels}
-          onMoveStage={handleMoveStage}
-          onSelect={(p) => setSelectedPatientId(p.id)}
-          pendingIds={pendingMoves.current}
-          registerStageRef={registerStageRef}
-        />
+        // List view needs its own scroll container on desktop: the page root
+        // is a fixed-height overflow-hidden flex column, so without a
+        // flex-1/min-h-0/overflow-y-auto wrapper the list content gets
+        // clipped and the page can't scroll. On phone/tablet the page flows
+        // naturally, so the scroll behavior is desktop-only.
+        <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto scrollbar-brand">
+          <PatientListView
+            patients={filteredPatients}
+            stageOrder={stageOrder}
+            stageLabels={stageLabels}
+            onMoveStage={handleMoveStage}
+            onSelect={(p) => setSelectedPatientId(p.id)}
+            pendingIds={pendingMoves.current}
+            registerStageRef={registerStageRef}
+            activeStage={quickJumpStage}
+          />
+        </div>
       )}
 
       <PatientModal

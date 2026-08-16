@@ -74,6 +74,14 @@ import {
 import { usePatient } from "@/hooks/query/usePatients"
 import { useActivityLog } from "@/hooks/query/useActivityLog"
 import { SelectOrOther } from "@/components/shared/select-or-other"
+import { LocationCombobox } from "@/components/shared/location-combobox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { EligibilityCheckDialog } from "./eligibility-check-dialog"
 import { PAYMENT_METHOD_OPTIONS, INSURANCE_PROVIDER_OPTIONS, VISIT_STATUS_OPTIONS, VOB_LABELS } from "@/lib/patient-options"
 import { getStageColor } from "@/lib/stage-colors"
@@ -453,16 +461,6 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     if (assignFeedbackTimer.current) clearTimeout(assignFeedbackTimer.current)
   }, [])
 
-  // Desktop vs. mobile layout below used to be picked with CSS alone
-  // (`hidden lg:block` / `lg:hidden`) while BOTH copies stayed mounted in the
-  // DOM at once. Every Contact & Payment field is `register()`-ed once in
-  // each copy, so react-hook-form ended up with two refs sharing one field
-  // name — outside of checkbox/radio groups that's unsupported, and in
-  // practice RHF's submitted value came from whichever ref it considered
-  // canonical, which was not reliably the one the user was actually typing
-  // into. Symptom: typing looks fine in the visible input, but Save sends
-  // stale/old data because the hidden copy's untouched value wins. Fixing
-  // this at the root means only ever mounting ONE of the two layouts.
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= 1024,
   )
@@ -475,15 +473,7 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     return () => mql.removeEventListener("change", sync)
   }, [])
 
-  // Full reset — ONLY when switching to look at a different patient (or the
-  // modal opens on this one for the first time). This must stay scoped to
-  // `patient?.id` alone: it used to also depend on paymentMethod/
-  // insuranceProvider/appointmentDatetime, which are exactly the fields the
-  // Contact & Payment form itself saves — so every successful save on THIS
-  // patient re-triggered this same effect, which called reset() (blanking
-  // whatever was just typed) and setActiveTab("overview") (forcing the tab
-  // back), making a successful save look like it silently failed and lost
-  // your edits.
+  
   useEffect(() => {
     const pm = patient?.paymentMethod ?? ""
     const ip = patient?.insuranceProvider ?? ""
@@ -492,11 +482,13 @@ export function PatientModal({ patientId, open, onClose }: PatientModalProps) {
     setPaymentMethodOther(pm !== "" && !PAYMENT_METHOD_OPTIONS.includes(pm))
     setInsuranceProviderOther(ip !== "" && !INSURANCE_PROVIDER_OPTIONS.includes(ip))
     setVisitStatus(patient?.visitStatus ?? "not_visited")
-    const fullName = `${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`.trim() || patient?.name || ""
+    const fullName = `${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`.trim() || patient?.name || "";
+    
+    
     const { firstName, lastName } = splitPatientName(fullName)
     reset({
-      firstName,
-      lastName,
+      firstName:patient?.firstName,
+      lastName:patient?.lastName,
       location: patient?.location ?? "",
       phone: patient?.phone ?? "",
       email: patient?.email ?? "",
@@ -1620,7 +1612,12 @@ const isExpired = () => {
                           </div>
                           <div>
                             <label className={contactLabelClass(false)}>Location</label>
-                            <input {...register("location")} className={contactInputClass(false)} />
+                            <LocationCombobox
+                              value={watch("location") ?? ""}
+                              onChange={(v) => setValue("location", v, { shouldValidate: true, shouldDirty: true })}
+                              placeholder="Search city & state..."
+                              className={contactInputClass(false)}
+                            />
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Date of Birth</label>
@@ -1631,6 +1628,10 @@ const isExpired = () => {
                               placeholder="Select date of birth"
                             />
                             {errors.dateOfBirth && <p className="text-[11px] text-[#CC3333] mt-1">{errors.dateOfBirth.message}</p>}
+                            <p className="flex items-center gap-1 text-[11px] text-gray-400 mt-1">
+                              <Info className="w-3 h-3 shrink-0" />
+                              DOB must be realistic — patient must be at least 15 years old
+                            </p>
                           </div>
                           <div>
                             <label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label>
@@ -1667,10 +1668,14 @@ const isExpired = () => {
                           </div>
                           <div>
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Visit Status</label>
-                            <select value={visitStatus} onChange={(e) => setVisitStatus(e.target.value)}
-                              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400/30">
-                              {VISIT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
+                            <Select value={visitStatus} onValueChange={setVisitStatus}>
+                              <SelectTrigger className="w-full h-10 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white shadow-none focus:outline-none focus:ring-2 focus:ring-emerald-400/30 cursor-pointer">
+                                <SelectValue placeholder="Select visit status..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {VISIT_STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       </div>
@@ -2720,14 +2725,14 @@ const isExpired = () => {
                         <input {...register("lastName")} aria-invalid={!!errors.lastName} className={contactInputClass(!!errors.lastName)} />
                         {errors.lastName && <p className="text-[11px] text-[#CC3333] mt-1">{errors.lastName.message}</p>}
                       </div>
-                      <div><label className={contactLabelClass(false)}>Location</label><input {...register("location")} className={contactInputClass(false)} /></div>
+                      <div><label className={contactLabelClass(false)}>Location</label><LocationCombobox value={watch("location") ?? ""} onChange={(v) => setValue("location", v, { shouldValidate: true, shouldDirty: true })} placeholder="Search city & state..." className={contactInputClass(false)} /></div>
                       <div><label className={contactLabelClass(!!errors.phone)}>Phone <span className="text-[#CC3333]">*</span></label><input {...register("phone")} type="number" aria-invalid={!!errors.phone} className={contactInputClass(!!errors.phone)} />{errors.phone && <p className="text-[11px] text-[#CC3333] mt-1">{errors.phone.message}</p>}</div>
                       <div><label className={contactLabelClass(false)}>Email</label><input type="email" readOnly title="Email can't be changed here" {...register("email")}  className={cn(contactInputClass(false), "bg-gray-50 text-gray-500 cursor-not-allowed")} /></div>
                       <div><label className={contactLabelClass(false)}>Copay Amount</label><input {...register("copayAmount")} type="number" className={contactInputClass(false)} /></div>
                       <div><label className={contactLabelClass(false)}>Amount Paid</label><input {...register("amountPaid")} type="number" className={contactInputClass(false)} /></div>
                       <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Payment Type</label><SelectOrOther value={paymentMethod} onChange={setPaymentMethod} otherMode={paymentMethodOther} onOtherModeChange={setPaymentMethodOther} options={PAYMENT_METHOD_OPTIONS} placeholder="Select..." /></div>
                       <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Insurance</label><SelectOrOther value={insuranceProvider} onChange={setInsuranceProvider} otherMode={insuranceProviderOther} onOtherModeChange={setInsuranceProviderOther} options={INSURANCE_PROVIDER_OPTIONS} placeholder="Select..." /></div>
-                      <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Visit Status</label><select value={visitStatus} onChange={(e) => setVisitStatus(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400/30">{VISIT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+                      <div><label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Visit Status</label><Select value={visitStatus} onValueChange={setVisitStatus}><SelectTrigger className="w-full h-10 px-3 py-2 text-sm border border-gray-200 rounded-xl bg-white shadow-none focus:outline-none focus:ring-2 focus:ring-emerald-400/30 cursor-pointer"><SelectValue placeholder="Select visit status..." /></SelectTrigger><SelectContent>{VISIT_STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select></div>
                     </div>
                   </div>
                 )}

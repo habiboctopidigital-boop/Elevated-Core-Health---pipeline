@@ -26,6 +26,13 @@ import {
 import { addDays, endOfWeek, format, startOfWeek } from "date-fns"
 import { usePatients, useListVas } from "@/hooks/query/usePatients"
 import { useStageMeta } from "@/hooks/query/useStages"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useLogExport } from "@/hooks/query/useReporting"
 import { useAuth } from "@/hooks/auth/useAuth"
 import { PatientModal } from "@/components/features/patient-modal"
@@ -485,31 +492,37 @@ export function WorkloadCalendar() {
             </button>
           )}
         </div>
-        <select
-          value={vaFilter}
-          onChange={(e) => setVaFilter(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer flex-1 sm:flex-none min-w-[110px]"
-        >
-          <option value="">All VAs</option>
-          <option value="__unassigned__">Unassigned</option>
-          {vaList?.map((va) => (
-            <option key={va.id} value={va.id}>
-              {va.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] focus:outline-none focus:ring-2 focus:ring-[#036638]/30 appearance-none cursor-pointer flex-1 sm:flex-none min-w-[110px]"
-        >
-          <option value="">All Stages</option>
-          {stageOrder.map((s) => (
-            <option key={s} value={s}>
-              {stageLabels[s]}
-            </option>
-          ))}
-        </select>
+        <div className="flex-1 sm:flex-none min-w-[110px]">
+          <Select value={vaFilter} onValueChange={setVaFilter}>
+            <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+              <SelectValue placeholder="All VAs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All VAs</SelectItem>
+              <SelectItem value="__unassigned__">Unassigned</SelectItem>
+              {vaList?.map((va) => (
+                <SelectItem key={va.id} value={va.id}>
+                  {va.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-1 sm:flex-none min-w-[110px]">
+          <Select value={stageFilter} onValueChange={setStageFilter}>
+            <SelectTrigger className="w-full h-9 rounded-lg border-[#E5E7EB] bg-white text-sm text-[#1A1B1E] shadow-none focus:ring-2 focus:ring-[#036638]/25 hover:border-[#D1D5DB] cursor-pointer">
+              <SelectValue placeholder="All Stages" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Stages</SelectItem>
+              {stageOrder.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {stageLabels[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {(search || vaFilter || stageFilter) && (
           <button
             onClick={() => {
