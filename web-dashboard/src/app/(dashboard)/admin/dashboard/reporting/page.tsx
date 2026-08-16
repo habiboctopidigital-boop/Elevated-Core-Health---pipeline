@@ -24,6 +24,9 @@ import {
   BarChart3,
   Loader2,
   X,
+  Eye,
+  ListChecks,
+  LayoutGrid,
 } from "lucide-react"
 import { useAdminReport, useVaReport } from "@/hooks/query/useReporting"
 import { useAuth } from "@/hooks/auth/useAuth"
@@ -91,27 +94,41 @@ function VaDetailModal({ vaId, onClose }: { vaId: string; onClose: () => void })
   const { data: report, isLoading } = useVaReport(vaId)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex items-start justify-between px-6 py-5 border-b border-[#E5E7EB] shrink-0">
-          <div>
-            <h3 className="text-base font-bold text-[#1A1B1E]">VA Performance</h3>
-            <p className="text-xs text-[#6B7280] mt-0.5">
-              {isLoading ? "Loading..." : report?.va?.name}
-            </p>
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#FAFAFA] rounded-3xl shadow-[0_24px_80px_rgba(0,0,0,0.25)] w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Hero header — same dark-green gradient language used across the app's other detail modals */}
+        <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-[#023E23] via-[#036638] to-[#012816] px-6 py-6 sm:px-8 sm:py-7">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-[70px] -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center shrink-0">
+                <span className="text-xl font-bold text-white">
+                  {(isLoading || !report ? "…" : report.va.name).charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#65BD6C]">
+                  Performance Overview
+                </p>
+                <h3 className="text-xl sm:text-2xl font-bold text-white truncate">
+                  {isLoading ? "Loading…" : report?.va?.name}
+                </h3>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              title="Close"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-[#6B7280] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
-        <div className="overflow-y-auto px-6 py-5 space-y-5">
+        <div className="overflow-y-auto px-6 py-6 sm:px-8 sm:py-7 space-y-6">
           {isLoading || !report ? (
-            <div className="flex items-center justify-center py-12">
+            <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 text-[#036638] animate-spin" />
             </div>
           ) : (
@@ -126,27 +143,29 @@ function VaDetailModal({ vaId, onClose }: { vaId: string; onClose: () => void })
 function VaDetailContent({ report }: { report: VaReport }) {
   const { totals, workload, performance, stageDistribution, series } = report
   const activeData = series.weekly
+  const maxStageCount = Math.max(...stageDistribution.map((s) => s.count), 1)
 
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniStat label="Assigned" value={totals.assigned} />
-        <MiniStat label="Active" value={totals.active} />
-        <MiniStat label="Completed" value={totals.completed} />
-        <MiniStat label="Cancelled" value={totals.cancelled} />
+        <StatCard label="Assigned" value={totals.assigned} icon={Users} accent="bg-[#EBF7EC]" />
+        <StatCard label="Active" value={totals.active} icon={Activity} accent="bg-[#EBF7EC]" />
+        <StatCard label="Completed" value={totals.completed} icon={CheckCircle2} accent="bg-[#EBF7EC]" />
+        <StatCard label="Cancelled" value={totals.cancelled} icon={XCircle} accent="bg-[#EBF7EC]" />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniStat label="Workload" value={workload} />
-        <MiniStat label="Handled cases" value={performance.handledCases} />
-        <MiniStat label="Avg completion" value={`${performance.avgCompletionDays}d`} />
-        <MiniStat label="Completion rate" value={`${performance.stageCompletionRate}%`} />
+        <WorkflowMetric label="Workload" value={String(workload)} icon={LayoutGrid} tone="bg-[#EBF7EC]" />
+        <WorkflowMetric label="Handled Cases" value={String(performance.handledCases)} icon={ListChecks} tone="bg-[#EBF7EC]" />
+        <WorkflowMetric label="Avg Completion" value={`${performance.avgCompletionDays}d`} icon={Clock} tone="bg-[#EBF7EC]" />
+        <WorkflowMetric label="Completion Rate" value={`${performance.stageCompletionRate}%`} icon={Gauge} tone="bg-[#EBF7EC]" />
       </div>
 
-      <div>
-        <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider mb-2">
-          Weekly activity
-        </p>
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-4 h-4 text-[#036638]" />
+          <h4 className="text-sm font-bold text-[#036638]">Weekly Activity</h4>
+        </div>
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={activeData}>
@@ -163,40 +182,33 @@ function VaDetailContent({ report }: { report: VaReport }) {
         </div>
       </div>
 
-      <div>
-        <p className="text-xs font-semibold text-[#374151] uppercase tracking-wider mb-2">
-          Patients by stage
-        </p>
-        <div className="space-y-2">
-          {stageDistribution.map((s) => (
-            <div key={s.stage} className="flex items-center gap-3">
-              <span className="text-xs text-[#6B7280] w-28 truncate shrink-0">{s.label}</span>
-              <div className="flex-1 h-3 bg-[#EBF7EC] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#65BD6C] rounded-full transition-all"
-                  style={{
-                    width: `${Math.max(
-                      (s.count / Math.max(...stageDistribution.map((x) => x.count), 1)) * 100,
-                      s.count > 0 ? 6 : 0,
-                    )}%`,
-                  }}
-                />
+      <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-4 h-4 text-[#036638]" />
+          <h4 className="text-sm font-bold text-[#036638]">Patients by Stage</h4>
+        </div>
+        <div className="space-y-2.5">
+          {stageDistribution.map((s, i) => {
+            const color = STAGE_BAR_COLORS[i % STAGE_BAR_COLORS.length]
+            return (
+              <div key={s.stage} className="flex items-center gap-3">
+                <span className="text-xs text-[#374151] font-medium w-28 truncate shrink-0">{s.label}</span>
+                <div className="flex-1 h-2.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.max((s.count / maxStageCount) * 100, s.count > 0 ? 4 : 0)}%`,
+                      backgroundColor: color,
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-[#1A1B1E] w-6 text-right tabular-nums">{s.count}</span>
               </div>
-              <span className="text-xs font-semibold text-[#1A1B1E] w-6 text-right">{s.count}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </>
-  )
-}
-
-function MiniStat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] px-3 py-2.5">
-      <p className="text-lg font-bold text-[#1A1B1E] leading-tight">{value}</p>
-      <p className="text-[10px] text-[#6B7280] uppercase tracking-wider">{label}</p>
-    </div>
   )
 }
 
@@ -319,14 +331,15 @@ export default function AdminReportingPage() {
                 <thead>
                   <tr className="bg-[#F9FAFB] text-left text-[10px] font-semibold text-[#6B7280] uppercase tracking-wider">
                     <th className="px-5 py-3">VA</th>
-                    <th className="px-3 py-3 text-right">Assigned</th>
-                    <th className="px-3 py-3 text-right">Active</th>
-                    <th className="px-3 py-3 text-right">Completed</th>
-                    <th className="px-3 py-3 text-right">Cancelled</th>
-                    <th className="px-3 py-3 text-right">Handled</th>
-                    <th className="px-3 py-3 text-right">Actions</th>
-                    <th className="px-3 py-3 text-right">Avg Days</th>
+                    <th className="px-3 py-3 text-center">Assigned</th>
+                    <th className="px-3 py-3 text-center">Active</th>
+                    <th className="px-3 py-3 text-center">Completed</th>
+                    <th className="px-3 py-3 text-center">Cancelled</th>
+                    <th className="px-3 py-3 text-center">Handled</th>
+                    <th className="px-3 py-3 text-center">Actions</th>
+                    <th className="px-3 py-3 text-center">Avg Days</th>
                     <th className="px-5 py-3 text-right">Completion Rate</th>
+                    <th className="px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E7EB]/60">
@@ -351,13 +364,13 @@ export default function AdminReportingPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#374151]">{va.assigned}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#374151]">{va.active}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#036638] font-semibold">{va.completed}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#E15C4E] font-semibold">{va.cancelled}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#374151]">{va.handledCases}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#374151]">{va.actions}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-[#374151]">{va.avgCompletionDays}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#374151]">{va.assigned}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#374151]">{va.active}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#036638] font-semibold">{va.completed}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#E15C4E] font-semibold">{va.cancelled}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#374151]">{va.handledCases}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#374151]">{va.actions}</td>
+                      <td className="px-3 py-3 text-center tabular-nums text-[#374151]">{va.avgCompletionDays}</td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <div className="w-16 h-1.5 bg-[#EBF7EC] rounded-full overflow-hidden">
@@ -371,11 +384,23 @@ export default function AdminReportingPage() {
                           </span>
                         </div>
                       </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedVa(va)
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#036638]/25 bg-[#EBF7EC] text-[#036638] text-xs font-semibold hover:bg-[#036638] hover:text-white hover:border-[#036638] transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View Performance
+                        </button>
+                      </td>
                     </tr>
                   ))}
                   {report.vaComparison.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-5 py-10 text-center text-sm text-[#6B7280] italic">
+                      <td colSpan={10} className="px-5 py-10 text-center text-sm text-[#6B7280] italic">
                         No VAs found
                       </td>
                     </tr>
