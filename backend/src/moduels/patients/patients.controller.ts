@@ -158,6 +158,8 @@ export const patientsController = {
 	},
 
 	async intake(req: Request, res: Response): Promise<void> {
+		console.log("opm",req.body);
+		
 		const serviceResponse = await patientsService.intake(req.body);
 		handleServiceResponse(serviceResponse, res);
 	},
