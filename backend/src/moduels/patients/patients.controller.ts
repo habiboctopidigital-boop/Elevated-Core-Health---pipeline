@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { handleServiceResponse } from "@/utils/httpHandlers";
 import { ServiceResponse } from "@/utils/serviceResponse";
+import { logger } from "@/utils/logger";
 import { patientsService } from "./patients.service";
 
 function paramId(req: Request): string {
@@ -158,9 +159,10 @@ export const patientsController = {
 	},
 
 	async intake(req: Request, res: Response): Promise<void> {
-		console.log("opm",req.body);
+		const body = req.body;
+		logger.info({ body, path: req.path }, "Webhook intake received");
 		
-		const serviceResponse = await patientsService.intake(req.body);
+		const serviceResponse = await patientsService.intake(body);
 		handleServiceResponse(serviceResponse, res);
 	},
 

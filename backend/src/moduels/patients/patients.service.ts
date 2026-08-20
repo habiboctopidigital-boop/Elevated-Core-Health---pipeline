@@ -1075,6 +1075,8 @@ export const patientsService = {
 		// patientDOB, purchaseAmount, appointmentId, practitionerName, etc.
 		// We map these to the Patient schema fields.
 		
+		logger.info({ firstName: input.firstName, lastName: input.lastName, email: input.email, phone: input.phone }, "Webhook intake - processing patient data");
+
 		// Safely parse appointment datetime from separate fields if not provided as ISO
 		let appointmentDatetime: Date | null = null;
 		try {
@@ -1128,13 +1130,32 @@ export const patientsService = {
 
 		const firstStage = await getFirstStageKey(); // Should be "onboarding"
 
-		// Reject re-pushes of a patient that already exists (same email).
-		if (input.email && await findDuplicateByEmail(input.email)) {
-			return ServiceResponse.failure(
-				"A patient with this email already exists. Intake skipped to avoid a duplicate record.",
-				null,
-				StatusCodes.CONFLICT,
-			);
+		// Normalize phone for duplicate check (strip non-digits)
+		const normalizedPhone = input.phone?.replace(/\D/g, "") || null;
+
+		// Reject re-pushes of a patient that already exists (same email OR same phone).
+		if (input.email) {
+			if (await findDuplicateByEmail(input.email)) {
+				return ServiceResponse.failure(
+					"A patient with this email already exists. Intake skipped to avoid a duplicate record.",
+					null,
+					StatusCodes.CONFLICT,
+				);
+			}
+		}
+		if (normalizedPhone && normalizedPhone.length >= 10) {
+			const existingByPhone = await prisma.patient.findFirst({
+				where: { phone: { contains: normalizedPhone, mode: "insensitive" } },
+				select: { id: true, firstName: true, lastName: true },
+			});
+			if (existingByPhone) {
+				logger.warn({ phone: input.phone, existingPatientId: existingByPhone.id }, "Duplicate phone detected, skipping intake");
+				return ServiceResponse.failure(
+					`A patient with this phone number already exists (${existingByPhone.firstName} ${existingByPhone.lastName ?? ""}). Intake skipped to avoid a duplicate record.`,
+					null,
+					StatusCodes.CONFLICT,
+				);
+			}
 		}
 
 		// Auto-assign VA: explicit selection wins, then vaName from webhook, then appointment time
@@ -1196,6 +1217,22 @@ export const patientsService = {
 				assignedTo,
 			},
 		});
+
+		logger.info({
+			patientId: patient.id,
+			firstName: patient.firstName,
+			lastName: patient.lastName,
+			email: patient.email,
+			phone: patient.phone,
+			location: patient.location,
+			dateOfBirth: patient.dateOfBirth,
+			stage: patient.stage,
+			appointmentDatetime: patient.appointmentDatetime,
+			bookingPlatform: patient.bookingPlatform,
+			copayAmount: patient.copayAmount,
+			source: patient.source,
+			assignedTo: patient.assignedTo,
+		}, "Webhook intake - patient created successfully");
 
 		const platformLabel = input.bookingPlatform ?? "email";
 		const assignmentNote = assignedTo ? ` - Auto-assigned via ${assignmentMethod}` : "";

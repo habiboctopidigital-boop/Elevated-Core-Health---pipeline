@@ -31,11 +31,29 @@ export const patientsPublicRouter: Router = Router();
 // see webhooksService.getActiveSecret().
 patientsPublicRouter.post(
 	"/intake",
-	async (req, res, next) => {
-		console.log(req.body);
+	// Normalize the webhook body before validation: Make.com/Klarity may
+	// send patient fields nested inside an `opm` wrapper object, or as a
+	// flat body, or inside the outer object alongside `opm`. Flatten everything
+	// so the Zod schema sees a single flat object.
+	(req, _res, next) => {
+		const body = req.body;
+		if (body && typeof body === "object") {
+			// Case 1: Body is { opm: { firstName, lastName, ... }, email, status, ... }
+			// The `opm` key holds the primary patient data from Klarity/Optimantra.
+			if (body.opm && typeof body.opm === "object") {
+				const merged = { ...body.opm };
+				// Top-level fields override opm fields when both exist
+				for (const key of Object.keys(body)) {
+					if (key !== "opm" && body[key] !== undefined && body[key] !== null && body[key] !== "") {
+						merged[key] = body[key];
+					}
+				}
+				req.body = merged;
+			}
+		}
 		next();
 	},
-	// validateRequest(IntakeSchema),
+	validateRequest(IntakeSchema),
 	patientsController.intake,
 );
 
