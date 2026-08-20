@@ -37,6 +37,12 @@ patientsPublicRouter.post(
 	// so the Zod schema sees a single flat object.
 	(req, _res, next) => {
 		const body = req.body;
+		console.log(JSON.stringify(body));
+		console.log("row dara");
+		
+		console.log(body);
+		
+		
 		if (body && typeof body === "object") {
 			// Case 1: Body is { opm: { firstName, lastName, ... }, email, status, ... }
 			// The `opm` key holds the primary patient data from Klarity/Optimantra.
