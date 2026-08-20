@@ -33,16 +33,9 @@ patientsPublicRouter.post(
 	"/intake",
 	async (req, res, next) => {
 		console.log(req.body);
-		
-		// const secret = req.headers["x-webhook-secret"];
-		// const activeSecret = await webhooksService.getActiveSecret();
-		// if (!secret || secret !== activeSecret) {
-		// 	handleServiceResponse(ServiceResponse.failure("Invalid webhook secret.", null, 401), res);
-		// 	return;
-		// }
 		next();
 	},
-	validateRequest(IntakeSchema),
+	// validateRequest(IntakeSchema),
 	patientsController.intake,
 );
 
