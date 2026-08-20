@@ -1070,11 +1070,66 @@ export const patientsService = {
 	},
 
 	async intake(input: IntakeInput) {
-		const appointmentDatetime = input.appointmentDatetime ? new Date(input.appointmentDatetime) : null;
-		const firstStage = await getFirstStageKey();
+		// --- Webhook field mapping (Make.com/Klarity format → Patient model) ---
+		// The webhook sends: firstName, lastName, locationName, apptDate, apptStartTime,
+		// patientDOB, purchaseAmount, appointmentId, practitionerName, etc.
+		// We map these to the Patient schema fields.
+		
+		// Safely parse appointment datetime from separate fields if not provided as ISO
+		let appointmentDatetime: Date | null = null;
+		try {
+			if (input.appointmentDatetime) {
+				const parsed = new Date(input.appointmentDatetime);
+				if (!Number.isNaN(parsed.getTime())) {
+					appointmentDatetime = parsed;
+				}
+			} else if (input.apptDate && input.apptStartTime) {
+				// Combine apptDate (e.g. "Sat Aug 22 04:00:00 2026") + apptStartTime (e.g. "21:00")
+				const dateStr = `${input.apptDate} ${input.apptStartTime}`;
+				const parsed = new Date(dateStr);
+				if (!Number.isNaN(parsed.getTime())) {
+					appointmentDatetime = parsed;
+				} else {
+					logger.warn({ apptDate: input.apptDate, apptStartTime: input.apptStartTime }, "Could not parse webhook appointment date fields");
+				}
+			}
+		} catch (err) {
+			logger.warn({ err, apptDate: input.apptDate, apptStartTime: input.apptStartTime }, "Failed to parse appointment datetime from webhook");
+		}
+
+		// Safely parse date of birth from patientDOB field (e.g. "2007-01-20")
+		let dateOfBirth: Date | null = null;
+		if (input.patientDOB) {
+			try {
+				const parsed = new Date(input.patientDOB);
+				if (!Number.isNaN(parsed.getTime())) {
+					dateOfBirth = parsed;
+				} else {
+					logger.warn({ patientDOB: input.patientDOB }, "Could not parse patient date of birth");
+				}
+			} catch (err) {
+				logger.warn({ err, patientDOB: input.patientDOB }, "Failed to parse patientDOB");
+			}
+		}
+
+		// Map locationName to location (fallback gracefully)
+		const location = input.location?.trim() || input.locationName?.trim() || null;
+
+		// Validate name — required for patient creation
+		const firstName = input.firstName?.trim() || splitName(input.name).firstName;
+		if (!firstName) {
+			return ServiceResponse.failure(
+				"Patient first name is required. The webhook did not provide a name or firstName field.",
+				null,
+				StatusCodes.BAD_REQUEST,
+			);
+		}
+		const lastName = input.lastName?.trim() || splitName(input.name).lastName || null;
+
+		const firstStage = await getFirstStageKey(); // Should be "onboarding"
 
 		// Reject re-pushes of a patient that already exists (same email).
-		if (await findDuplicateByEmail(input.email)) {
+		if (input.email && await findDuplicateByEmail(input.email)) {
 			return ServiceResponse.failure(
 				"A patient with this email already exists. Intake skipped to avoid a duplicate record.",
 				null,
@@ -1085,27 +1140,59 @@ export const patientsService = {
 		// Auto-assign VA: explicit selection wins, then vaName from webhook, then appointment time
 		const { assignedTo, assignmentMethod } = await resolveAutoAssign(input, appointmentDatetime);
 
+		// Safely build paymentDetails JSON with webhook metadata
+		const webhookMetadata: Record<string, unknown> = {};
+		if (input.appointmentId) webhookMetadata.appointmentId = String(input.appointmentId).trim();
+		if (input.practitionerName) webhookMetadata.practitionerName = String(input.practitionerName).trim();
+		if (input.practitionerID) webhookMetadata.practitionerID = String(input.practitionerID).trim();
+		if (input.tag) webhookMetadata.tag = String(input.tag).trim();
+		if (input.status) webhookMetadata.bookingStatus = String(input.status).trim();
+		
+		// Safely merge with any existing paymentDetails from input
+		let existingDetails: Record<string, unknown> = {};
+		try {
+			if (input.paymentDetails && typeof input.paymentDetails === "object") {
+				existingDetails = input.paymentDetails as Record<string, unknown>;
+			}
+		} catch {
+			logger.warn({ paymentDetails: input.paymentDetails }, "Could not parse webhook paymentDetails");
+		}
+		const paymentDetails = { ...existingDetails, ...webhookMetadata };
+
+		// Safely parse purchaseAmount as copayAmount
+		let copayAmount: string | null = null;
+		if (input.purchaseAmount) {
+			const amt = String(input.purchaseAmount).trim();
+			if (/^\d+(\.\d{1,2})?$/.test(amt)) {
+				copayAmount = amt;
+			} else {
+				logger.warn({ purchaseAmount: input.purchaseAmount }, "Invalid purchaseAmount format, skipping copayAmount");
+			}
+		}
+
 		const patient = await prisma.patient.create({
 			data: {
 				// firstName/lastName are the source of truth. The webhook sends a
 				// single `name` (parsed from booking emails) — split it, or use
 				// explicit overrides when provided.
-				firstName: input.firstName?.trim() || splitName(input.name).firstName,
-				lastName: input.lastName?.trim() || splitName(input.name).lastName,
-				email: input.email ?? null,
-				phone: input.phone ?? null,
-				location: input.location ?? null,
-				stage: firstStage,
+				firstName,
+				lastName,
+				email: input.email?.trim() || null,
+				phone: input.phone?.trim() || null,
+				location,
+				dateOfBirth,
+				stage: firstStage, // Always "onboarding" for new patients
 				appointmentDatetime,
 				bookingPlatform: input.bookingPlatform ?? null,
-				problemDescription: input.problemDescription ?? null,
-				paymentMethod: input.paymentMethod ?? null,
-				insuranceProvider: input.insuranceProvider ?? null,
-				paymentDetails: (input.paymentDetails as object) ?? null,
+				problemDescription: input.problemDescription?.trim() || null,
+				paymentMethod: input.paymentMethod?.trim() || null,
+				insuranceProvider: input.insuranceProvider?.trim() || null,
+				paymentDetails: Object.keys(paymentDetails).length > 0 ? JSON.parse(JSON.stringify(paymentDetails)) : undefined,
+				copayAmount,
 				visitStatus: input.visitStatus ?? undefined,
 				source: "webhook",
 				checklistState: {},
-				notes: null,
+				notes: input.practitionerName?.trim() ? `Practitioner: ${input.practitionerName.trim()}` : null,
 				assignedTo,
 			},
 		});

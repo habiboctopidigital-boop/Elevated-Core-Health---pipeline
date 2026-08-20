@@ -51,20 +51,26 @@ export const ClearFlagSchema = z.object({
 });
 
 export const IntakeSchema = z.object({
-	body: z.object({
+	body: z
+		.object({
 		// Webhook sends a single `name` (parsed from booking emails) — split
 		// into first/last server-side. Explicit firstName/lastName overrides
-		// win when provided.
-		name: z.string().trim().min(1, "Patient name is required").refine(
-			(name) => name.trim().length > 0,
-			"Patient name cannot be empty"
-		),
+		// win when provided. Some webhooks send firstName/lastName separately
+		// (e.g. Make.com/Klarity), so name is optional when firstName is given.
+		name: z.string().trim().optional(),
 		firstName: z.string().trim().max(100).optional(),
 		lastName: z.string().trim().max(100).optional(),
 		email: z.string().email().optional().nullable(),
 		phone: z.string().optional().nullable(),
 		location: z.string().trim().max(200).optional().nullable(),
+		// Webhook may send `locationName` instead of `location` (Make.com/Klarity format)
+		locationName: z.string().trim().max(200).optional().nullable(),
 		appointmentDatetime: z.string().datetime().optional().nullable(),
+		// Webhook sends separate apptDate + apptStartTime instead of combined ISO datetime
+		apptDate: z.string().optional().nullable(),
+		apptStartTime: z.string().optional().nullable(),
+		// Webhook sends patientDOB instead of dateOfBirth
+		patientDOB: z.string().optional().nullable(),
 		vaName: z.string().trim().max(100).optional().nullable(),
 		// Explicit VA selection (e.g. from the Add Patient form's assign dropdown) —
 		// takes priority over vaName matching and time-based auto-assignment.
@@ -75,6 +81,19 @@ export const IntakeSchema = z.object({
 		insuranceProvider: z.string().max(200).optional().nullable(),
 		paymentDetails: z.record(z.string(), z.unknown()).optional().nullable(),
 		visitStatus: z.enum(["not_visited", "arrived", "no_show", "rescheduled"]).optional(),
+		// Additional webhook fields from Make.com/Klarity
+		purchaseAmount: z.string().optional().nullable(),
+		appointmentId: z.string().optional().nullable(),
+		practitionerName: z.string().optional().nullable(),
+		practitionerID: z.string().optional().nullable(),
+		tag: z.string().optional().nullable(),
+		status: z.string().optional().nullable(),
+	})
+	.superRefine((val, ctx) => {
+		// At least one of name or firstName must be present for patient creation.
+		if (!val.name?.trim() && !val.firstName?.trim()) {
+			ctx.addIssue({ code: "custom", path: ["firstName"], message: "Patient name or firstName is required" });
+		}
 	}),
 });
 
